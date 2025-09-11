@@ -1,0 +1,8 @@
+.minHeight-large{
+    min-height: 30rem;
+}
+
+.vertical-align{
+    position: relative;
+    top: 30%;
+}
