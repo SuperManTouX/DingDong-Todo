@@ -1,6 +1,7 @@
-import React, {useState} from 'react'
-import './App.css'
-import './bootstrap.css'
+import {useState} from 'react'
+import './TicTacToe.css'
+import '../bootstrap.css'
+// @ts-ignore
 import {JSX} from "react/v18/ts5.0";
 
 //1. 仅针对当前着手，显示“You are at move #…”而不是按钮。

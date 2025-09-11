@@ -1,7 +1,8 @@
 interface Todo {
     id: string,
     text: string,
-    completed: boolean
+    completed: boolean,
+    priority?: number
 }
 
 interface TodoAddAction {
@@ -26,18 +27,31 @@ interface TodoReplaceAction {
 }
 
 interface TodoCompleteAllAction {
-    type: 'completeAll',
-    completeOrUncomplete: boolean
+    type: 'completedAll',
+    completeOrUncomplete: boolean,
+    showType: ShowType
 }
 
-type TodoAction = TodoAddAction | TodoChangedAction | TodoDeletedAction | TodoReplaceAction | TodoCompleteAllAction
+interface TodoDeleteAllCompleteAction {
+    type: 'deletedAll',
+    todoList: Todo[]
+}
+
+type TodoAction =
+    TodoAddAction
+    | TodoChangedAction
+    | TodoDeletedAction
+    | TodoReplaceAction
+    | TodoCompleteAllAction
+    | TodoDeleteAllCompleteAction
 
 interface TodoItemProps {
     todo: Todo
     onTodoChange: (TodoAction) => void,
     onTodoDelete: (TodoAction) => void,
-    sub?:boolean
+    sub?: boolean
 }
+
 
 interface ControllerProps {
     isAllDone: boolean
@@ -45,3 +59,9 @@ interface ControllerProps {
     onCompleteAll: (boolean) => void
 }
 
+import type {Priority} from '../constants';
+
+export type Priority = typeof Priority[keyof typeof Priority];
+import type {ShowType} from '../constants';
+
+export type ShowType = typeof ShowType[keyof typeof ShowType];
