@@ -8,6 +8,7 @@ import {ShowType} from "@/constants";
 export default function reducer(draft: Todo[], action: TodoAction,) {
     switch (action.type) {
         case "completedAll":
+            // console.log(action.showType)
             switch (action.showType) {
                 case ShowType.all:
                     draft.forEach((t) => t.completed = action.completeOrUncomplete)

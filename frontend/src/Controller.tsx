@@ -1,15 +1,15 @@
-
-
 // @ts-ignore
 import {ControllerProps} from "@/types";
 import {ShowType} from "@/constants";
 
-export default function Controller({onSwitchShow,onCompleteAll,isAllDone,}:ControllerProps) {
+export default function Controller({onSwitchShow, onCompleteAll, isAllDone,}: ControllerProps) {
     return (
 
-        <li className='gap-3 d-flex justify-content-between'>
-            <span><input type="checkbox" checked={isAllDone} onChange={(e)=> onCompleteAll({type: 'completeAll', completeOrUncomplete: e.target.checked})
-            }/>
+        <li className=' rounded p-1 gap-3 d-flex justify-content-between'>
+            <span>
+                <input className="me-2" type="checkbox" checked={isAllDone}
+                       onChange={(e) => onCompleteAll({type: 'completedAll', completeOrUncomplete: e.target.checked})
+                       }/>
             <button type="button" onClick={() => {
 
                 onSwitchShow(ShowType.all)
@@ -22,7 +22,8 @@ export default function Controller({onSwitchShow,onCompleteAll,isAllDone,}:Contr
             <button type="button" onClick={() => {
                 onSwitchShow(ShowType.completed)
             }} className="btn btn-primary btn-sm">已完成
-            </button></span>
+            </button>
+            </span>
 
         </li>
     );
