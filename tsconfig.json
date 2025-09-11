@@ -12,12 +12,13 @@
     "baseUrl": ".",
     "paths": {
       "@/*": [
-        "src/*"
+        "./src/*"
       ]
-    },
-    "allowSyntheticDefaultImports": true
+    }
   },
-  "include": [
-    "src"
-  ]
-}
+    "allowSyntheticDefaultImports": true,
+    "include": [
+      "src",
+      "src/types/index.d.ts"
+    ]
+  }
