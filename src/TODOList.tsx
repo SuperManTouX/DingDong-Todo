@@ -10,6 +10,7 @@ import reducer from "./reducer.ts";
 import type {ShowType as ST, Todo, TodoAction, TodoCompleteAllAction} from "@/types.d.ts";
 import {ShowType} from "@/constants";
 
+
 // 1. 完成   / 未完成 过滤栏添加三个按钮：All / Active / Completed，点谁就只显示对应列表。
 // 2. 完成  一键全选 / 取消全选顶部放 checkbox，逻辑：若已全选则 取消全选，否则全部勾选。
 // 3. 完成   未完成计数器 / 在标题旁实时显示 “还剩 3 项未完成”。
@@ -19,12 +20,11 @@ import {ShowType} from "@/constants";
 // 7. 完成  优先级标记 / 给 Todo 加 priority: 'low' | 'medium' | 'high' 字段，UI 用颜色或图标区分，并可切换优先级。
 // 8. 完成  批量删除已完成 / 底部增加“清除已完成”按钮，一键删掉所有 done === true 的项。
 
-
 export default function TODOList() {
     let initialTodoList: Todo[] = [
         {id: uuidv4(), text: '学习 React', completed: false, priority: 2},
-        {id: uuidv4(), text: '写一个 TODOListOriginal 组件', completed: true},
-        {id: uuidv4(), text: '部署到 GitHub Pages', completed: false}
+        {id: uuidv4(), text: '写一个 TODOListOriginal 组件', completed: true,priority:1},
+        {id: uuidv4(), text: '部署到 GitHub Pages', completed: false,priority:0}
     ]
     // 读取本地值
     // if (localStorage.getItem('todoList') !== null) {
@@ -81,7 +81,7 @@ export default function TODOList() {
 
     //当一键完成或一键取消完成的时候
     function handleCompleteAll(action: TodoCompleteAllAction) {
-
+        console.log({...action, showType})
         dispatch({...action, showType})
     }
 
@@ -125,7 +125,7 @@ export default function TODOList() {
         <>
             <div className='container rounded mx-auto h-50 vertical-align'>
 
-                <div className="row bg-info rounded row-cols-2 justify-content-between p-2">
+                <div className="row bg-info rounded-top row-cols-2 justify-content-between p-2">
                     <div className="col-2 align-items-center">
                         TODOLIST
                     </div>
@@ -139,7 +139,7 @@ export default function TODOList() {
                     </div>
                 </div>
 
-                <div className="row  rounded h-50 mt-2 mb-2">
+                <div className="row  rounded h-50 ">
                     <div className="col-2 border">侧边</div>
                     <DragDropContext onDragEnd={onDragEnd}>
                         <Droppable droppableId="droppable">
@@ -176,11 +176,13 @@ export default function TODOList() {
                     </DragDropContext>
                 </div>
 
-                <div className="row flex-row rounded bg-light justify-content-end">
+                <div className="row flex-row rounded-bottom bg-secondary justify-content-end   p-2">
+                    <span className="d-flex w-25 gap-3 align-items-center">
                     <button type="button" onClick={() => handleDeleteAllCompleted()}
-                            className="btn btn-primary btn-sm w-25">删除所有已完成
+                            className="btn btn-primary btn-sm">删除所有已完成
                     </button>
-                    <span className="w-25">未完成：{calculateUncompletedCount()}个{}</span>
+                    <span className="">未完成：{calculateUncompletedCount()}个{}</span>
+                    </span>
                 </div>
             </div>
 

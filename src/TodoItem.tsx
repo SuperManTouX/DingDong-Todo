@@ -1,6 +1,7 @@
 import React, {useState} from "react";
 import type {TodoItemProps} from "@/types";
 import {Priority} from "@/constants";
+import './TodoItem.css'
 
 
 export default function TodoItem({todo, onTodoChange, onTodoDelete, sub}: TodoItemProps) {
@@ -10,14 +11,14 @@ export default function TodoItem({todo, onTodoChange, onTodoDelete, sub}: TodoIt
     switch (todo.priority) {
 
         case Priority.Low:
-            priClass = "bg-secondary"
+            priClass = "low-todo"
             break
         case Priority.Medium:
-            priClass = "bg-warning"
+            priClass = "medium-todo"
             break
         case Priority.High:
 
-            priClass = "bg-danger"
+            priClass = "high-todo"
             break
         default:
             priClass = ""
@@ -58,24 +59,30 @@ export default function TodoItem({todo, onTodoChange, onTodoDelete, sub}: TodoIt
 
     return (
         <>
-            <li className={`d-flex justify-content-between  ${priClass} ${sub ? 'opacity-25' : ''}`}>
-                <span className="w-75"><input type="checkbox"
-                                              checked={todo.completed}
-                                              onChange={(e) =>
-                                                  onTodoChange({
-                                                      type: 'changed',
-                                                      todo: {
-                                                          ...todo,
-                                                          completed: e.target.checked
-                                                      }
-                                                  })
-                                              }/>{renderEditInput()}</span>
+            <li className={`d-flex justify-content-between rounded p-1  ${sub ? 'opacity-25' : ''}`}>
+                <span className="d-flex  w-75 lh-base align-items-center">
+                    <input type="checkbox"
+                           className={`me-1 ${priClass}`}
+                           checked={todo.completed}
+                           onChange={(e) =>
+                               onTodoChange({
+                                   type: 'changed',
+                                   todo: {
+                                       ...todo,
+                                       completed: e.target.checked
+                                   }
+                               })
+                           }/>
+                    {renderEditInput()}
+                </span>
 
 
-                <span className="d-flex justify-content-end w-25"><button
-                    type="button" className="btn btn-secondary btn-sm">编辑</button>
+                <span className="d-flex justify-content-end w-25">
+                    <button
+                        type="button" className="btn btn-secondary btn-sm">编辑</button>
                     <button type="button" className="btn btn-danger btn-sm"
-                            onClick={() => onTodoDelete({type: 'deleted', deleteId: todo.id})}>删除</button></span>
+                            onClick={() => onTodoDelete({type: 'deleted', deleteId: todo.id})}>删除</button>
+                </span>
             </li>
         </>
     );
