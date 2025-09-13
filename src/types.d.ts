@@ -1,8 +1,17 @@
+
+import type {Priority} from '../constants';
+
+export type Priority = typeof Priority[keyof typeof Priority];
+import {ShowType, type ShowTypeValue} from "@/constants";
+
+export type ShowType = typeof ShowType[keyof typeof ShowType];
 interface Todo {
     id: string,
     text: string,
     completed: boolean,
-    priority?: number
+    priority: number,
+    datetimeLocal?:string,
+    deadline?:string,
 }
 
 interface TodoAddAction {
@@ -29,7 +38,7 @@ interface TodoReplaceAction {
 interface TodoCompleteAllAction {
     type: 'completedAll',
     completeOrUncomplete: boolean,
-    showType: ShowType
+    showType?:ShowTypeValue,
 }
 
 interface TodoDeleteAllCompleteAction {
@@ -45,23 +54,18 @@ type TodoAction =
     | TodoCompleteAllAction
     | TodoDeleteAllCompleteAction
 
+
 interface TodoItemProps {
     todo: Todo
-    onTodoChange: (TodoAction) => void,
-    onTodoDelete: (TodoAction) => void,
+    onTodoChange: (TodoChangedAction) => void,
+    onTodoDelete: (TodoDeletedAction) => void,
     sub?: boolean
 }
 
 
 interface ControllerProps {
     isAllDone: boolean
-    onSwitchShow: (ShowType) => void
-    onCompleteAll: (boolean) => void
+    onSwitchShow: (showType:ShowTypeValue) => void
+    onCompleteAll: (action:TodoCompleteAllAction) => void
+    showType: ShowType
 }
-
-import type {Priority} from '../constants';
-
-export type Priority = typeof Priority[keyof typeof Priority];
-import type {ShowType} from '../constants';
-
-export type ShowType = typeof ShowType[keyof typeof ShowType];

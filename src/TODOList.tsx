@@ -1,4 +1,3 @@
-import './bootstrap.css'
 import './TODOList.css'
 import {v4 as uuidv4} from 'uuid';
 import {useImmerReducer} from 'use-immer';
@@ -8,7 +7,8 @@ import TodoItem from './TodoItem'
 import {DragDropContext, Droppable, Draggable, type DropResult} from "@hello-pangea/dnd";
 import reducer from "./reducer.ts";
 import type {ShowType as ST, Todo, TodoAction, TodoCompleteAllAction} from "@/types.d.ts";
-import {ShowType} from "@/constants";
+import {ShowType, type ShowTypeValue} from "@/constants";
+import dayjs from 'dayjs'
 
 
 // 1. 完成   / 未完成 过滤栏添加三个按钮：All / Active / Completed，点谁就只显示对应列表。
@@ -22,9 +22,28 @@ import {ShowType} from "@/constants";
 
 export default function TODOList() {
     let initialTodoList: Todo[] = [
-        {id: uuidv4(), text: '学习 React', completed: false, priority: 2},
-        {id: uuidv4(), text: '写一个 TODOListOriginal 组件', completed: true,priority:1},
-        {id: uuidv4(), text: '部署到 GitHub Pages', completed: false,priority:0}
+        {
+            id: uuidv4(),
+            text: '学习 React',
+            completed: false,
+            priority: 2,
+            datetimeLocal: dayjs().format(),
+            deadline: dayjs('2025-9-15').format()
+        },
+        {
+            id: uuidv4(), text: '写一个 TODOListOriginal 组件', completed: true, priority: 1,
+            datetimeLocal: dayjs().format(),
+            deadline: dayjs('2025-9-10').format()
+        },
+        {
+            id: uuidv4(), text: '部署到 GitHub Pages', completed: false, priority: 0,
+            datetimeLocal: dayjs().format(),
+            deadline: dayjs('2025-9-10').format()
+        },
+        {
+            id: uuidv4(), text: 'test', completed: false, priority: 0,
+
+        },
     ]
     // 读取本地值
     // if (localStorage.getItem('todoList') !== null) {
@@ -45,8 +64,7 @@ export default function TODOList() {
     }
 
     //切换任务列表（全部，未完成，已完成）
-    function handleSwitchShow(showType: ST) {
-
+    function handleSwitchShow(showType: ShowTypeValue) {
         setShowType(showType)
     }
 
@@ -60,6 +78,8 @@ export default function TODOList() {
                 return todoList.filter((t) => t.completed)
             case ShowType.uncompleted:
                 return todoList.filter((t) => !t.completed)
+            case ShowType.overdue:
+                return todoList.filter((t) => dayjs(t.deadline).diff(dayjs(), 'day') >= 0)
             default:
                 return []
         }
@@ -81,7 +101,7 @@ export default function TODOList() {
 
     //当一键完成或一键取消完成的时候
     function handleCompleteAll(action: TodoCompleteAllAction) {
-        console.log({...action, showType})
+
         dispatch({...action, showType})
     }
 
@@ -139,14 +159,14 @@ export default function TODOList() {
                     </div>
                 </div>
 
-                <div className="row  rounded h-50 ">
+                <div className="row  rounded minHeight-large ">
                     <div className="col-2 border">侧边</div>
                     <DragDropContext onDragEnd={onDragEnd}>
                         <Droppable droppableId="droppable">
-                            {(provided) => <ul className="col" ref={provided.innerRef} {...provided.droppableProps}>
+                            {(provided) => <ul className="col p-2" ref={provided.innerRef} {...provided.droppableProps}>
                                 {/*顶部操作Li*/}
                                 {<Controller isAllDone={isAllDone} onSwitchShow={handleSwitchShow}
-                                             onCompleteAll={handleCompleteAll}/>}
+                                             onCompleteAll={handleCompleteAll} showType={showType}/>}
                                 {/*可拖动列表*/}
                                 {renderTodos().map((t, index) => (
                                     <Draggable key={t.id} draggableId={t.id} index={index}>
@@ -184,6 +204,7 @@ export default function TODOList() {
                     <span className="">未完成：{calculateUncompletedCount()}个{}</span>
                     </span>
                 </div>
+
             </div>
 
 
