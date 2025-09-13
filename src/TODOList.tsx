@@ -9,6 +9,8 @@ import reducer from "./reducer.ts";
 import type {ShowType as ST, Todo, TodoAction, TodoCompleteAllAction} from "@/types.d.ts";
 import {ShowType, type ShowTypeValue} from "@/constants";
 import dayjs from 'dayjs'
+import {DeleteOutlined, EditOutlined} from '@ant-design/icons';
+import {Dropdown, type MenuProps, message} from 'antd';
 
 
 // 1. 完成   / 未完成 过滤栏添加三个按钮：All / Active / Completed，点谁就只显示对应列表。
@@ -28,7 +30,15 @@ export default function TODOList() {
             completed: false,
             priority: 2,
             datetimeLocal: dayjs().format(),
-            deadline: dayjs('2025-9-15').format()
+            deadline: dayjs('2025-9-15').format(),
+            subTodo: [{
+                subId: uuidv4(),
+                subText: 'Sub 学习  React',
+                subCompleted: false,
+                subPriority: 2,
+                subDatetimeLocal: dayjs().format(),
+                subDeadline: dayjs('2025-9-18').format(),
+            }]
         },
         {
             id: uuidv4(), text: '写一个 TODOListOriginal 组件', completed: true, priority: 1,
@@ -54,8 +64,10 @@ export default function TODOList() {
     const [showType, setShowType] = useState<ST>(ShowType.all)
     const [todoList, dispatch] = useImmerReducer(reducer, initialTodoList)
     let isAllDone = todoList.length > 0 && todoList.every(t => t.completed)
+
     // 设置本地值
     // localStorage.setItem('todoList', JSON.stringify(todoList))
+
 
     //点击添加按钮
     function handleAdded(): void {
@@ -79,7 +91,7 @@ export default function TODOList() {
             case ShowType.uncompleted:
                 return todoList.filter((t) => !t.completed)
             case ShowType.overdue:
-                return todoList.filter((t) => dayjs(t.deadline).diff(dayjs(), 'day') >= 0)
+                return todoList.filter((t) => dayjs(t.deadline).diff(dayjs(), 'day') < 0)
             default:
                 return []
         }
@@ -136,10 +148,37 @@ export default function TODOList() {
         dispatch({type: 'replaced', todoList: newOrder});
     }
 
+    // 删除所有已完成
     function handleDeleteAllCompleted() {
-        console.log(1)
         dispatch({type: 'deletedAll', todoList})
     }
+
+    const items: MenuProps['items'] = [
+        {
+            key: 'edit',
+            icon: <EditOutlined/>,
+            label: '编辑',
+            // onClick: (key) => {
+            //     message.info('点击了编辑')
+            //     console.log(key)
+            // },
+        },
+        {
+            key: 'delete',
+            icon: <DeleteOutlined/>,
+            label: '删除',
+        },
+    ];
+    // 右键菜单
+    const handleMenuClick = (key,t) => {
+        // ✅ 这里直接拿到 todo.id
+        if (key === 'edit') {
+            console.log('编辑', t);
+        } else if (key === 'delete') {
+            console.log('删除', t);
+        }
+    }
+
 
     return (
         <>
@@ -176,17 +215,24 @@ export default function TODOList() {
                                                 {...provided.draggableProps}
                                                 {...provided.dragHandleProps}
                                             >
-
-                                                <TodoItem todo={t} onTodoChange={handleTodoChange}
-                                                          onTodoDelete={dispatch}/>
-
+                                                <Dropdown
+                                                    key={t.id}
+                                                    trigger={['contextMenu']}
+                                                    menu={{items, onClick: ({key})=>handleMenuClick(key,t)}}
+                                                >
+                                                    <div style={{cursor: 'context-menu'}}>
+                                                        <TodoItem todo={t} onTodoChange={dispatch}
+                                                                  onTodoDelete={dispatch}/>
+                                                    </div>
+                                                </Dropdown>
                                             </div>
                                         )}
                                     </Draggable>
                                 ))}
                                 {provided.placeholder}
                                 {renderOtherTodos()?.map(t => {
-                                    return <TodoItem sub={true} key={t.id} todo={t} onTodoChange={handleTodoChange}
+                                    return <TodoItem other={true} key={t.id} todo={t}
+                                                     onTodoChange={handleTodoChange}
                                                      onTodoDelete={dispatch}/>
                                 })}
                             </ul>

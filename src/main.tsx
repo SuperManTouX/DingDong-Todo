@@ -16,6 +16,7 @@ createRoot(document.getElementById('root')!).render(
         {/*  <TaskApp></TaskApp>*/}
         {/*  <TODOListOriginal></TODOListOriginal>*/}
         <TODOList></TODOList>
+        {/*<Test></Test>*/}
         {/*<Drag></Drag>*/}
     </StrictMode>,
 )
