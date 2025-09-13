@@ -1,0 +1,137 @@
+/* 1. 剥掉系统默认 */
+.high-todo {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    vertical-align: middle;
+    cursor: pointer;
+
+    /* 2. 自定义边框 */
+    border: 1px solid #ee5a56;   /* 红色边框 */
+    border-radius: 4px;
+    background: #fff;
+    position: relative;
+}
+
+/* 3. 选中时背景变红 + 画白勾 */
+.high-todo:checked {
+    background: #ee5a56;
+    border-color: #ee5a56;
+}
+.high-todo:checked::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+/* 4. 聚焦时补一条红晕（可删） */
+.high-todo:focus-visible {
+    outline: 1px solid #ee5a56;
+    outline-offset: 1px;
+}
+/* 4. 聚焦时补一条红晕（可删） */
+.high-todo:hover {
+    border: 1px solid #e30f0a;
+
+}
+
+/* 1. 剥掉系统默认 */
+.medium-todo {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    vertical-align: middle;
+    cursor: pointer;
+
+    /* 2. 自定义边框 */
+    border: 1px solid #ffc107;   /* 红色边框 */
+    border-radius: 4px;
+    background: #fff;
+    position: relative;
+}
+
+/* 3. 选中时背景变红 + 画白勾 */
+.medium-todo:checked {
+    background: #ffc107;
+    border-color: #ffc107;
+}
+.medium-todo:checked::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+/* 4. 聚焦时补一条红晕（可删） */
+.medium-todo:focus-visible {
+    outline: 1px solid #ffc107;
+    outline-offset: 1px;
+}
+
+.medium-todo:hover {
+    border: 1px solid #d9a801;
+
+}
+
+
+
+
+/* 1. 剥掉系统默认 */
+.low-todo {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    vertical-align: middle;
+    cursor: pointer;
+
+    /* 2. 自定义边框 */
+    border: 1px solid #0d6efd;   /* 红色边框 */
+    border-radius: 4px;
+    background: #fff;
+    position: relative;
+}
+
+/* 3. 选中时背景变红 + 画白勾 */
+.low-todo:checked {
+    background: #0d6efd;
+    border-color: #0d6efd;
+}
+.low-todo:checked::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+/* 4. 聚焦时补一条红晕（可删） */
+.low-todo:focus-visible {
+    outline: 1px solid #0d6efd;
+    outline-offset: 1px;
+}
+/* 4. 聚焦时补一条红晕（可删） */
+.low-todo:hover {
+    border: 1px solid #014ebd;
+
+}

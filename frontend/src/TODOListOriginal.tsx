@@ -169,7 +169,7 @@ export default function TODOListOriginal() {
                                 })}
 
                             {renderOtherTodos()?.map(t => {
-                                return <TodoItem sub={true} key={t.id} todo={t} onTodoChange={handleTodoChange}
+                                return <TodoItem other={true} key={t.id} todo={t} onTodoChange={handleTodoChange}
                                                  onTodoDelete={dispatch}/>
                             })}
                         </ul>

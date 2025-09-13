@@ -1,5 +1,5 @@
 import React, {useState} from "react";
-import type {TodoItemProps} from "@/types";
+import type {SubTodoItemProps} from "@/types";
 import {Priority, PriorityName} from "@/constants";
 import './TodoItem.css'
 import {Button, Card, Collapse, Dropdown} from "react-bootstrap";
@@ -7,21 +7,19 @@ import {DatePicker} from 'antd';
 import dayjs from "dayjs";
 
 import type {RangePickerProps} from "antd/es/date-picker";
-import SubTodoItem from "@/SubTodoItem";
+
 
 const {RangePicker} = DatePicker;
 
 
-export default function TodoItem({todo, onTodoChange, onTodoDelete, other,}: TodoItemProps) {
+export default function SubTodoItem({todoId, subTodo, onSubTodoChange, onSubTodoDelete, other}: SubTodoItemProps) {
     const [editType, setEditType] = useState<boolean>(false)
     const [text, setText] = useState<string>('')
     // 展开折叠筐
     const [open, setOpen] = useState(false);
-    const [subOpen, setSubOpen] = useState(false);
-
 
     let priClass;
-    switch (todo.priority) {
+    switch (subTodo.subPriority) {
 
         case Priority.Low:
             priClass = "low-todo"
@@ -36,7 +34,6 @@ export default function TodoItem({todo, onTodoChange, onTodoDelete, other,}: Tod
             priClass = ""
 
     }
-
 
     // 双击编辑
     function updateEditType(test: string) {
@@ -55,91 +52,80 @@ export default function TodoItem({todo, onTodoChange, onTodoDelete, other,}: Tod
             return (
                 <input type="text" autoFocus value={text} onChange={(e) => handleEditChanged(e.currentTarget.value)}
                        onBlur={() => {
-                           onTodoChange({
-                               type: 'changed',
-                               todo: {
-                                   ...todo,
-                                   text,
+                           onSubTodoChange({
+                               subId: subTodo.subId, todoId: todoId,
+                               type: 'change_sub',
+                               newSubTodo: {
+                                   ...subTodo,
+                                   subText: text,
                                }
                            })
                            setEditType(false)
-                       }}/>
+                       }
+                       }
+
+                />
             )
         } else {
             return (
                 <span
-                    onDoubleClick={(e: React.MouseEvent<HTMLSpanElement>) => updateEditType(e.currentTarget.innerText)}>{todo.text}</span>
+                    onDoubleClick={(e: React.MouseEvent<HTMLSpanElement>) => updateEditType(e.currentTarget.innerText)}>{subTodo.subText}</span>
             )
         }
     }
 
+    // 更改时间
     const handleTodoDeadLineChange: RangePickerProps['onChange'] = (dates) => {
         // @ts-ignore
         const [local, deadLine] = dates;
-        onTodoChange({
-            type: 'changed',
-            todo: {...todo, datetimeLocal: dayjs(local).format(), deadline: dayjs(deadLine).format()}
+        onSubTodoChange({
+            subId: subTodo.subId, todoId: todoId,
+            type: 'change_sub',
+            newSubTodo: {
+                ...subTodo,
+                subDatetimeLocal: dayjs(local).format(), subDeadline: dayjs(deadLine).format()
+            }
         })
     }
 
 
     // 倒计时
     const renderCountdown = () => {
-        if (!todo.deadline && !todo.datetimeLocal) return null
-        const leftDay = dayjs(todo.deadline).diff(dayjs(), 'day')
-        if (leftDay > 1) return (<span>{dayjs(todo.deadline).diff(dayjs(), 'day')}天</span>)
+        if (!subTodo.subDeadline && !subTodo.subDatetimeLocal) return null
+        const leftDay = dayjs(subTodo.subDeadline).diff(dayjs(), 'day')
+        if (leftDay >= 0) return (<span>{dayjs(subTodo.subDeadline).diff(dayjs(), 'day')}天</span>)
         if (leftDay == 0) return (<span>今天</span>)
         if (leftDay == 1) return (<span>明天</span>)
         if (leftDay < 0) return (
-            <span className="text-danger">{dayjs(todo.deadline).format("MM月DD日")}</span>)
+            <span className="text-danger">{dayjs(subTodo.subDeadline).format("MM月DD日")}</span>)
         // <span className="text-danger">已逾期{Math.abs(dayjs(todo.deadline).diff(dayjs(), 'day'))}天</span>
 
     }
-    const SubList = () => {
-        if (todo?.subTodo) {
-            return (
-                <Collapse in={subOpen}>
-                    <ul id="subList" className=" ps-4">{todo.subTodo.map((st,) => {
-                        return <SubTodoItem todoId={todo.id} key={st.subId} subTodo={st} onSubTodoChange={onTodoChange}
-                                            onSubTodoDelete={onTodoDelete}/>
-                    })}</ul>
-
-                </Collapse>
-
-            )
-        }
-        return null
-    }
-
 
     return (
         <>
-
             <li className={`row d-flex justify-content-between rounded p-1  ${other ? 'opacity-25' : ''}`}>
 
                 <div className="d-flex justify-content-between lh-base align-items-center">
                     <span className="d-flex  w-50 lh-base align-items-center">
-                    <input type="checkbox"
-                           className={`me-1 ${priClass}`}
-                           checked={todo.completed}
-                           onChange={(e) =>
-                               onTodoChange({
-                                   type: 'changed',
-                                   todo: {
-                                       ...todo,
-                                       completed: e.target.checked
-                                   }
-                               })
-                           }/>
+                    {/* 完成单个任务*/}
+                        <input type="checkbox"
+                               className={`me-1 ${priClass}`}
+                               checked={subTodo.subCompleted}
+                               onChange={(e) =>
+                                   onSubTodoChange({
+                                       subId: subTodo.subId, todoId: todoId,
+                                       type: 'change_sub',
+                                       newSubTodo: {
+                                           ...subTodo,
+                                           subCompleted: e.target.checked
+                                       }
+                                   })
+                               }/>
                         {renderEditInput()}
                 </span>
                     <span className="d-flex justify-content-end align-items-center">
                         <span>{renderCountdown()}</span>
-                        {todo?.subTodo && todo.subTodo.length > 0 && <button
-                            onClick={() => setSubOpen(!subOpen)}
-                            aria-controls="subList"
-                            aria-expanded={open}
-                        >子任务</button>}
                         <Button
                             onClick={() => setOpen(!open)}
                             aria-controls="EditTodo"
@@ -148,10 +134,12 @@ export default function TodoItem({todo, onTodoChange, onTodoDelete, other,}: Tod
                             className="me-2"
                         >编辑</Button>
                         <button type="button" className="btn btn-danger btn-sm"
-                                onClick={() => onTodoDelete({type: 'deleted', deleteId: todo.id})}>删除</button>
+                                onClick={() => onSubTodoDelete({
+                                    type: 'deleteSub_sub',
+                                    subId: subTodo.subId, todoId: todoId,
+                                })}>删除</button>
                 </span>
                 </div>
-                {SubList()}
                 {/*编辑折叠框*/}
                 <Collapse in={open}>
                     <div id="EditTodo">
@@ -159,12 +147,20 @@ export default function TodoItem({todo, onTodoChange, onTodoDelete, other,}: Tod
                             <Card.Body className="d-flex justify-content-between align-items-center">
                                 <div>
                                     <span>优先级：</span>
+                                    {/*优先级选择器*/}
                                     <Dropdown className="d-inline-block" onSelect={(eventKey,) => {
-                                        onTodoChange({type: 'changed', todo: {...todo, priority: Number(eventKey)}})
+                                        onSubTodoChange({
+                                            subId: subTodo.subId, todoId: todoId,
+                                            type: 'change_sub',
+                                            newSubTodo: {
+                                                ...subTodo,
+                                                subPriority: Number(eventKey)
+                                            }
+                                        })
                                     }}>
                                         <Dropdown.Toggle variant="primary" id="dropdown-basic">
                                             {// @ts-ignore
-                                                PriorityName[String(todo.priority)]
+                                                PriorityName[String(subTodo.subPriority)]
                                             }
                                         </Dropdown.Toggle>
 
@@ -178,6 +174,7 @@ export default function TodoItem({todo, onTodoChange, onTodoDelete, other,}: Tod
                                 </div>
                                 <div>
                                     <span>任务开始结束时间：</span>
+                                    {/*时间选择器*/}
                                     <RangePicker onChange={handleTodoDeadLineChange} size="small"/>
                                 </div>
 
