@@ -120,10 +120,7 @@ interface ControllerProps {
     onCompleteAll: (action: TodoCompleteAllAction) => void
     showType: ShowType
 }
-
-
-type LiContextMenuProps = {
-    menu: MenuProps['items'];   // antd 5 的 items 数组
-    onMenuClick?: (key: string) => void; // 统一回调，可选
-    children: ReactElement;     // 只允许一个 <li />
-};
+interface ContextMenuProps {
+    todo:Todo,
+    onTodoChange: (action:TodoChangedAction|SubTodoChangedAction) => void,
+}

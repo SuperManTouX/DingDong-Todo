@@ -9,9 +9,8 @@ import reducer from "./reducer.ts";
 import type {ShowType as ST, Todo, TodoAction, TodoCompleteAllAction} from "@/types.d.ts";
 import {ShowType, type ShowTypeValue} from "@/constants";
 import dayjs from 'dayjs'
-import {DeleteOutlined, EditOutlined} from '@ant-design/icons';
-import {Dropdown, type MenuProps, message} from 'antd';
 
+import ContextMenu from './ContextMenu';
 
 // 1. 完成   / 未完成 过滤栏添加三个按钮：All / Active / Completed，点谁就只显示对应列表。
 // 2. 完成  一键全选 / 取消全选顶部放 checkbox，逻辑：若已全选则 取消全选，否则全部勾选。
@@ -153,32 +152,6 @@ export default function TODOList() {
         dispatch({type: 'deletedAll', todoList})
     }
 
-    const items: MenuProps['items'] = [
-        {
-            key: 'edit',
-            icon: <EditOutlined/>,
-            label: '编辑',
-            // onClick: (key) => {
-            //     message.info('点击了编辑')
-            //     console.log(key)
-            // },
-        },
-        {
-            key: 'delete',
-            icon: <DeleteOutlined/>,
-            label: '删除',
-        },
-    ];
-    // 右键菜单
-    const handleMenuClick = (key,t) => {
-        // ✅ 这里直接拿到 todo.id
-        if (key === 'edit') {
-            console.log('编辑', t);
-        } else if (key === 'delete') {
-            console.log('删除', t);
-        }
-    }
-
 
     return (
         <>
@@ -215,16 +188,12 @@ export default function TODOList() {
                                                 {...provided.draggableProps}
                                                 {...provided.dragHandleProps}
                                             >
-                                                <Dropdown
-                                                    key={t.id}
-                                                    trigger={['contextMenu']}
-                                                    menu={{items, onClick: ({key})=>handleMenuClick(key,t)}}
-                                                >
+                                                <ContextMenu todo={t}>
                                                     <div style={{cursor: 'context-menu'}}>
                                                         <TodoItem todo={t} onTodoChange={dispatch}
                                                                   onTodoDelete={dispatch}/>
                                                     </div>
-                                                </Dropdown>
+                                                </ContextMenu>
                                             </div>
                                         )}
                                     </Draggable>
