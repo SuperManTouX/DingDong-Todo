@@ -9,10 +9,6 @@ export default function ContextMenu({todo, children}: ContextMenuProps) {
             key: 'edit',
             icon: <EditOutlined/>,
             label: '编辑',
-            // onClick: (key) => {
-
-            //     console.log(key)
-            // },
         },
         {
             key: 'delete',
