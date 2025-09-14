@@ -1,5 +1,5 @@
 import {DeleteOutlined, EditOutlined} from "@ant-design/icons";
-import {ContextMenuProps} from "@/types";
+import type {ContextMenuProps, Todo} from "@/types";
 import {Dropdown, type MenuProps, message} from 'antd';
 
 export default function ContextMenu({todo, children}: ContextMenuProps) {
@@ -17,7 +17,7 @@ export default function ContextMenu({todo, children}: ContextMenuProps) {
         },
     ];
     // 右键菜单
-    const handleMenuClick = (key, todo) => {
+    const handleMenuClick = (key: string, todo: Todo) => {
         // ✅ 这里直接拿到 todo.id
         if (key === 'edit') {
             message.info('点击了编辑')

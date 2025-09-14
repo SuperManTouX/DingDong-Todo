@@ -407,6 +407,32 @@ button + button {
   min-width: 1366px;
 }
 
+.highlight {
+    padding: 32px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    border: 1px solid #f0f0f0;
+    /*transition: background 0.3s, border-color 0.3s;*/
+}
+
+.highlight:hover {
+    /* 使用 antd 官方主色 @primary-1 */
+    background: #e6f7ff;
+    border-color: #91d5ff;
+}
+.sub-highlight {
+    padding: 32px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    /*transition: background 0.3s, border-color 0.3s;*/
+}
+
+.sub-highlight:hover {
+    /* 使用 antd 官方主色 @primary-1 */
+    background: #99f1b8;
+    border-color: #08091a;
+}
+
 /* 暗黑模式 Dark mode */
 /* @media (prefers-color-scheme: dark) {
   body,
