@@ -1,26 +1,18 @@
 import React, { useState } from "react";
 import type { SubTodoItemProps } from "@/types";
-import { Priority, PriorityName } from "@/constants";
+import { Priority } from "@/constants";
 import "./TodoItem.css";
-import { Button, Card, Collapse, Dropdown } from "react-bootstrap";
-import { Col, DatePicker, Row } from "antd";
+import { Col, Row } from "antd";
 import dayjs from "dayjs";
-
-import type { RangePickerProps } from "antd/es/date-picker";
-
-const { RangePicker } = DatePicker;
 
 export default function SubTodoItem({
   todoId,
   subTodo,
   onSubTodoChange,
-  onSubTodoDelete,
   other,
 }: SubTodoItemProps) {
   const [editType, setEditType] = useState<boolean>(false);
   const [text, setText] = useState<string>("");
-  // 展开折叠筐
-  const [open, setOpen] = useState(false);
 
   let priClass;
   switch (subTodo.subPriority) {
@@ -84,30 +76,13 @@ export default function SubTodoItem({
     }
   }
 
-  // 更改时间
-  const handleTodoDeadLineChange: RangePickerProps["onChange"] = (dates) => {
-    // @ts-ignore
-    const [local, deadLine] = dates;
-    onSubTodoChange({
-      subId: subTodo.subId,
-      todoId: todoId,
-      type: "change_sub",
-      newSubTodo: {
-        ...subTodo,
-        subDatetimeLocal: dayjs(local).format(),
-        subDeadline: dayjs(deadLine).format(),
-      },
-    });
-  };
-
   // 倒计时
   const renderCountdown = () => {
     if (!subTodo.subDeadline && !subTodo.subDatetimeLocal) return null;
     const leftDay = dayjs(subTodo.subDeadline).diff(dayjs(), "day");
-    if (leftDay >= 0)
-      return <span>{dayjs(subTodo.subDeadline).diff(dayjs(), "day")}天</span>;
-    if (leftDay == 0) return <span>今天</span>;
-    if (leftDay == 1) return <span>明天</span>;
+    if (leftDay >= 0) return <span className="text-primary">{leftDay}天</span>;
+    if (leftDay == 0) return <span className="text-primary">今天</span>;
+    if (leftDay == 1) return <span className="text-primary">明天</span>;
     if (leftDay < 0)
       return (
         <span className="text-danger">
@@ -150,86 +125,13 @@ export default function SubTodoItem({
             </span>
           </Col>
           {/*截止时间*/}
-          <Col span={8}>
-            <span className="d-flex justify-content-end align-items-center">
-              <span>{renderCountdown()}</span>
-              <Button
-                onClick={() => setOpen(!open)}
-                aria-controls="EditTodo"
-                aria-expanded={open}
-                variant="primary"
-                className="me-2"
-              >
-                编辑
-              </Button>
-              <button
-                type="button"
-                className="btn btn-danger btn-sm"
-                onClick={() =>
-                  onSubTodoDelete({
-                    type: "deleteSub_sub",
-                    subId: subTodo.subId,
-                    todoId: todoId,
-                  })
-                }
-              >
-                删除
-              </button>
-            </span>
+          <Col
+            span={8}
+            className="d-flex justify-content-end align-items-center"
+          >
+            <span>{renderCountdown()}</span>
           </Col>
         </Row>
-        {/*编辑折叠框*/}
-        <Collapse in={open}>
-          <div id="EditTodo">
-            <Card>
-              <Card.Body className="d-flex justify-content-between align-items-center">
-                <div>
-                  <span>优先级：</span>
-                  {/*优先级选择器*/}
-                  <Dropdown
-                    className="d-inline-block"
-                    onSelect={(eventKey) => {
-                      onSubTodoChange({
-                        subId: subTodo.subId,
-                        todoId: todoId,
-                        type: "change_sub",
-                        newSubTodo: {
-                          ...subTodo,
-                          subPriority: Number(eventKey),
-                        },
-                      });
-                    }}
-                  >
-                    <Dropdown.Toggle variant="primary" id="dropdown-basic">
-                      {
-                        // @ts-ignore
-                        PriorityName[String(subTodo.subPriority)]
-                      }
-                    </Dropdown.Toggle>
-
-                    <Dropdown.Menu>
-                      {Object.entries(Priority).map(([k, v]) => {
-                        return (
-                          <Dropdown.Item key={k} eventKey={v}>
-                            {k}
-                          </Dropdown.Item>
-                        );
-                      })}
-                    </Dropdown.Menu>
-                  </Dropdown>
-                </div>
-                <div>
-                  <span>任务开始结束时间：</span>
-                  {/*时间选择器*/}
-                  <RangePicker
-                    onChange={handleTodoDeadLineChange}
-                    size="small"
-                  />
-                </div>
-              </Card.Body>
-            </Card>
-          </div>
-        </Collapse>
       </li>
     </>
   );
