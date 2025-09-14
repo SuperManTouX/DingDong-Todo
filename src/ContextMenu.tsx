@@ -4,7 +4,7 @@ import {
   EditOutlined,
   ExclamationOutlined,
 } from "@ant-design/icons";
-import type { ContextMenuProps, SubTodo } from "@/types";
+import type { ContextMenuProps, Priority, SubTodo } from "@/types";
 import {
   Button,
   DatePicker,
@@ -23,7 +23,6 @@ export default function ContextMenu({
   todo,
   children,
   onTodoChange,
-  onTodoDelete,
 }: ContextMenuProps) {
   // 编辑时间
   const onOk = (
@@ -41,8 +40,6 @@ export default function ContextMenu({
     } else {
       const subTodo = todo as SubTodo;
       onTodoChange({
-        subId: subTodo.subId,
-        todoId: subTodo.todoId,
         type: "change_sub",
         newSubTodo: {
           ...subTodo,
@@ -52,6 +49,18 @@ export default function ContextMenu({
       });
     }
     message.info("时间更改成功");
+  };
+  // 更改任务优先级
+  const setPriority = (p: Priority) => {
+    if ("id" in todo) {
+      onTodoChange({ type: "changed", todo: { ...todo, priority: p } });
+    } else {
+      const subTodo = todo as SubTodo;
+      onTodoChange({
+        newSubTodo: { ...subTodo, subPriority: p },
+        type: "change_sub",
+      });
+    }
   };
   const items: MenuProps["items"] = [
     {
@@ -75,7 +84,12 @@ export default function ContextMenu({
       key: "priority_set",
       label: (
         <Space>
-          <Button size="small" variant="solid" color="danger">
+          <Button
+            onClick={() => setPriority(3)}
+            size="small"
+            variant="solid"
+            color="danger"
+          >
             高
           </Button>
           <Button size="small" variant="solid" color="yellow">
@@ -101,13 +115,13 @@ export default function ContextMenu({
       label: "删除",
       onClick: () => {
         if ("id" in todo) {
-          onTodoDelete({
+          onTodoChange({
             type: "deleted",
             deleteId: todo.id,
           });
         } else {
           const subTodo = todo as SubTodo;
-          onTodoDelete({
+          onTodoChange({
             subId: subTodo.subId,
             todoId: subTodo.todoId,
             type: "delete_sub",
