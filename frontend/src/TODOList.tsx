@@ -15,16 +15,14 @@ import reducer from "./reducer.ts";
 import type {
   ShowType as ST,
   SubTodo,
-  SubTodoChangedAction,
   Todo,
-  TodoChangedAction,
   TodoCompleteAllAction,
 } from "@/types.d.ts";
 import { ShowType, type ShowTypeValue } from "@/constants";
 import dayjs from "dayjs";
 
 import ContextMenu from "./ContextMenu";
-import { Col, Row } from "antd";
+import { Col, Row, Space } from "antd";
 import { Content, Footer, Header } from "antd/es/layout/layout";
 
 // 1. 完成   / 未完成 过滤栏添加三个按钮：All / Active / Completed，点谁就只显示对应列表。
@@ -104,7 +102,7 @@ export default function TODOList() {
   //     initialTodoList = JSON.parse(localStorage.getItem('todoList') as string) as Todo[];
   // }
   const [text, setText] = useState<string>("");
-  const [showType, setShowType] = useState<ST>(ShowType.all);
+  const [showType, setShowType] = useState<ST>(ShowType.uncompleted);
   const [todoList, dispatch] = useImmerReducer(reducer, initialTodoList);
   let isAllDone = todoList.length > 0 && todoList.every((t) => t.completed);
 
@@ -144,10 +142,17 @@ export default function TODOList() {
     switch (showType) {
       case ShowType.all:
         return null;
+      //   已完成
       case ShowType.completed:
         return todoList.filter((t) => !t.completed);
+      //未完成
       case ShowType.uncompleted:
         return todoList.filter((t) => t.completed);
+      //已逾期
+      case ShowType.overdue:
+        return todoList.filter(
+          (t) => dayjs(t.deadline).diff(dayjs(), "day") < 0,
+        );
       default:
         return [];
     }
@@ -156,11 +161,6 @@ export default function TODOList() {
   //当一键完成或一键取消完成的时候
   function handleCompleteAll(action: TodoCompleteAllAction) {
     dispatch({ ...action, showType });
-  }
-
-  //当单个任务完成的时候
-  function handleTodoChange(action: TodoChangedAction | SubTodoChangedAction) {
-    dispatch(action);
   }
 
   //计算未完成的个数
@@ -178,12 +178,20 @@ export default function TODOList() {
       // 没放下 / 原地放下
       if (!destination) return;
       if (destination.index === source.index) return;
-
       // 1. 深拷贝（Immer 外做，避免 draft 混淆）
+      const rT = [...renderTodos()];
       const newOrder = [...todoList];
-      const [moved] = newOrder.splice(source.index, 1);
-      newOrder.splice(destination.index, 0, moved);
-
+      const originalSourceIndex = todoList.findIndex(
+        (t) => t.id === draggableId,
+      );
+      const originalDestinationIndex = todoList.findIndex(
+        (t) => t.id === rT[destination.index].id,
+      );
+      console.log();
+      todoList.findIndex((t) => t.id === draggableId);
+      const [moved] = newOrder.splice(originalSourceIndex, 1);
+      newOrder.splice(originalDestinationIndex, 0, moved);
+      console.log(newOrder);
       // 2. 一次性替换， reducer 里已写好 "replaced" 分支
       dispatch({ type: "replaced", todoList: newOrder });
     }
@@ -213,7 +221,7 @@ export default function TODOList() {
 
   return (
     <>
-      <Header className="bg-info">
+      <Header className="bg-info rounded-top">
         <Row align={"middle"} justify="space-between">
           <Col>TODOLIST</Col>
 
@@ -240,7 +248,7 @@ export default function TODOList() {
         </Row>
       </Header>
 
-      <Content className="row  rounded minHeight-large pe-4 ps-4">
+      <Content className="minHeight-large pe-4 ps-4">
         <DragDropContext onDragEnd={onDragEnd}>
           <Droppable droppableId="droppable" type="PARENT">
             {(provided) => (
@@ -249,59 +257,52 @@ export default function TODOList() {
                 ref={provided.innerRef}
                 {...provided.droppableProps}
               >
-                {/*顶部操作Li*/}
-                {
-                  <Controller
-                    isAllDone={isAllDone}
-                    onSwitchShow={handleSwitchShow}
-                    onCompleteAll={handleCompleteAll}
-                    showType={showType}
-                  />
-                }
-                {/*可拖动列表*/}
-                {renderTodos().map((t, index) => (
-                  <Draggable key={t.id} draggableId={t.id} index={index}>
-                    {(provided) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                      >
-                        <ContextMenu
-                          todo={t}
-                          onTodoChange={handleTodoChange}
-                          onTodoDelete={dispatch}
-                        >
-                          <div style={{ cursor: "context-menu" }}>
-                            <TodoItem
-                              todo={t}
-                              onTodoChange={dispatch}
-                              onTodoDelete={dispatch}
-                            />
-                          </div>
-                        </ContextMenu>
-                      </div>
-                    )}
-                  </Draggable>
-                ))}
-                {provided.placeholder}
-                {renderOtherTodos()?.map((t) => {
-                  return (
-                    <TodoItem
-                      other={true}
-                      key={t.id}
-                      todo={t}
-                      onTodoChange={handleTodoChange}
-                      onTodoDelete={dispatch}
+                <Space className="w-100" direction="vertical" size="small">
+                  {/*顶部操作Li*/}
+                  {
+                    <Controller
+                      isAllDone={isAllDone}
+                      onSwitchShow={handleSwitchShow}
+                      onCompleteAll={handleCompleteAll}
+                      showType={showType}
                     />
-                  );
-                })}
+                  }
+                  {/*可拖动列表*/}
+                  {renderTodos().map((t, index) => (
+                    <Draggable key={t.id} draggableId={t.id} index={index}>
+                      {(provided) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                        >
+                          <ContextMenu todo={t} onTodoChange={dispatch}>
+                            <div style={{ cursor: "context-menu" }}>
+                              <TodoItem todo={t} onTodoChange={dispatch} />
+                            </div>
+                          </ContextMenu>
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                  {renderOtherTodos()?.map((t) => {
+                    return (
+                      <TodoItem
+                        other={true}
+                        key={t.id}
+                        todo={t}
+                        onTodoChange={dispatch}
+                      />
+                    );
+                  })}
+                </Space>
               </ul>
             )}
           </Droppable>
         </DragDropContext>
       </Content>
-      <Footer>
+      <Footer className="rounded-bottom">
         <Row align={"middle"} justify={"space-between"}>
           <button
             type="button"

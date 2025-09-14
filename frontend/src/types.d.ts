@@ -33,6 +33,11 @@ interface TodoAddAction {
   completed: false;
 }
 
+interface TodoToggleAction {
+  type: "toggle";
+  todoId: string;
+  newCompleted: boolean;
+}
 interface TodoChangedAction {
   type: "changed";
   todo: Todo;
@@ -68,8 +73,6 @@ interface SubTodoToggleAction {
 /* 1. Action 类型 */
 interface SubTodoChangedAction {
   type: "change_sub";
-  todoId: string; // 父任务 id
-  subId: string; // 要被替换的子任务 subId
   newSubTodo: SubTodo; // 全新的子任务对象
 }
 
@@ -84,9 +87,14 @@ interface SubTodoDeletedAction {
   todoId: string;
   subId: string;
 }
+interface SubTodoCompletedAllAction {
+  type: "completedAll_sub";
+  todoId: string;
+}
 
 type TodoAction =
   | TodoAddAction
+  | TodoToggleAction
   | TodoChangedAction
   | TodoDeletedAction
   | TodoReplaceAction
@@ -95,12 +103,12 @@ type TodoAction =
   | SubTodoToggleAction
   | SubTodoChangedAction
   | SubTodoAddedAction
-  | SubTodoDeletedAction;
+  | SubTodoDeletedAction
+  | SubTodoCompletedAllAction;
 
 interface TodoItemProps {
   todo: Todo;
-  onTodoChange: (action: TodoChangedAction | SubTodoChangedAction) => void;
-  onTodoDelete: (action: TodoDeletedAction | SubTodoDeletedAction) => void;
+  onTodoChange: (action: TodoAction) => void;
 
   other?: boolean;
 }
@@ -108,8 +116,7 @@ interface TodoItemProps {
 interface SubTodoItemProps {
   subTodo: SubTodo;
   todoId: string;
-  onSubTodoChange: (action: SubTodoChangedAction) => void;
-  onSubTodoDelete: (action: SubTodoDeletedAction) => void;
+  onSubTodoChange: (action: TodoAction) => void;
   other?: boolean;
 }
 
@@ -121,7 +128,6 @@ interface ControllerProps {
 }
 interface ContextMenuProps {
   todo: Todo | SubTodo;
-  onTodoChange: (action: TodoChangedAction | SubTodoChangedAction) => void;
+  onTodoChange: (action: TodoAction) => void;
   children: React.ReactNode;
-  onTodoDelete: (action: TodoDeletedAction | SubTodoDeletedAction) => void;
 }

@@ -8,13 +8,24 @@ export default function reducer(draft: Todo[], action: TodoAction) {
     case "completedAll":
       switch (action.showType) {
         case ShowType.all:
-          draft.forEach((t) => (t.completed = action.completeOrUncomplete));
+          draft.forEach((t) => {
+            t.completed = action.completeOrUncomplete;
+            // 子任务也同样
+            t.subTodo?.forEach((st) => {
+              st.subCompleted = action.completeOrUncomplete;
+            });
+          });
+
           break;
         case ShowType.completed:
           draft.forEach((t) => {
             if (t.completed) {
               t.completed = false;
             }
+            // 子任务也同样
+            t.subTodo?.forEach((st) => {
+              st.subCompleted = false;
+            });
           });
           break;
         case ShowType.uncompleted:
@@ -22,10 +33,20 @@ export default function reducer(draft: Todo[], action: TodoAction) {
             if (!t.completed) {
               t.completed = true;
             }
+            // 子任务也同样
+            t.subTodo?.forEach((st) => {
+              st.subCompleted = true;
+            });
           });
           break;
       }
       break;
+    case "toggle": {
+      const todo = draft.find((t) => t.id === action.todoId);
+      if (todo) todo.completed = action.newCompleted; // 安全，无 TS2532
+
+      return;
+    }
     case "deleted":
       return draft.filter((d) => d.id !== action.deleteId);
     case "deletedAll":
@@ -44,6 +65,7 @@ export default function reducer(draft: Todo[], action: TodoAction) {
       break;
     // 拖动排序专属
     case "replaced":
+      console.log(action.todoList);
       return action.todoList;
 
     /* 1. 切换子任务完成状态 */
@@ -56,10 +78,12 @@ export default function reducer(draft: Todo[], action: TodoAction) {
     }
     // 更新子任务
     case "change_sub": {
-      const parent = draft.find((t) => t.id === action.todoId);
+      const parent = draft.find((t) => t.id === action.newSubTodo.todoId);
       if (!parent || !parent.subTodo) return;
 
-      const idx = parent.subTodo.findIndex((s) => s.subId === action.subId);
+      const idx = parent.subTodo.findIndex(
+        (s) => s.subId === action.newSubTodo.subId,
+      );
       if (idx === -1) return;
 
       parent.subTodo[idx] = action.newSubTodo; // 整颗替换
@@ -88,6 +112,13 @@ export default function reducer(draft: Todo[], action: TodoAction) {
       if (!parent || !parent.subTodo) return;
       const idx = parent.subTodo.findIndex((s) => s.subId === action.subId);
       if (idx !== -1) parent.subTodo.splice(idx, 1);
+      break;
+    }
+    case "completedAll_sub": {
+      let i = draft.findIndex((t) => t.id === action.todoId);
+      draft[i].subTodo?.forEach((t) => {
+        t.subCompleted = draft[i].completed;
+      });
       break;
     }
   }

@@ -3,7 +3,7 @@ import type { TodoItemProps } from "@/types";
 import { Priority } from "@/constants";
 import "./TodoItem.css";
 import { Collapse } from "react-bootstrap";
-import { Col, Row } from "antd";
+import { Col, message, Row, Space } from "antd";
 import dayjs from "dayjs";
 
 import SubTodoItem from "@/SubTodoItem";
@@ -11,12 +11,7 @@ import { RightOutlined } from "@ant-design/icons";
 import { Draggable, Droppable } from "@hello-pangea/dnd";
 import ContextMenu from "@/ContextMenu";
 
-export default function TodoItem({
-  todo,
-  onTodoChange,
-  onTodoDelete,
-  other,
-}: TodoItemProps) {
+export default function TodoItem({ todo, onTodoChange, other }: TodoItemProps) {
   const [editType, setEditType] = useState<boolean>(false);
   const [text, setText] = useState<string>("");
   const [subOpen, setSubOpen] = useState(false);
@@ -105,49 +100,45 @@ export default function TodoItem({
             <Collapse in={subOpen}>
               <ul
                 id="subList"
-                className=" ps-4"
                 ref={provided.innerRef}
                 {...provided.droppableProps}
               >
-                {/*可拖动列表*/}
-                {todo.subTodo?.map((st, index) => (
-                  <Draggable
-                    key={st.subId}
-                    draggableId={st.subId}
-                    index={index}
-                  >
-                    {(provided) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                      >
-                        <ContextMenu
-                          todo={st}
-                          onTodoChange={onTodoChange}
-                          onTodoDelete={onTodoDelete}
+                <Space className="w-100" direction="vertical" size="small">
+                  {/*可拖动列表*/}
+                  {todo.subTodo?.map((st, index) => (
+                    <Draggable
+                      key={st.subId}
+                      draggableId={st.subId}
+                      index={index}
+                    >
+                      {(provided) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
                         >
-                          <div
-                            onContextMenu={(e) => {
-                              e.stopPropagation();
-                              e.preventDefault();
-                            }}
-                            style={{ cursor: "context-menu" }}
-                          >
-                            <SubTodoItem
-                              todoId={todo.id}
-                              key={st.subId}
-                              subTodo={st}
-                              onSubTodoChange={onTodoChange}
-                              onSubTodoDelete={onTodoDelete}
-                            />
-                          </div>
-                        </ContextMenu>
-                      </div>
-                    )}
-                  </Draggable>
-                ))}
-                {provided.placeholder}
+                          <ContextMenu todo={st} onTodoChange={onTodoChange}>
+                            <div
+                              onContextMenu={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                              }}
+                              style={{ cursor: "context-menu" }}
+                            >
+                              <SubTodoItem
+                                todoId={todo.id}
+                                key={st.subId}
+                                subTodo={st}
+                                onSubTodoChange={onTodoChange}
+                              />
+                            </div>
+                          </ContextMenu>
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </Space>
               </ul>
             </Collapse>
           )}
@@ -176,7 +167,7 @@ export default function TodoItem({
   return (
     <>
       <li
-        className={`row d-flex justify-content-between highlight rounded p-1  ${other ? "opacity-25" : ""}`}
+        className={`row d-flex justify-content-between highlight rounded pe-0 ps-0 pt-2 pb-2  ${other ? "opacity-25" : ""}`}
       >
         <Row justify={"start"} align={"middle"} className="ps-0">
           <Col span={1}>
@@ -187,15 +178,15 @@ export default function TodoItem({
               type="checkbox"
               className={`me-1 ${priClass}`}
               checked={todo.completed}
-              onChange={(e) =>
+              onChange={(e) => {
                 onTodoChange({
-                  type: "changed",
-                  todo: {
-                    ...todo,
-                    completed: e.target.checked,
-                  },
-                })
-              }
+                  type: "toggle",
+                  todoId: todo.id,
+                  newCompleted: e.currentTarget.checked,
+                });
+                onTodoChange({ type: "completedAll_sub", todoId: todo.id });
+                if (e.currentTarget.checked) message.info(`已完成${todo.text}`);
+              }}
             />
             {renderEditInput()}
           </Col>

@@ -2,11 +2,10 @@ import React, { useState } from "react";
 import type { SubTodoItemProps } from "@/types";
 import { Priority } from "@/constants";
 import "./TodoItem.css";
-import { Col, Row } from "antd";
+import { Col, message, Row } from "antd";
 import dayjs from "dayjs";
 
 export default function SubTodoItem({
-  todoId,
   subTodo,
   onSubTodoChange,
   other,
@@ -51,8 +50,6 @@ export default function SubTodoItem({
           onChange={(e) => handleEditChanged(e.currentTarget.value)}
           onBlur={() => {
             onSubTodoChange({
-              subId: subTodo.subId,
-              todoId: todoId,
               type: "change_sub",
               newSubTodo: {
                 ...subTodo,
@@ -94,7 +91,7 @@ export default function SubTodoItem({
   return (
     <>
       <li
-        className={`row sub-highlight d-flex justify-content-between rounded p-1  ${other ? "opacity-25" : ""}`}
+        className={`row sub-highlight d-flex justify-content-between rounded ps-4 p-1  ${other ? "opacity-25" : ""}`}
       >
         <Row justify={"start"} align={"middle"} className="ps-0">
           {/*勾选框和todo内容*/}
@@ -109,17 +106,16 @@ export default function SubTodoItem({
                 type="checkbox"
                 className={`me-1 ${priClass}`}
                 checked={subTodo.subCompleted}
-                onChange={(e) =>
+                onChange={(e) => {
                   onSubTodoChange({
-                    subId: subTodo.subId,
-                    todoId: todoId,
                     type: "change_sub",
                     newSubTodo: {
                       ...subTodo,
                       subCompleted: e.target.checked,
                     },
-                  })
-                }
+                  });
+                  if (e.currentTarget.checked) message.info(`已完成`);
+                }}
               />
               {renderEditInput()}
             </span>
