@@ -122,5 +122,6 @@ interface ControllerProps {
 }
 interface ContextMenuProps {
     todo:Todo,
-    onTodoChange: (action:TodoChangedAction|SubTodoChangedAction) => void,
+
+    children: React.ReactNode,
 }
