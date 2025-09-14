@@ -1,16 +1,15 @@
 import React, { useState } from "react";
 import type { TodoItemProps } from "@/types";
-import { Priority, PriorityName } from "@/constants";
+import { Priority } from "@/constants";
 import "./TodoItem.css";
-import { Button, Card, Collapse, Dropdown } from "react-bootstrap";
-import { Col, DatePicker, Row } from "antd";
+import { Collapse } from "react-bootstrap";
+import { Col, Row } from "antd";
 import dayjs from "dayjs";
 
-import type { RangePickerProps } from "antd/es/date-picker";
 import SubTodoItem from "@/SubTodoItem";
 import { RightOutlined } from "@ant-design/icons";
-
-const { RangePicker } = DatePicker;
+import { Draggable, Droppable } from "@hello-pangea/dnd";
+import ContextMenu from "@/ContextMenu";
 
 export default function TodoItem({
   todo,
@@ -20,8 +19,6 @@ export default function TodoItem({
 }: TodoItemProps) {
   const [editType, setEditType] = useState<boolean>(false);
   const [text, setText] = useState<string>("");
-  // 展开折叠筐
-  const [open, setOpen] = useState(false);
   const [subOpen, setSubOpen] = useState(false);
 
   let priClass;
@@ -84,27 +81,13 @@ export default function TodoItem({
     }
   }
 
-  const handleTodoDeadLineChange: RangePickerProps["onChange"] = (dates) => {
-    // @ts-ignore
-    const [local, deadLine] = dates;
-    onTodoChange({
-      type: "changed",
-      todo: {
-        ...todo,
-        datetimeLocal: dayjs(local).format(),
-        deadline: dayjs(deadLine).format(),
-      },
-    });
-  };
-
   // 倒计时
   const renderCountdown = () => {
     if (!todo.deadline && !todo.datetimeLocal) return null;
     const leftDay = dayjs(todo.deadline).diff(dayjs(), "day");
-    if (leftDay > 1)
-      return <span>{dayjs(todo.deadline).diff(dayjs(), "day")}天</span>;
-    if (leftDay == 0) return <span>今天</span>;
-    if (leftDay == 1) return <span>明天</span>;
+    if (leftDay > 1) return <span className="text-primary">{leftDay}天</span>;
+    if (leftDay == 0) return <span className="text-primary">今天</span>;
+    if (leftDay == 1) return <span className="text-primary">明天</span>;
     if (leftDay < 0)
       return (
         <span className="text-danger">
@@ -113,24 +96,62 @@ export default function TodoItem({
       );
     // <span className="text-danger">已逾期{Math.abs(dayjs(todo.deadline).diff(dayjs(), 'day'))}天</span>
   };
+
   const SubList = () => {
     if (todo?.subTodo) {
       return (
-        <Collapse in={subOpen}>
-          <ul id="subList" className=" ps-4">
-            {todo.subTodo.map((st) => {
-              return (
-                <SubTodoItem
-                  todoId={todo.id}
-                  key={st.subId}
-                  subTodo={st}
-                  onSubTodoChange={onTodoChange}
-                  onSubTodoDelete={onTodoDelete}
-                />
-              );
-            })}
-          </ul>
-        </Collapse>
+        <Droppable droppableId="subTodo" type="SUB">
+          {(provided) => (
+            <Collapse in={subOpen}>
+              <ul
+                id="subList"
+                className=" ps-4"
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+              >
+                {/*可拖动列表*/}
+                {todo.subTodo?.map((st, index) => (
+                  <Draggable
+                    key={st.subId}
+                    draggableId={st.subId}
+                    index={index}
+                  >
+                    {(provided) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                      >
+                        <ContextMenu
+                          todo={st}
+                          onTodoChange={onTodoChange}
+                          onTodoDelete={onTodoDelete}
+                        >
+                          <div
+                            onContextMenu={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                            }}
+                            style={{ cursor: "context-menu" }}
+                          >
+                            <SubTodoItem
+                              todoId={todo.id}
+                              key={st.subId}
+                              subTodo={st}
+                              onSubTodoChange={onTodoChange}
+                              onSubTodoDelete={onTodoDelete}
+                            />
+                          </div>
+                        </ContextMenu>
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </ul>
+            </Collapse>
+          )}
+        </Droppable>
       );
     }
     return null;
@@ -145,7 +166,6 @@ export default function TodoItem({
           rotate={subOpen ? 90 : 0}
           onClick={() => setSubOpen(!subOpen)}
           aria-controls="subList"
-          aria-expanded={open}
         />
       );
     }
@@ -184,74 +204,11 @@ export default function TodoItem({
             className="d-flex justify-content-end align-items-center"
           >
             <span>{renderCountdown()}</span>
-
-            <Button
-              onClick={() => setOpen(!open)}
-              aria-controls="EditTodo"
-              aria-expanded={open}
-              variant="primary"
-              className="me-2"
-            >
-              编辑
-            </Button>
-            <button
-              type="button"
-              className="btn btn-danger btn-sm"
-              onClick={() =>
-                onTodoDelete({ type: "deleted", deleteId: todo.id })
-              }
-            >
-              删除
-            </button>
           </Col>
         </Row>
         {/*子任务列表*/}
         {SubList()}
         {/*编辑折叠框*/}
-        <Collapse in={open}>
-          <div id="EditTodo">
-            <Card>
-              <Card.Body className="d-flex justify-content-between align-items-center">
-                <div>
-                  <span>优先级：</span>
-                  <Dropdown
-                    className="d-inline-block"
-                    onSelect={(eventKey) => {
-                      onTodoChange({
-                        type: "changed",
-                        todo: { ...todo, priority: Number(eventKey) },
-                      });
-                    }}
-                  >
-                    <Dropdown.Toggle variant="primary" id="dropdown-basic">
-                      {
-                        // @ts-ignore
-                        PriorityName[String(todo.priority)]
-                      }
-                    </Dropdown.Toggle>
-
-                    <Dropdown.Menu>
-                      {Object.entries(Priority).map(([k, v]) => {
-                        return (
-                          <Dropdown.Item key={k} eventKey={v}>
-                            {k}
-                          </Dropdown.Item>
-                        );
-                      })}
-                    </Dropdown.Menu>
-                  </Dropdown>
-                </div>
-                <div>
-                  <span>任务开始结束时间：</span>
-                  <RangePicker
-                    onChange={handleTodoDeadLineChange}
-                    size="small"
-                  />
-                </div>
-              </Card.Body>
-            </Card>
-          </div>
-        </Collapse>
       </li>
     </>
   );

@@ -1,6 +1,7 @@
 import "./TODOList.css";
 import { v4 as uuidv4 } from "uuid";
 import { useImmerReducer } from "use-immer";
+// @ts-ignore
 import React, { useState } from "react";
 import Controller from "./Controller";
 import TodoItem from "./TodoItem";
@@ -13,16 +14,17 @@ import {
 import reducer from "./reducer.ts";
 import type {
   ShowType as ST,
+  SubTodo,
+  SubTodoChangedAction,
   Todo,
-  TodoAction,
+  TodoChangedAction,
   TodoCompleteAllAction,
 } from "@/types.d.ts";
 import { ShowType, type ShowTypeValue } from "@/constants";
 import dayjs from "dayjs";
 
 import ContextMenu from "./ContextMenu";
-import { Col, Layout, Row } from "antd";
-import Sider from "antd/es/layout/Sider";
+import { Col, Row } from "antd";
 import { Content, Footer, Header } from "antd/es/layout/layout";
 
 // 1. 完成   / 未完成 过滤栏添加三个按钮：All / Active / Completed，点谁就只显示对应列表。
@@ -37,7 +39,7 @@ import { Content, Footer, Header } from "antd/es/layout/layout";
 export default function TODOList() {
   let initialTodoList: Todo[] = [
     {
-      id: uuidv4(),
+      id: "1",
       text: "学习 React",
       completed: false,
       priority: 2,
@@ -46,11 +48,30 @@ export default function TODOList() {
       subTodo: [
         {
           subId: uuidv4(),
-          subText: "Sub 学习  React",
+          subText: "Sub 学习  React1",
           subCompleted: false,
           subPriority: 2,
           subDatetimeLocal: dayjs().format(),
           subDeadline: dayjs("2025-9-18").format(),
+          todoId: "1",
+        },
+        {
+          subId: uuidv4(),
+          subText: "Sub 学习  React2",
+          subCompleted: false,
+          subPriority: 2,
+          subDatetimeLocal: dayjs().format(),
+          subDeadline: dayjs("2025-9-18").format(),
+          todoId: "1",
+        },
+        {
+          subId: uuidv4(),
+          subText: "Sub 学习  React3",
+          subCompleted: false,
+          subPriority: 2,
+          subDatetimeLocal: dayjs().format(),
+          subDeadline: dayjs("2025-9-18").format(),
+          todoId: "1",
         },
       ],
     },
@@ -138,7 +159,7 @@ export default function TODOList() {
   }
 
   //当单个任务完成的时候
-  function handleTodoChange(action: TodoAction) {
+  function handleTodoChange(action: TodoChangedAction | SubTodoChangedAction) {
     dispatch(action);
   }
 
@@ -152,19 +173,37 @@ export default function TODOList() {
 
   // 拖动排序方法
   function onDragEnd(result: DropResult) {
-    const { destination, source } = result;
+    const { destination, source, type, draggableId } = result;
+    if (type === "PARENT") {
+      // 没放下 / 原地放下
+      if (!destination) return;
+      if (destination.index === source.index) return;
 
-    // 没放下 / 原地放下
-    if (!destination) return;
-    if (destination.index === source.index) return;
+      // 1. 深拷贝（Immer 外做，避免 draft 混淆）
+      const newOrder = [...todoList];
+      const [moved] = newOrder.splice(source.index, 1);
+      newOrder.splice(destination.index, 0, moved);
 
-    // 1. 深拷贝（Immer 外做，避免 draft 混淆）
-    const newOrder = [...todoList];
-    const [moved] = newOrder.splice(source.index, 1);
-    newOrder.splice(destination.index, 0, moved);
+      // 2. 一次性替换， reducer 里已写好 "replaced" 分支
+      dispatch({ type: "replaced", todoList: newOrder });
+    }
+    if (type === "SUB") {
+      // @ts-ignore
+      let subId = draggableId;
+      let todo =
+        todoList[
+          todoList.findIndex((t) => t.subTodo?.some((st) => st.subId === subId))
+        ];
+      let subTodo = todo.subTodo as SubTodo[];
 
-    // 2. 一次性替换， reducer 里已写好 "replaced" 分支
-    dispatch({ type: "replaced", todoList: newOrder });
+      const newOrder = [...subTodo];
+      const [moved] = newOrder.splice(source.index, 1);
+      // @ts-ignore
+      newOrder.splice(destination.index, 0, moved);
+
+      // 2. 一次性替换， reducer 里已写好 "changed" 分支
+      dispatch({ type: "changed", todo: { ...todo, subTodo: newOrder } });
+    }
   }
 
   // 删除所有已完成
@@ -172,120 +211,110 @@ export default function TODOList() {
     dispatch({ type: "deletedAll", todoList });
   }
 
-  const siderStyle: React.CSSProperties = {
-    textAlign: "center",
-    lineHeight: "120px",
-    color: "#fff",
-    backgroundColor: "#1677ff",
-  };
-
   return (
     <>
-      <Layout>
-        <Sider width="25%" style={siderStyle}>
-          Sider
-        </Sider>
-        <Layout>
-          <Header className="bg-info">
-            <Row align={"middle"} justify="space-between">
-              <Col>TODOLIST</Col>
+      <Header className="bg-info">
+        <Row align={"middle"} justify="space-between">
+          <Col>TODOLIST</Col>
 
-              <Col>
-                <div className="input-group input-group-sm ">
-                  <input
-                    type="text"
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    className="form-control"
-                    placeholder="Username"
-                    aria-label="Username"
-                    aria-describedby="basic-addon1"
+          <Col>
+            <div className="input-group input-group-sm ">
+              <input
+                type="text"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                className="form-control"
+                placeholder="Username"
+                aria-label="Username"
+                aria-describedby="basic-addon1"
+              />
+              <button
+                type="button"
+                onClick={handleAdded}
+                className="btn btn-primary btn-sm"
+              >
+                添加
+              </button>
+            </div>
+          </Col>
+        </Row>
+      </Header>
+
+      <Content className="row  rounded minHeight-large pe-4 ps-4">
+        <DragDropContext onDragEnd={onDragEnd}>
+          <Droppable droppableId="droppable" type="PARENT">
+            {(provided) => (
+              <ul
+                className="col p-2"
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+              >
+                {/*顶部操作Li*/}
+                {
+                  <Controller
+                    isAllDone={isAllDone}
+                    onSwitchShow={handleSwitchShow}
+                    onCompleteAll={handleCompleteAll}
+                    showType={showType}
                   />
-                  <button
-                    type="button"
-                    onClick={handleAdded}
-                    className="btn btn-primary btn-sm"
-                  >
-                    添加
-                  </button>
-                </div>
-              </Col>
-            </Row>
-          </Header>
-
-          <Content className="row  rounded minHeight-large pe-4 ps-4">
-            <DragDropContext onDragEnd={onDragEnd}>
-              <Droppable droppableId="droppable">
-                {(provided) => (
-                  <ul
-                    className="col p-2"
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                  >
-                    {/*顶部操作Li*/}
-                    {
-                      <Controller
-                        isAllDone={isAllDone}
-                        onSwitchShow={handleSwitchShow}
-                        onCompleteAll={handleCompleteAll}
-                        showType={showType}
-                      />
-                    }
-                    {/*可拖动列表*/}
-                    {renderTodos().map((t, index) => (
-                      <Draggable key={t.id} draggableId={t.id} index={index}>
-                        {(provided) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                          >
-                            <ContextMenu todo={t}>
-                              <div style={{ cursor: "context-menu" }}>
-                                <TodoItem
-                                  todo={t}
-                                  onTodoChange={dispatch}
-                                  onTodoDelete={dispatch}
-                                />
-                              </div>
-                            </ContextMenu>
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                    {renderOtherTodos()?.map((t) => {
-                      return (
-                        <TodoItem
-                          other={true}
-                          key={t.id}
+                }
+                {/*可拖动列表*/}
+                {renderTodos().map((t, index) => (
+                  <Draggable key={t.id} draggableId={t.id} index={index}>
+                    {(provided) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                      >
+                        <ContextMenu
                           todo={t}
                           onTodoChange={handleTodoChange}
                           onTodoDelete={dispatch}
-                        />
-                      );
-                    })}
-                  </ul>
-                )}
-              </Droppable>
-            </DragDropContext>
-          </Content>
-          <Footer>
-            <Row align={"middle"} justify={"space-between"}>
-              <button
-                type="button"
-                onClick={() => handleDeleteAllCompleted()}
-                className="btn btn-primary btn-sm"
-              >
-                删除所有已完成
-              </button>
-              <span className="">
-                未完成：{calculateUncompletedCount()}个{}
-              </span>
-            </Row>
-          </Footer>
-        </Layout>
-      </Layout>
+                        >
+                          <div style={{ cursor: "context-menu" }}>
+                            <TodoItem
+                              todo={t}
+                              onTodoChange={dispatch}
+                              onTodoDelete={dispatch}
+                            />
+                          </div>
+                        </ContextMenu>
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+                {renderOtherTodos()?.map((t) => {
+                  return (
+                    <TodoItem
+                      other={true}
+                      key={t.id}
+                      todo={t}
+                      onTodoChange={handleTodoChange}
+                      onTodoDelete={dispatch}
+                    />
+                  );
+                })}
+              </ul>
+            )}
+          </Droppable>
+        </DragDropContext>
+      </Content>
+      <Footer>
+        <Row align={"middle"} justify={"space-between"}>
+          <button
+            type="button"
+            onClick={() => handleDeleteAllCompleted()}
+            className="btn btn-primary btn-sm"
+          >
+            删除所有已完成
+          </button>
+          <span className="">
+            未完成：{calculateUncompletedCount()}个{}
+          </span>
+        </Row>
+      </Footer>
     </>
   );
 }

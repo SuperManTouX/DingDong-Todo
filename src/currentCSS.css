@@ -432,6 +432,9 @@ button + button {
     background: #99f1b8;
     border-color: #08091a;
 }
+.ctx-menu-left .ant-dropdown-menu-item {
+    text-align: left;
+}
 
 /* 暗黑模式 Dark mode */
 /* @media (prefers-color-scheme: dark) {
