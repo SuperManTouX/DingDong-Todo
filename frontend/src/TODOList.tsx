@@ -1,8 +1,7 @@
 import "./TODOList.css";
 import { v4 as uuidv4 } from "uuid";
 import { useImmerReducer } from "use-immer";
-// @ts-ignore
-import React, { useState } from "react";
+import { useState } from "react";
 import Controller from "./Controller";
 import TodoItem from "./TodoItem";
 import {
@@ -11,18 +10,13 @@ import {
   Draggable,
   type DropResult,
 } from "@hello-pangea/dnd";
-import reducer from "./reducer.ts";
-import type {
-  ShowType as ST,
-  SubTodo,
-  Todo,
-  TodoCompleteAllAction,
-} from "@/types.d.ts";
+import reducer from "./reducer";
+import type { Todo, TodoCompleteAllAction } from "@/types";
 import { ShowType, type ShowTypeValue } from "@/constants";
 import dayjs from "dayjs";
-
 import ContextMenu from "./ContextMenu";
 import { Col, Row, Space } from "antd";
+import { Collapse } from "react-bootstrap";
 import { Content, Footer, Header } from "antd/es/layout/layout";
 
 // 1. 完成   / 未完成 过滤栏添加三个按钮：All / Active / Completed，点谁就只显示对应列表。
@@ -36,6 +30,7 @@ import { Content, Footer, Header } from "antd/es/layout/layout";
 
 export default function TODOList() {
   let initialTodoList: Todo[] = [
+    // 根任务，depth 为 0
     {
       id: "1",
       text: "学习 React",
@@ -43,36 +38,41 @@ export default function TODOList() {
       priority: 2,
       datetimeLocal: dayjs().format(),
       deadline: dayjs("2025-9-15").format(),
-      subTodo: [
-        {
-          subId: uuidv4(),
-          subText: "Sub 学习  React1",
-          subCompleted: false,
-          subPriority: 2,
-          subDatetimeLocal: dayjs().format(),
-          subDeadline: dayjs("2025-9-18").format(),
-          todoXId: "1",
-        },
-        {
-          subId: uuidv4(),
-          subText: "Sub 学习  React2",
-          subCompleted: false,
-          subPriority: 2,
-          subDatetimeLocal: dayjs().format(),
-          subDeadline: dayjs("2025-9-18").format(),
-          todoXId: "1",
-        },
-        {
-          subId: uuidv4(),
-          subText: "Sub 学习  React3",
-          subCompleted: false,
-          subPriority: 2,
-          subDatetimeLocal: dayjs().format(),
-          subDeadline: dayjs("2025-9-18").format(),
-          todoXId: "1",
-        },
-      ],
+      parentId: null,
+      depth: 0,
     },
+    // 子任务，depth 为 1
+    {
+      id: uuidv4(),
+      text: "Sub 学习  React1",
+      completed: false,
+      priority: 2,
+      datetimeLocal: dayjs().format(),
+      deadline: dayjs("2025-9-18").format(),
+      parentId: "1",
+      depth: 1,
+    },
+    {
+      id: uuidv4(),
+      text: "Sub 学习  React2",
+      completed: false,
+      priority: 2,
+      datetimeLocal: dayjs().format(),
+      deadline: dayjs("2025-9-18").format(),
+      parentId: "1",
+      depth: 1,
+    },
+    {
+      id: uuidv4(),
+      text: "Sub 学习  React3",
+      completed: false,
+      priority: 2,
+      datetimeLocal: dayjs().format(),
+      deadline: dayjs("2025-9-18").format(),
+      parentId: "1",
+      depth: 1,
+    },
+    // 其他根任务
     {
       id: uuidv4(),
       text: "写一个 TODOListOriginal 组件",
@@ -80,6 +80,8 @@ export default function TODOList() {
       priority: 1,
       datetimeLocal: dayjs().format(),
       deadline: dayjs("2025-9-10").format(),
+      parentId: null,
+      depth: 0,
     },
     {
       id: uuidv4(),
@@ -88,12 +90,16 @@ export default function TODOList() {
       priority: 0,
       datetimeLocal: dayjs().format(),
       deadline: dayjs("2025-9-10").format(),
+      parentId: null,
+      depth: 0,
     },
     {
       id: uuidv4(),
       text: "test",
       completed: false,
       priority: 0,
+      parentId: null,
+      depth: 0,
     },
   ];
   // 读取本地值
@@ -102,23 +108,83 @@ export default function TODOList() {
   //     initialTodoList = JSON.parse(localStorage.getItem('todoList') as string) as Todo[];
   // }
   const [text, setText] = useState<string>("");
-  const [showType, setShowType] = useState<ST>(ShowType.uncompleted);
+  const [showType, setShowType] = useState<ShowTypeValue>(ShowType.uncompleted);
   const [todoList, dispatch] = useImmerReducer(reducer, initialTodoList);
+  const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>(
+    {},
+  );
   let isAllDone = todoList.length > 0 && todoList.every((t) => t.completed);
 
   // 设置本地值
   // localStorage.setItem('todoList', JSON.stringify(todoList))
 
-  //点击添加按钮
+  //点击添加按钮 - 添加根任务
   function handleAdded(): void {
     dispatch({ type: "added", text, completed: false });
     setText("");
+  }
+
+  // 添加子任务
+  function handleAddSubTask(parentId: string, parentDepth: number): void {
+    if (text.trim()) {
+      dispatch({
+        type: "added",
+        text,
+        completed: false,
+        parentId,
+        depth: parentDepth + 1,
+      });
+      setText("");
+    } else {
+      // 如果没有输入文本，可以提示用户
+      console.log("请输入子任务内容");
+    }
   }
 
   //切换任务列表（全部，未完成，已完成）
   function handleSwitchShow(showType: ShowTypeValue) {
     setShowType(showType);
   }
+
+  // 获取层次化的任务列表（考虑过滤条件）
+  function getHierarchicalTasks(type: boolean = true): (Todo | Todo[])[] {
+    if (!type && renderOtherTodos().length === 0) return [];
+    // 首先获取过滤后的任务列表
+    const filteredTodos = type ? renderTodos() : renderOtherTodos();
+
+    // 获取过滤后的根任务
+    const rootTasks = filteredTodos.filter((task) => task.parentId === null);
+
+    const result: (Todo | Todo[])[] = [];
+
+    rootTasks.forEach((rootTask) => {
+      result.push(rootTask);
+      // 获取该根任务的子任务（只包含在filteredTodos中的子任务）
+      const subTasks = todoList
+        .filter((task) => task.parentId === rootTask.id)
+        .filter((subTask) => filteredTodos.some((t) => t.id === subTask.id));
+
+      // 仅在任务展开状态下添加子任务
+      if (subTasks.length > 0 && expandedTasks[rootTask.id]) {
+        result.push(subTasks);
+      }
+    });
+
+    return result;
+  }
+
+  // 切换任务展开状态
+  const toggleTaskExpand = (taskId: string) => {
+    setExpandedTasks((prev) => ({
+      ...prev,
+      [taskId]: !prev[taskId],
+    }));
+  };
+
+  // 检查任务是否有子任务
+  const hasSubTasks = (taskId: string): boolean => {
+    return todoList.some((task) => task.parentId === taskId);
+  };
 
   //todo模板初始化
   function renderTodos(): Todo[] {
@@ -138,10 +204,10 @@ export default function TODOList() {
     }
   }
 
-  function renderOtherTodos(): Todo[] | null {
+  function renderOtherTodos(): Todo[] {
     switch (showType) {
       case ShowType.all:
-        return null;
+        return [];
       //   已完成
       case ShowType.completed:
         return todoList.filter((t) => !t.completed);
@@ -171,47 +237,29 @@ export default function TODOList() {
     }, 0);
   }
 
-  // 拖动排序方法
+  // 拖动排序方法 - 扁平化后只处理PARENT类型，所有任务都在同一列表中
   function onDragEnd(result: DropResult) {
-    const { destination, source, type, draggableId } = result;
-    if (type === "PARENT") {
-      // 没放下 / 原地放下
-      if (!destination) return;
-      if (destination.index === source.index) return;
-      // 1. 深拷贝（Immer 外做，避免 draft 混淆）
-      const rT = [...renderTodos()];
-      const newOrder = [...todoList];
-      const originalSourceIndex = todoList.findIndex(
-        (t) => t.id === draggableId,
-      );
-      const originalDestinationIndex = todoList.findIndex(
-        (t) => t.id === rT[destination.index].id,
-      );
-      console.log();
-      todoList.findIndex((t) => t.id === draggableId);
-      const [moved] = newOrder.splice(originalSourceIndex, 1);
-      newOrder.splice(originalDestinationIndex, 0, moved);
-      console.log(newOrder);
-      // 2. 一次性替换， reducer 里已写好 "replaced" 分支
-      dispatch({ type: "replaced", todoList: newOrder });
-    }
-    if (type === "SUB") {
-      // @ts-ignore
-      let subId = draggableId;
-      let todo =
-        todoList[
-          todoList.findIndex((t) => t.subTodo?.some((st) => st.subId === subId))
-        ];
-      let subTodo = todo.subTodo as SubTodo[];
+    const { destination, source, draggableId } = result;
 
-      const newOrder = [...subTodo];
-      const [moved] = newOrder.splice(source.index, 1);
-      // @ts-ignore
-      newOrder.splice(destination.index, 0, moved);
+    // 现在只需要处理PARENT类型，因为所有任务都在同一扁平化列表中
+    // 没放下 / 原地放下
+    if (!destination) return;
+    if (destination.index === source.index) return;
 
-      // 2. 一次性替换， reducer 里已写好 "changed" 分支
-      dispatch({ type: "changed", todo: { ...todo, subTodo: newOrder } });
-    }
+    // 1. 深拷贝（Immer 外做，避免 draft 混淆）
+    const rT = [...renderTodos()];
+    const newOrder = [...todoList];
+    const originalSourceIndex = todoList.findIndex((t) => t.id === draggableId);
+    const originalDestinationIndex = todoList.findIndex(
+      (t) => t.id === rT[destination.index].id,
+    );
+
+    // 2. 调整任务顺序
+    const [moved] = newOrder.splice(originalSourceIndex, 1);
+    newOrder.splice(originalDestinationIndex, 0, moved);
+
+    // 3. 一次性替换， reducer 里已写好 "replaced" 分支
+    dispatch({ type: "replaced", todoList: newOrder });
   }
 
   // 删除所有已完成
@@ -267,35 +315,124 @@ export default function TODOList() {
                       showType={showType}
                     />
                   }
-                  {/*可拖动列表*/}
-                  {renderTodos().map((t, index) => (
-                    <Draggable key={t.id} draggableId={t.id} index={index}>
-                      {(provided) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
+                  {/*层次化任务列表渲染*/}
+                  {getHierarchicalTasks().map((item, index) => {
+                    // 如果是根任务
+                    if ("id" in item) {
+                      return (
+                        <Draggable
+                          key={item.id}
+                          draggableId={item.id}
+                          index={index}
                         >
-                          <ContextMenu todo={t} onTodoChange={dispatch}>
+                          {(provided) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                            >
+                              <ContextMenu
+                                todo={item}
+                                onTodoChange={dispatch}
+                                onAddSubTask={handleAddSubTask}
+                              >
+                                <div style={{ cursor: "context-menu" }}>
+                                  <TodoItem
+                                    todo={item}
+                                    onTodoChange={dispatch}
+                                    hasSubTasks={hasSubTasks(item.id)}
+                                    isExpanded={expandedTasks[item.id]}
+                                    onToggleExpand={() =>
+                                      toggleTaskExpand(item.id)
+                                    }
+                                  />
+                                </div>
+                              </ContextMenu>
+                              {/* 子任务折叠面板 */}
+                              <Collapse in={expandedTasks[item.id]}>
+                                <div style={{ marginLeft: "40px" }}>
+                                  {/* 子任务将在getHierarchicalTasks中自动渲染 */}
+                                </div>
+                              </Collapse>
+                            </div>
+                          )}
+                        </Draggable>
+                      );
+                    }
+                    // 如果是子任务数组
+                    else {
+                      return item.map((subTodo) => (
+                        <div
+                          key={subTodo.id}
+                          style={{ marginLeft: `${subTodo.depth * 20}px` }}
+                          className="sub-task-container"
+                        >
+                          <ContextMenu
+                            todo={subTodo}
+                            onTodoChange={dispatch}
+                            onAddSubTask={handleAddSubTask}
+                          >
                             <div style={{ cursor: "context-menu" }}>
-                              <TodoItem todo={t} onTodoChange={dispatch} />
+                              <TodoItem
+                                todo={subTodo}
+                                onTodoChange={dispatch}
+                                hasSubTasks={hasSubTasks(subTodo.id)}
+                                isExpanded={expandedTasks[subTodo.id]}
+                                onToggleExpand={() =>
+                                  toggleTaskExpand(subTodo.id)
+                                }
+                              />
                             </div>
                           </ContextMenu>
                         </div>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                  {renderOtherTodos()?.map((t) => {
-                    return (
-                      <TodoItem
-                        other={true}
-                        key={t.id}
-                        todo={t}
-                        onTodoChange={dispatch}
-                      />
-                    );
+                      ));
+                    }
                   })}
+                  {provided.placeholder}
+                  <div style={{ opacity: `.3` }}>
+                    {getHierarchicalTasks(false).map((item) => {
+                      console.log(1);
+                      if ("id" in item) {
+                        return (
+                          <TodoItem
+                            todo={item}
+                            onTodoChange={dispatch}
+                            hasSubTasks={hasSubTasks(item.id)}
+                            isExpanded={expandedTasks[item.id]}
+                            onToggleExpand={() => toggleTaskExpand(item.id)}
+                          />
+                        );
+                      } else {
+                        return item.map((subTodo) => (
+                          <ContextMenu
+                            todo={subTodo}
+                            onTodoChange={dispatch}
+                            onAddSubTask={handleAddSubTask}
+                          >
+                            <div style={{ cursor: "context-menu" }}>
+                              <div
+                                key={subTodo.id}
+                                style={{
+                                  marginLeft: `${subTodo.depth * 20}px`,
+                                }}
+                                className="sub-task-container"
+                              >
+                                <TodoItem
+                                  todo={subTodo}
+                                  onTodoChange={dispatch}
+                                  hasSubTasks={hasSubTasks(subTodo.id)}
+                                  isExpanded={expandedTasks[subTodo.id]}
+                                  onToggleExpand={() =>
+                                    toggleTaskExpand(subTodo.id)
+                                  }
+                                />
+                              </div>
+                            </div>
+                          </ContextMenu>
+                        ));
+                      }
+                    })}
+                  </div>
                 </Space>
               </ul>
             )}

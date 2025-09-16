@@ -4,7 +4,7 @@ import {
   EditOutlined,
   ExclamationOutlined,
 } from "@ant-design/icons";
-import type { ContextMenuProps, Priority, SubTodo } from "@/types";
+import type { ContextMenuProps, Priority } from "@/types";
 import {
   Button,
   DatePicker,
@@ -23,44 +23,25 @@ export default function ContextMenu({
   todo,
   children,
   onTodoChange,
+  onAddSubTask,
 }: ContextMenuProps) {
   // 编辑时间
   const onOk = (
     deadLine: DatePickerProps["value"] | RangePickerProps["value"],
   ) => {
-    if ("id" in todo) {
-      onTodoChange({
-        type: "changed",
-        todo: {
-          ...todo,
-          // @ts-ignore
-          deadline: dayjs(deadLine).format(),
-        },
-      });
-    } else {
-      const subTodo = todo as SubTodo;
-      onTodoChange({
-        type: "change_sub",
-        newSubTodo: {
-          ...subTodo,
-          // @ts-ignore
-          subDeadline: dayjs(deadLine).format(),
-        },
-      });
-    }
+    onTodoChange({
+      type: "changed",
+      todo: {
+        ...todo,
+        // @ts-ignore
+        deadline: dayjs(deadLine).format(),
+      },
+    });
     message.info("时间更改成功");
   };
   // 更改任务优先级
   const setPriority = (p: Priority) => {
-    if ("id" in todo) {
-      onTodoChange({ type: "changed", todo: { ...todo, priority: p } });
-    } else {
-      const subTodo = todo as SubTodo;
-      onTodoChange({
-        newSubTodo: { ...subTodo, subPriority: p },
-        type: "change_sub",
-      });
-    }
+    onTodoChange({ type: "changed", todo: { ...todo, priority: p } });
   };
   const items: MenuProps["items"] = [
     {
@@ -123,12 +104,9 @@ export default function ContextMenu({
       key: "add_sub",
       icon: <EditOutlined />,
       label: "添加子任务",
-      disabled: !("id" in todo),
       onClick: () => {
-        if ("id" in todo) {
-          onTodoChange({ type: "add_sub", todoId: todo.id });
-        } else {
-          message.info("删除成功");
+        if (onAddSubTask) {
+          onAddSubTask(todo.id, todo.depth);
         }
       },
     },
@@ -137,19 +115,10 @@ export default function ContextMenu({
       icon: <DeleteOutlined />,
       label: "删除",
       onClick: () => {
-        if ("id" in todo) {
-          onTodoChange({
-            type: "deleted",
-            deleteId: todo.id,
-          });
-        } else {
-          const subTodo = todo as SubTodo;
-          onTodoChange({
-            subId: subTodo.subId,
-            todoId: subTodo.todoXId,
-            type: "delete_sub",
-          });
-        }
+        onTodoChange({
+          type: "deleted",
+          deleteId: todo.id,
+        });
         message.info("删除成功");
       },
     },
@@ -158,7 +127,7 @@ export default function ContextMenu({
   return (
     <>
       <Dropdown
-        key={"id" in todo ? todo.id : todo.subId}
+        key={todo.id}
         trigger={["contextMenu"]}
         menu={{
           items,
