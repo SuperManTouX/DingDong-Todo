@@ -51,7 +51,7 @@ export default function TODOList() {
           subPriority: 2,
           subDatetimeLocal: dayjs().format(),
           subDeadline: dayjs("2025-9-18").format(),
-          todoId: "1",
+          todoXId: "1",
         },
         {
           subId: uuidv4(),
@@ -60,7 +60,7 @@ export default function TODOList() {
           subPriority: 2,
           subDatetimeLocal: dayjs().format(),
           subDeadline: dayjs("2025-9-18").format(),
-          todoId: "1",
+          todoXId: "1",
         },
         {
           subId: uuidv4(),
@@ -69,7 +69,7 @@ export default function TODOList() {
           subPriority: 2,
           subDatetimeLocal: dayjs().format(),
           subDeadline: dayjs("2025-9-18").format(),
-          todoId: "1",
+          todoXId: "1",
         },
       ],
     },
