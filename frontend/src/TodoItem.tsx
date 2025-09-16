@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { RightOutlined } from "@ant-design/icons";
 import { Priority } from "./constants/index";
 import "./TodoItem.css";
@@ -15,9 +15,24 @@ interface TodoItemProps {
   onToggleExpand?: () => void;
 }
 
-export default function TodoItem({ todo, onTodoChange, other = false, hasSubTasks = false, isExpanded = false, onToggleExpand }: TodoItemProps) {
-  const [editType, setEditType] = useState<boolean>(false);
-  const [text, setText] = useState<string>("");
+export default function TodoItem({
+  todo,
+  onTodoChange,
+  other = false,
+  hasSubTasks = false,
+  isExpanded = false,
+  onToggleExpand,
+}: TodoItemProps) {
+  const [text, setText] = useState<string>(todo.text);
+
+  // // 当todo.text为空时，自动进入编辑模式
+  // useEffect(() => {
+  //   if (todo.text === "") {
+  //     setText("");
+  //   } else {
+  //     setText(todo.text);
+  //   }
+  // }, [todo.text]);
 
   let priClass;
   switch (todo.priority) {
@@ -34,12 +49,6 @@ export default function TodoItem({ todo, onTodoChange, other = false, hasSubTask
       priClass = "";
   }
 
-  // 双击编辑
-  function updateEditType(test: string) {
-    setEditType(true);
-    setText(test);
-  }
-
   // 更新Todo
   function handleEditChanged(changeTest: string) {
     setText(changeTest);
@@ -47,36 +56,31 @@ export default function TodoItem({ todo, onTodoChange, other = false, hasSubTask
 
   // 渲染双击编辑输入框
   function renderEditInput() {
-    if (editType) {
-      return (
-        <input
-          type="text"
-          autoFocus
-          value={text}
-          onChange={(e) => handleEditChanged(e.currentTarget.value)}
-          onBlur={() => {
-            onTodoChange({
-              type: "changed",
-              todo: {
-                ...todo,
-                text,
-              },
-            });
-            setEditType(false);
-          }}
-        />
-      );
-    } else {
-      return (
-        <span
-          onDoubleClick={(e: React.MouseEvent<HTMLSpanElement>) =>
-            updateEditType(e.currentTarget.innerText)
-          }
-        >
-          {todo.text}
-        </span>
-      );
-    }
+    return (
+      <input
+        type="text"
+        autoFocus
+        className="w-50"
+        value={text}
+        onChange={(e) => handleEditChanged(e.currentTarget.value)}
+        onBlur={() => {
+          onTodoChange({
+            type: "changed",
+            todo: {
+              ...todo,
+              text,
+            },
+          });
+        }}
+        style={{
+          border: "none",
+          backgroundColor: "transparent",
+          outline: "none",
+          width: "100%",
+          padding: "0",
+        }}
+      />
+    );
   }
 
   // 倒计时
@@ -101,7 +105,7 @@ export default function TodoItem({ todo, onTodoChange, other = false, hasSubTask
   return (
     <>
       <li
-        className={`row d-flex justify-content-between highlight rounded pe-0 ps-0 pt-0 pb-0  ${other ? "opacity-25" : ""}`}
+        className={`cursor-pointer row d-flex justify-content-between highlight rounded pe-0 ps-0 pt-0 pb-0  ${other ? "opacity-25" : ""}`}
       >
         <Row justify={"start"} align={"middle"} className="ps-0">
           <Col span={1}>
