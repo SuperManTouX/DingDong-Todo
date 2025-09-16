@@ -7,7 +7,7 @@ import "@ant-design/v5-patch-for-react-19";
 // import App from './TicTacToe.tsx'
 // import TaskApp from "./TaskApp";
 import TODOList from "./TODOList";
-// import NestedList from "./Test";
+import NestedList from "./Test";
 import Sider from "antd/es/layout/Sider";
 import { Layout } from "antd";
 
@@ -38,6 +38,6 @@ createRoot(document.getElementById("root")!).render(
       </Layout>
     </Layout>
 
-    {/*<NestedList></NestedList>*/}
+    <NestedList></NestedList>
   </StrictMode>,
 );
