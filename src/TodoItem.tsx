@@ -1,20 +1,23 @@
 import React, { useState } from "react";
-import type { TodoItemProps } from "@/types";
-import { Priority } from "@/constants";
+import { RightOutlined } from "@ant-design/icons";
+import { Priority } from "./constants/index";
 import "./TodoItem.css";
-import { Collapse } from "react-bootstrap";
 import { Col, message, Row } from "antd";
 import dayjs from "dayjs";
+import type { Todo, TodoAction } from "./types.d";
 
-import SubTodoItem from "@/SubTodoItem";
-import { RightOutlined } from "@ant-design/icons";
-import { Draggable, Droppable } from "@hello-pangea/dnd";
-import ContextMenu from "@/ContextMenu";
+interface TodoItemProps {
+  todo: Todo;
+  onTodoChange: (action: TodoAction) => void;
+  other?: boolean;
+  hasSubTasks?: boolean;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
+}
 
-export default function TodoItem({ todo, onTodoChange, other }: TodoItemProps) {
+export default function TodoItem({ todo, onTodoChange, other = false, hasSubTasks = false, isExpanded = false, onToggleExpand }: TodoItemProps) {
   const [editType, setEditType] = useState<boolean>(false);
   const [text, setText] = useState<string>("");
-  const [subOpen, setSubOpen] = useState(false);
 
   let priClass;
   switch (todo.priority) {
@@ -92,75 +95,8 @@ export default function TodoItem({ todo, onTodoChange, other }: TodoItemProps) {
     // <span className="text-danger">已逾期{Math.abs(dayjs(todo.deadline).diff(dayjs(), 'day'))}天</span>
   };
 
-  const SubList = () => {
-    if (todo?.subTodo) {
-      return (
-        <Droppable droppableId="subTodo" type="SUB">
-          {(provided) => (
-            <Collapse in={subOpen}>
-              <ul
-                id="subList"
-                ref={provided.innerRef}
-                {...provided.droppableProps}
-              >
-                {/*可拖动列表*/}
-                {todo.subTodo?.map((st, index) => (
-                  <Draggable
-                    key={st.subId}
-                    draggableId={st.subId}
-                    index={index}
-                  >
-                    {(provided) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                      >
-                        <ContextMenu todo={st} onTodoChange={onTodoChange}>
-                          <div
-                            onContextMenu={(e) => {
-                              e.stopPropagation();
-                              e.preventDefault();
-                            }}
-                            style={{ cursor: "context-menu" }}
-                          >
-                            <SubTodoItem
-                              todoId={todo.id}
-                              key={st.subId}
-                              subTodo={st}
-                              onSubTodoChange={onTodoChange}
-                            />
-                          </div>
-                        </ContextMenu>
-                      </div>
-                    )}
-                  </Draggable>
-                ))}
-                {provided.placeholder}
-              </ul>
-            </Collapse>
-          )}
-        </Droppable>
-      );
-    }
-    return null;
-  };
-  // 展开收齐子任务列表
-  const renderSubIcon = () => {
-    if (todo?.subTodo && todo.subTodo.length > 0) {
-      return (
-        <RightOutlined
-          className="me-2"
-          style={{ fontSize: 10 }}
-          rotate={subOpen ? 90 : 0}
-          onClick={() => setSubOpen(!subOpen)}
-          aria-controls="subList"
-        />
-      );
-    }
-
-    return null;
-  };
+  // SubList函数已移除，子任务现在在TodoList中直接渲染
+  // 子任务图标已移除，子任务现在在TodoList中直接渲染;
 
   return (
     <>
@@ -169,7 +105,20 @@ export default function TodoItem({ todo, onTodoChange, other }: TodoItemProps) {
       >
         <Row justify={"start"} align={"middle"} className="ps-0">
           <Col span={1}>
-            <span>{renderSubIcon()}</span>
+            {hasSubTasks && onToggleExpand && (
+              <RightOutlined
+                style={{
+                  marginRight: "8px",
+                  cursor: "pointer",
+                  transition: "transform 0.3s",
+                  transform: isExpanded ? "rotate(90deg)" : "rotate(0)",
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleExpand();
+                }}
+              />
+            )}
           </Col>
           <Col span={15} className="d-flex  w-50 lh-base align-items-center">
             <input
@@ -182,7 +131,6 @@ export default function TodoItem({ todo, onTodoChange, other }: TodoItemProps) {
                   todoId: todo.id,
                   newCompleted: e.currentTarget.checked,
                 });
-                onTodoChange({ type: "completedAll_sub", todoId: todo.id });
                 if (e.currentTarget.checked) message.info(`已完成${todo.text}`);
               }}
             />
@@ -195,8 +143,7 @@ export default function TodoItem({ todo, onTodoChange, other }: TodoItemProps) {
             <span>{renderCountdown()}</span>
           </Col>
         </Row>
-        {/*子任务列表*/}
-        {SubList()}
+        {/*子任务列表已移除，子任务现在在TodoList中直接渲染*/}
         {/*编辑折叠框*/}
       </li>
     </>

@@ -21,6 +21,7 @@ export default function Controller({
             onCompleteAll({
               type: "completedAll",
               completeOrUncomplete: e.target.checked,
+              showType: showType,
             });
             if (e.currentTarget.checked) message.info(`已完成全部`);
           }}

@@ -12,23 +12,16 @@ interface Todo {
   priority: number;
   datetimeLocal?: string;
   deadline?: string;
-  subTodo?: SubTodo[];
-}
-
-interface SubTodo {
-  todoXId: string;
-  subId: string;
-  subText: string;
-  subCompleted: boolean;
-  subPriority: number;
-  subDatetimeLocal?: string;
-  subDeadline?: string;
+  parentId?: string | null; // 新增：指向父任务ID
+  depth: number; // 新增：表示嵌套深度
 }
 
 interface TodoAddAction {
   type: "added";
   text: string;
   completed: false;
+  parentId?: string | null; // 可选：用于添加子任务
+  depth?: number; // 可选：表示嵌套深度
 }
 
 interface TodoToggleAction {
@@ -63,31 +56,8 @@ interface TodoDeleteAllCompleteAction {
 }
 
 // ========= 新增 Action 类型 =========
-interface SubTodoToggleAction {
-  type: "toggle_sub";
-  todoId: string; // 父任务 id
-  subId: string; // 子任务 subId
-}
-/* 1. Action 类型 */
-interface SubTodoChangedAction {
-  type: "change_sub";
-  newSubTodo: SubTodo; // 全新的子任务对象
-}
-
-interface SubTodoAddedAction {
-  type: "add_sub";
-  todoId: string;
-}
-
-interface SubTodoDeletedAction {
-  type: "delete_sub";
-  todoId: string;
-  subId: string;
-}
-interface SubTodoCompletedAllAction {
-  type: "completedAll_sub";
-  todoId: string;
-}
+// 扁平化后，子任务相关的Action可以被通用的TodoAction替代
+// 但为了兼容性，我们保留部分Action类型
 
 type TodoAction =
   | TodoAddAction
@@ -96,12 +66,7 @@ type TodoAction =
   | TodoDeletedAction
   | TodoReplaceAction
   | TodoCompleteAllAction
-  | TodoDeleteAllCompleteAction
-  | SubTodoToggleAction
-  | SubTodoChangedAction
-  | SubTodoAddedAction
-  | SubTodoDeletedAction
-  | SubTodoCompletedAllAction;
+  | TodoDeleteAllCompleteAction;
 
 interface TodoItemProps {
   todo: Todo;
@@ -110,21 +75,17 @@ interface TodoItemProps {
   other?: boolean;
 }
 
-interface SubTodoItemProps {
-  subTodo: SubTodo;
-  todoId: string;
-  onSubTodoChange: (action: TodoAction) => void;
-  other?: boolean;
-}
+// SubTodoItemProps接口已移除，扁平化后所有任务都使用Todo类型
 
 interface ControllerProps {
   isAllDone: boolean;
   onSwitchShow: (showType: ShowTypeValue) => void;
   onCompleteAll: (action: TodoCompleteAllAction) => void;
-  showType: ShowType;
+  showType: ShowTypeValue;
 }
 interface ContextMenuProps {
-  todo: Todo | SubTodo;
+  todo: Todo;
+  onAddSubTask: (parentId: string, parentDepth: number) => void;
   onTodoChange: (action: TodoAction) => void;
   children: React.ReactNode;
 }
