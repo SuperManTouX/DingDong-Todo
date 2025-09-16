@@ -107,6 +107,8 @@ export default function ContextMenu({
       onClick: () => {
         if (onAddSubTask) {
           onAddSubTask(todo.id, todo.depth);
+        } else {
+          message.warning('添加子任务功能不可用');
         }
       },
     },

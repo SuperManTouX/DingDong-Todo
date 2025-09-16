@@ -161,6 +161,22 @@ export default function TODOList() {
       parentId: null,
       depth: 0,
     },
+    {
+      id: "2",
+      text: "sub-sub 学习 React",
+      completed: false,
+      priority: 0,
+      parentId: "1",
+      depth: 2,
+    },
+    {
+      id: uuidv4(),
+      text: "sub-sub-sub 学习 React",
+      completed: false,
+      priority: 0,
+      parentId: "2",
+      depth: 3,
+    },
   ];
   // 读取本地值
   // if (localStorage.getItem('todoList') !== null) {
@@ -186,19 +202,13 @@ export default function TODOList() {
 
   // 添加子任务
   function handleAddSubTask(parentId: string, parentDepth: number): void {
-    if (text.trim()) {
-      dispatch({
-        type: "added",
-        text,
-        completed: false,
-        parentId,
-        depth: parentDepth + 1,
-      });
-      setText("");
-    } else {
-      // 如果没有输入文本，可以提示用户
-      console.log("请输入子任务内容");
-    }
+    dispatch({
+      type: "added",
+      text,
+      completed: false,
+      parentId,
+      depth: parentDepth + 1,
+    });
   }
 
   //切换任务列表（全部，未完成，已完成）
@@ -212,25 +222,49 @@ export default function TODOList() {
     // 首先获取过滤后的任务列表
     const filteredTodos = type ? renderTodos() : renderOtherTodos();
 
-    // 获取过滤后的根任务
-    const rootTasks = filteredTodos.filter((task) => task.parentId === null);
+    // 递归构建层次化任务结构
+    const buildHierarchicalTasks = (
+      parentId: string | null,
+    ): (Todo | Todo[])[] => {
+      const result: (Todo | Todo[])[] = [];
 
-    const result: (Todo | Todo[])[] = [];
+      // 获取当前父任务的直接子任务
+      const tasks = filteredTodos.filter((task) => task.parentId === parentId);
 
-    rootTasks.forEach((rootTask) => {
-      result.push(rootTask);
-      // 获取该根任务的子任务（只包含在filteredTodos中的子任务）
-      const subTasks = todoList
-        .filter((task) => task.parentId === rootTask.id)
-        .filter((subTask) => filteredTodos.some((t) => t.id === subTask.id));
+      tasks.forEach((task) => {
+        result.push(task);
 
-      // 仅在任务展开状态下添加子任务
-      if (subTasks.length > 0 && expandedTasks[rootTask.id]) {
-        result.push(subTasks);
-      }
-    });
+        // 获取该任务的子任务
+        const subTasks = buildHierarchicalTasks(task.id);
 
-    return result;
+        // 仅在任务展开状态下添加子任务
+        if (subTasks.length > 0 && expandedTasks[task.id]) {
+          // 收集所有子任务（包括嵌套的子任务）
+          const allSubTasks: Todo[] = [];
+
+          const collectSubTasks = (items: (Todo | Todo[])[]) => {
+            items.forEach((item) => {
+              if ("id" in item) {
+                allSubTasks.push(item);
+              } else {
+                collectSubTasks(item);
+              }
+            });
+          };
+
+          collectSubTasks(subTasks);
+
+          if (allSubTasks.length > 0) {
+            result.push(allSubTasks);
+          }
+        }
+      });
+
+      return result;
+    };
+
+    // 从根任务开始构建层次结构
+    return buildHierarchicalTasks(null);
   }
 
   // 切换任务展开状态
