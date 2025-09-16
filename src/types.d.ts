@@ -2,8 +2,6 @@ import type { Priority } from "../constants";
 
 export type Priority = (typeof Priority)[keyof typeof Priority];
 import { ShowType, type ShowTypeValue } from "@/constants";
-import { MenuProps } from "antd";
-import { ReactElement } from "react";
 
 export type ShowType = (typeof ShowType)[keyof typeof ShowType];
 
@@ -18,7 +16,7 @@ interface Todo {
 }
 
 interface SubTodo {
-  todoId: string;
+  todoXId: string;
   subId: string;
   subText: string;
   subCompleted: boolean;
@@ -79,7 +77,6 @@ interface SubTodoChangedAction {
 interface SubTodoAddedAction {
   type: "add_sub";
   todoId: string;
-  text: string;
 }
 
 interface SubTodoDeletedAction {

@@ -92,22 +92,45 @@ export default function ContextMenu({
           >
             高
           </Button>
-          <Button size="small" variant="solid" color="yellow">
+          <Button
+            onClick={() => setPriority(2)}
+            size="small"
+            variant="solid"
+            color="yellow"
+          >
             中
           </Button>
-          <Button size="small" variant="solid" color="blue">
+          <Button
+            onClick={() => setPriority(1)}
+            size="small"
+            variant="solid"
+            color="blue"
+          >
             低
           </Button>
-          <Button size="small" variant="solid" color="geekblue">
+          <Button
+            onClick={() => setPriority(0)}
+            size="small"
+            variant="solid"
+            color="geekblue"
+          >
             无
           </Button>
         </Space>
       ),
     },
     {
-      key: "edit",
+      key: "add_sub",
       icon: <EditOutlined />,
-      label: "编辑",
+      label: "添加子任务",
+      disabled: !("id" in todo),
+      onClick: () => {
+        if ("id" in todo) {
+          onTodoChange({ type: "add_sub", todoId: todo.id });
+        } else {
+          message.info("删除成功");
+        }
+      },
     },
     {
       key: "delete",
@@ -123,7 +146,7 @@ export default function ContextMenu({
           const subTodo = todo as SubTodo;
           onTodoChange({
             subId: subTodo.subId,
-            todoId: subTodo.todoId,
+            todoId: subTodo.todoXId,
             type: "delete_sub",
           });
         }

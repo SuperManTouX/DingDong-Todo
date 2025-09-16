@@ -78,7 +78,7 @@ export default function reducer(draft: Todo[], action: TodoAction) {
     }
     // 更新子任务
     case "change_sub": {
-      const parent = draft.find((t) => t.id === action.newSubTodo.todoId);
+      const parent = draft.find((t) => t.id === action.newSubTodo.todoXId);
       if (!parent || !parent.subTodo) return;
 
       const idx = parent.subTodo.findIndex(
@@ -92,17 +92,18 @@ export default function reducer(draft: Todo[], action: TodoAction) {
     }
 
     /* 3. 新增子任务 */
-    case "addSub_sub": {
+    case "add_sub": {
       const parent = draft.find((t) => t.id === action.todoId);
       if (!parent) return;
       if (!parent.subTodo) parent.subTodo = []; // 首次创建数组
       parent.subTodo.push({
         subId: uuidv4(),
-        subText: action.text,
+        subText: "",
         subCompleted: false,
         subPriority: Priority.None,
-        todoId: parent.id,
+        todoXId: parent.id,
       });
+      console.log(parent);
       break;
     }
 
