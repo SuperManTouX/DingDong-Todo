@@ -41,7 +41,7 @@ export default function SubTodoItem({
 
   // 渲染双击编辑输入框
   function renderEditInput() {
-    if (editType) {
+    if (editType || !subTodo.subText) {
       return (
         <input
           type="text"
@@ -63,6 +63,7 @@ export default function SubTodoItem({
     } else {
       return (
         <span
+          className="w-100 h-100 text-start"
           onDoubleClick={(e: React.MouseEvent<HTMLSpanElement>) =>
             updateEditType(e.currentTarget.innerText)
           }
