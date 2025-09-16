@@ -1,0 +1,144 @@
+[
+  {
+    "id": "a",
+    "title": "我的待办事项",
+    "createdAt": "2025-09-16T12:00:00+08:00",
+    "updatedAt": "2025-09-16T12:00:00+08:00",
+    "tasks": [
+      {
+        "id": "1",
+        "text": "学习 React",
+        "completed": false,
+        "priority": 2,
+        "datetimeLocal": "2025-09-16T12:00:00+08:00",
+        "deadline": "2025-09-15",
+        "parentId": null,
+        "depth": 0
+      },
+      {
+        "id": "t2",
+        "text": "Sub 学习 React1",
+        "completed": false,
+        "priority": 2,
+        "datetimeLocal": "2025-09-16T12:00:00+08:00",
+        "deadline": "2025-09-18",
+        "parentId": "1",
+        "depth": 1
+      },
+      {
+        "id": "3",
+        "text": "Sub 学习 React2",
+        "completed": false,
+        "priority": 2,
+        "datetimeLocal": "2025-09-16T12:00:00+08:00",
+        "deadline": "2025-09-18",
+        "parentId": "1",
+        "depth": 1
+      },
+      {
+        "id": "t4",
+        "text": "Sub 学习 React3",
+        "completed": false,
+        "priority": 2,
+        "datetimeLocal": "2025-09-16T12:00:00+08:00",
+        "deadline": "2025-09-18",
+        "parentId": "1",
+        "depth": 1
+      }
+    ]
+  },
+  {
+    "id": "b",
+    "title": "工作清单",
+    "createdAt": "2025-09-16T12:05:00+08:00",
+    "updatedAt": "2025-09-16T12:05:00+08:00",
+    "tasks": [
+      {
+        "id": "w1",
+        "text": "完成需求评审",
+        "completed": true,
+        "priority": 1,
+        "datetimeLocal": "2025-09-16T12:05:00+08:00",
+        "deadline": "2025-09-14",
+        "parentId": null,
+        "depth": 0
+      },
+      {
+        "id": "w2",
+        "text": "编写技术方案",
+        "completed": false,
+        "priority": 2,
+        "datetimeLocal": "2025-09-16T12:05:00+08:00",
+        "deadline": "2025-09-17",
+        "parentId": "w1",
+        "depth": 1
+      }
+    ]
+  },
+  {
+    "id": "c",
+    "title": "生活杂项",
+    "createdAt": "2025-09-16T12:10:00+08:00",
+    "updatedAt": "2025-09-16T12:10:00+08:00",
+    "tasks": [
+      {
+        "id": "l1",
+        "text": "交水电费",
+        "completed": false,
+        "priority": 0,
+        "datetimeLocal": "2025-09-16T12:10:00+08:00",
+        "deadline": "2025-09-20",
+        "parentId": null,
+        "depth": 0
+      },
+      {
+        "id": "l2",
+        "text": "预约牙医",
+        "completed": false,
+        "priority": 1,
+        "datetimeLocal": "2025-09-16T12:10:00+08:00",
+        "deadline": "2025-09-22",
+        "parentId": null,
+        "depth": 0
+      }
+    ]
+  },
+  {
+    "id": "d",
+    "title": "读书计划",
+    "createdAt": "2025-09-16T12:15:00+08:00",
+    "updatedAt": "2025-09-16T12:15:00+08:00",
+    "tasks": [
+      {
+        "id": "r1",
+        "text": "读完《深入理解计算机系统》",
+        "completed": false,
+        "priority": 2,
+        "datetimeLocal": "2025-09-16T12:15:00+08:00",
+        "deadline": "2025-10-01",
+        "parentId": null,
+        "depth": 0
+      },
+      {
+        "id": "r2",
+        "text": "做章节习题",
+        "completed": false,
+        "priority": 1,
+        "datetimeLocal": "2025-09-16T12:15:00+08:00",
+        "deadline": "2025-10-05",
+        "parentId": "r1",
+        "depth": 1
+      },
+      {
+        "id": "r3",
+        "text": "写读书笔记",
+        "completed": false,
+        "priority": 1,
+        "datetimeLocal": "2025-09-16T12:15:00+08:00",
+        "deadline": "2025-10-07",
+        "parentId": "r1",
+        "depth": 1
+      }
+    ]
+  }
+]

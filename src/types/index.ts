@@ -1,11 +1,30 @@
-import type { Priority } from "../constants";
+import type { Priority } from "@/constants";
+
+import { ShowType, type ShowTypeValue } from "@/constants";
+
+export interface ControllerProps {
+  isAllDone: boolean;
+  onSwitchShow: (showType: ShowTypeValue) => void;
+  onCompleteAll: (action: TodoCompleteAllAction) => void;
+  showType: ShowTypeValue;
+  text: string;
+  setText: (text: string) => void;
+  onAdded: () => void;
+}
 
 export type Priority = (typeof Priority)[keyof typeof Priority];
-import { ShowType, type ShowTypeValue } from "@/constants";
+
+export interface TodoListData {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  tasks: Todo[];
+}
 
 export type ShowType = (typeof ShowType)[keyof typeof ShowType];
 
-interface Todo {
+export interface Todo {
   id: string;
   text: string;
   completed: boolean;
@@ -44,7 +63,7 @@ interface TodoReplaceAction {
   todoList: Todo[];
 }
 
-interface TodoCompleteAllAction {
+export interface TodoCompleteAllAction {
   type: "completedAll";
   completeOrUncomplete: boolean;
   showType?: ShowTypeValue;
@@ -59,7 +78,7 @@ interface TodoDeleteAllCompleteAction {
 // 扁平化后，子任务相关的Action可以被通用的TodoAction替代
 // 但为了兼容性，我们保留部分Action类型
 
-type TodoAction =
+export type TodoAction =
   | TodoAddAction
   | TodoToggleAction
   | TodoChangedAction
@@ -68,7 +87,7 @@ type TodoAction =
   | TodoCompleteAllAction
   | TodoDeleteAllCompleteAction;
 
-interface TodoItemProps {
+export interface TodoItemProps {
   todo: Todo;
   onTodoChange: (action: TodoAction) => void;
 
@@ -76,16 +95,13 @@ interface TodoItemProps {
 }
 
 // SubTodoItemProps接口已移除，扁平化后所有任务都使用Todo类型
-
-interface ControllerProps {
-  isAllDone: boolean;
-  onSwitchShow: (showType: ShowTypeValue) => void;
-  onCompleteAll: (action: TodoCompleteAllAction) => void;
-  showType: ShowTypeValue;
-}
-interface ContextMenuProps {
+export interface ContextMenuProps {
   todo: Todo;
   onAddSubTask: (parentId: string, parentDepth: number) => void;
   onTodoChange: (action: TodoAction) => void;
   children: React.ReactNode;
+}
+
+export interface TODOListProps {
+  initialTodoList?: TodoListData;
 }

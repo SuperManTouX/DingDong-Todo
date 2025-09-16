@@ -1,14 +1,8 @@
 // @ts-ignore
-import { ControllerProps } from "@/types";
+import type { ControllerProps } from "@/types";
 import { ShowType, ShowTypeLabels, type ShowTypeValue } from "@/constants";
 import { Dropdown } from "react-bootstrap";
 import { Col, message, Row } from "antd";
-
-interface ControllerExtendedProps extends ControllerProps {
-  text: string;
-  setText: (text: string) => void;
-  onAdded: () => void;
-}
 
 export default function Controller({
   onSwitchShow,
@@ -18,7 +12,7 @@ export default function Controller({
   text,
   setText,
   onAdded,
-}: ControllerExtendedProps) {
+}: ControllerProps) {
   return (
     <li
       className={`row d-flex justify-content-between highlight rounded pe-0 ps-0 pt-0 pb-0  `}

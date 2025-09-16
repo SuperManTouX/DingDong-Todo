@@ -1,9 +1,9 @@
-import "./TODOList.css";
+import "@/styles/TODOList.css";
 import { v4 as uuidv4 } from "uuid";
 import { useImmerReducer } from "use-immer";
 import { useState, useCallback } from "react";
-import Controller from "./Controller";
-import TodoItem from "./TodoItem";
+import Controller from "./components/Controller";
+import TodoItem from "./components/TodoItem";
 import {
   DndContext,
   closestCenter,
@@ -11,61 +11,21 @@ import {
   PointerSensor,
   useSensor,
 } from "@dnd-kit/core";
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-  useSortable,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import reducer from "./reducer";
-import type { Todo, TodoCompleteAllAction } from "@/types";
-import { ShowType, type ShowTypeValue } from "@/constants";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { SortableList, SortableItem } from "./components/SortableComponents";
+import reducer from "./utils/reducer";
+import type {
+  Todo,
+  TodoCompleteAllAction,
+  TodoListData,
+  TODOListProps,
+} from "./types";
+import { ShowType, type ShowTypeValue } from "./constants";
 import dayjs from "dayjs";
-import ContextMenu from "./ContextMenu";
+import ContextMenu from "./components/ContextMenu";
 import { Col, Row, Space } from "antd";
 import { Collapse } from "react-bootstrap";
 import { Content, Footer, Header } from "antd/es/layout/layout";
-
-// 自定义Sortable组件，用于@dnd-kit/sortable
-const SortableItem = ({
-  id,
-  children,
-}: {
-  id: string;
-  children: React.ReactNode;
-}) => {
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({
-      id,
-    });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
-  return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      {children}
-    </div>
-  );
-};
-
-// 自定义Droppable容器组件
-const SortableList = ({
-  items,
-  children,
-}: {
-  items: string[];
-  children: React.ReactNode;
-}) => {
-  return (
-    <SortableContext items={items} strategy={verticalListSortingStrategy}>
-      {children}
-    </SortableContext>
-  );
-};
 
 // 1. 完成   / 未完成 过滤栏添加三个按钮：All / Active / Completed，点谁就只显示对应列表。
 // 2. 完成  一键全选 / 取消全选顶部放 checkbox，逻辑：若已全选则 取消全选，否则全部勾选。
@@ -76,7 +36,9 @@ const SortableList = ({
 // 7. 完成  优先级标记 / 给 Todo 加 priority: 'low' | 'medium' | 'high' 字段，UI 用颜色或图标区分，并可切换优先级。
 // 8. 完成  批量删除已完成 / 底部增加“清除已完成”按钮，一键删掉所有 done === true 的项。
 
-export default function TODOList() {
+export default function TODOList({
+  initialTodoList: propInitialTodoList,
+}: TODOListProps) {
   // 设置@dnd-kit传感器
   const sensors = [
     useSensor(PointerSensor, {
@@ -89,99 +51,17 @@ export default function TODOList() {
     }),
   ];
 
-  let initialTodoList: Todo[] = [
-    // 根任务，depth 为 0
-    {
-      id: "1",
-      text: "学习 React",
-      completed: false,
-      priority: 2,
-      datetimeLocal: dayjs().format(),
-      deadline: dayjs("2025-9-15").format(),
-      parentId: null,
-      depth: 0,
-    },
-    // 子任务，depth 为 1
-    {
-      id: uuidv4(),
-      text: "Sub 学习  React1",
-      completed: false,
-      priority: 2,
-      datetimeLocal: dayjs().format(),
-      deadline: dayjs("2025-9-18").format(),
-      parentId: "1",
-      depth: 1,
-    },
-    {
-      id: uuidv4(),
-      text: "Sub 学习  React2",
-      completed: false,
-      priority: 2,
-      datetimeLocal: dayjs().format(),
-      deadline: dayjs("2025-9-18").format(),
-      parentId: "1",
-      depth: 1,
-    },
-    {
-      id: uuidv4(),
-      text: "Sub 学习  React3",
-      completed: false,
-      priority: 2,
-      datetimeLocal: dayjs().format(),
-      deadline: dayjs("2025-9-18").format(),
-      parentId: "1",
-      depth: 1,
-    },
-    // 其他根任务
-    {
-      id: uuidv4(),
-      text: "写一个 TODOListOriginal 组件",
-      completed: true,
-      priority: 1,
-      datetimeLocal: dayjs().format(),
-      deadline: dayjs("2025-9-10").format(),
-      parentId: null,
-      depth: 0,
-    },
-    {
-      id: uuidv4(),
-      text: "部署到 GitHub Pages",
-      completed: false,
-      priority: 0,
-      datetimeLocal: dayjs().format(),
-      deadline: dayjs("2025-9-10").format(),
-      parentId: null,
-      depth: 0,
-    },
-    {
-      id: uuidv4(),
-      text: "test",
-      completed: false,
-      priority: 0,
-      parentId: null,
-      depth: 0,
-    },
-    {
-      id: "2",
-      text: "sub-sub 学习 React",
-      completed: false,
-      priority: 0,
-      parentId: "1",
-      depth: 2,
-    },
-    {
-      id: uuidv4(),
-      text: "sub-sub-sub 学习 React",
-      completed: false,
-      priority: 0,
-      parentId: "2",
-      depth: 3,
-    },
-  ];
+  // 使用从父组件传入的initialTodoList，如果没有则创建一个默认的
+  const initialTodoList: TodoListData = propInitialTodoList || {
+    id: uuidv4(),
+    title: "我的待办事项",
+    createdAt: dayjs().format(),
+    updatedAt: dayjs().format(),
+    tasks: [],
+  };
   // 读取本地值
   // if (localStorage.getItem('todoList') !== null) {
-  //     0
-  //     initialTodoList = JSON.parse(localStorage.getItem('todoList') as string) as Todo[];
+  //     initialTodoList = JSON.parse(localStorage.getItem('todoList') as string) as TodoListData;
   // }
   const [text, setText] = useState<string>("");
   const [showType, setShowType] = useState<ShowTypeValue>(ShowType.uncompleted);
@@ -189,7 +69,8 @@ export default function TODOList() {
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>(
     {},
   );
-  let isAllDone = todoList.length > 0 && todoList.every((t) => t.completed);
+  let isAllDone =
+    todoList.tasks.length > 0 && todoList.tasks.every((t) => t.completed);
 
   // 设置本地值
   // localStorage.setItem('todoList', JSON.stringify(todoList))
@@ -277,20 +158,20 @@ export default function TODOList() {
 
   // 检查任务是否有子任务
   const hasSubTasks = (taskId: string): boolean => {
-    return todoList.some((task) => task.parentId === taskId);
+    return todoList.tasks.some((task) => task.parentId === taskId);
   };
 
   //todo模板初始化
   function renderTodos(): Todo[] {
     switch (showType) {
       case ShowType.all:
-        return todoList;
+        return todoList.tasks;
       case ShowType.completed:
-        return todoList.filter((t) => t.completed);
+        return todoList.tasks.filter((t) => t.completed);
       case ShowType.uncompleted:
-        return todoList.filter((t) => !t.completed);
+        return todoList.tasks.filter((t) => !t.completed);
       case ShowType.overdue:
-        return todoList.filter(
+        return todoList.tasks.filter(
           (t) => dayjs(t.deadline).diff(dayjs(), "day") >= 0,
         );
       default:
@@ -304,13 +185,13 @@ export default function TODOList() {
         return [];
       //   已完成
       case ShowType.completed:
-        return todoList.filter((t) => !t.completed);
+        return todoList.tasks.filter((t) => !t.completed);
       //未完成
       case ShowType.uncompleted:
-        return todoList.filter((t) => t.completed);
+        return todoList.tasks.filter((t) => t.completed);
       //已逾期
       case ShowType.overdue:
-        return todoList.filter(
+        return todoList.tasks.filter(
           (t) => dayjs(t.deadline).diff(dayjs(), "day") < 0,
         );
       default:
@@ -325,7 +206,7 @@ export default function TODOList() {
 
   //计算未完成的个数
   function calculateUncompletedCount() {
-    return todoList.reduce((l, n) => {
+    return todoList.tasks.reduce((l, n) => {
       if (!n.completed) return l + 1;
       return l;
     }, 0);
@@ -342,13 +223,13 @@ export default function TODOList() {
       }
 
       // 获取拖动和放置的任务
-      const draggedTask = todoList.find((item) => item.id === active.id);
-      const targetTask = todoList.find((item) => item.id === over.id);
+      const draggedTask = todoList.tasks.find((item) => item.id === active.id);
+      const targetTask = todoList.tasks.find((item) => item.id === over.id);
 
       if (!draggedTask || !targetTask) return;
 
       // 深拷贝任务列表以进行修改
-      const updatedTasks: Todo[] = JSON.parse(JSON.stringify(todoList));
+      const updatedTasks: Todo[] = JSON.parse(JSON.stringify(todoList.tasks));
       const draggedIndex = updatedTasks.findIndex(
         (item) => item.id === active.id,
       );
@@ -408,7 +289,7 @@ export default function TODOList() {
 
   // 删除所有已完成
   function handleDeleteAllCompleted() {
-    dispatch({ type: "deletedAll", todoList });
+    dispatch({ type: "deletedAll", todoList: todoList.tasks });
   }
 
   // 获取所有可排序的任务ID
@@ -470,7 +351,7 @@ export default function TODOList() {
                         </ContextMenu>
                         {/* 子任务折叠面板 */}
                         <Collapse in={expandedTasks[item.id]}>
-                          <div style={{ marginLeft: "40px" }}>
+                          <div style={{ marginLeft: "20px" }}>
                             {/* 子任务将在getHierarchicalTasks中自动渲染 */}
                           </div>
                         </Collapse>
@@ -483,7 +364,7 @@ export default function TODOList() {
                       <SortableItem key={subTodo.id} id={subTodo.id}>
                         <div
                           style={{
-                            marginLeft: `${subTodo.depth * 20}px`,
+                            marginLeft: `${subTodo.depth * 15}px`,
                           }}
                           className="sub-task-container"
                         >
