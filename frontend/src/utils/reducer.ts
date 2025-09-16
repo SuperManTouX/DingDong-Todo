@@ -1,27 +1,28 @@
-import type { Todo, TodoAction } from "@/types";
+import type { TodoAction, TodoListData } from "@/types";
 import { Priority, ShowType } from "@/constants";
 import { v4 as uuidv4 } from "uuid";
+import dayjs from "dayjs";
 
 //todoReducer
-export default function reducer(draft: Todo[], action: TodoAction) {
+export default function reducer(draft: TodoListData, action: TodoAction) {
   switch (action.type) {
     case "completedAll":
       const { completeOrUncomplete, showType = ShowType.all } = action;
       switch (showType) {
         case ShowType.all:
-          draft.forEach((t) => {
+          draft.tasks.forEach((t) => {
             t.completed = completeOrUncomplete;
           });
           break;
         case ShowType.completed:
-          draft.forEach((t) => {
+          draft.tasks.forEach((t) => {
             if (t.completed) {
               t.completed = completeOrUncomplete;
             }
           });
           break;
         case ShowType.uncompleted:
-          draft.forEach((t) => {
+          draft.tasks.forEach((t) => {
             if (!t.completed) {
               t.completed = completeOrUncomplete;
             }
@@ -29,7 +30,7 @@ export default function reducer(draft: Todo[], action: TodoAction) {
           break;
         case ShowType.overdue:
           // 处理逾期任务
-          draft.forEach((t) => {
+          draft.tasks.forEach((t) => {
             const isOverdue =
               t.deadline && new Date(t.deadline) < new Date() && !t.completed;
             if (isOverdue) {
@@ -38,19 +39,20 @@ export default function reducer(draft: Todo[], action: TodoAction) {
           });
           break;
       }
+      draft.updatedAt = dayjs().format();
       break;
     case "toggle": {
-      const todo = draft.find((t) => t.id === action.todoId);
+      const todo = draft.tasks.find((t) => t.id === action.todoId);
       if (todo) {
         todo.completed = action.newCompleted;
 
         // 如果当前任务是父任务，同步所有子任务的状态
         // 查找所有直接子任务
-        const childTasks = draft.filter((t) => t.parentId === todo.id);
+        const childTasks = draft.tasks.filter((t) => t.parentId === todo.id);
         if (childTasks.length > 0) {
           // 递归更新所有子任务及其子任务
           function updateChildTasks(parentId: string, newCompleted: boolean) {
-            const children = draft.filter((t) => t.parentId === parentId);
+            const children = draft.tasks.filter((t) => t.parentId === parentId);
             children.forEach((child) => {
               child.completed = newCompleted;
               // 递归更新子任务的子任务
@@ -63,10 +65,10 @@ export default function reducer(draft: Todo[], action: TodoAction) {
 
         // 如果该任务是子任务，检查父任务是否应该完成
         if (todo.parentId) {
-          const parentTodo = draft.find((t) => t.id === todo.parentId);
+          const parentTodo = draft.tasks.find((t) => t.id === todo.parentId);
           if (parentTodo) {
             // 查找所有父任务的子任务
-            const allChildTasks = draft.filter(
+            const allChildTasks = draft.tasks.filter(
               (t) => t.parentId === parentTodo.id,
             );
             // 检查是否所有子任务都已完成
@@ -80,15 +82,19 @@ export default function reducer(draft: Todo[], action: TodoAction) {
           }
         }
       }
-
+      draft.updatedAt = dayjs().format();
       return;
     }
     case "deleted":
-      return draft.filter((d) => d.id !== action.deleteId);
+      draft.tasks = draft.tasks.filter((d) => d.id !== action.deleteId);
+      draft.updatedAt = dayjs().format();
+      break;
     case "deletedAll":
-      return draft.filter((d) => !d.completed);
+      draft.tasks = draft.tasks.filter((d) => !d.completed);
+      draft.updatedAt = dayjs().format();
+      break;
     case "added":
-      draft.push({
+      draft.tasks.push({
         id: uuidv4(),
         text: action.text,
         completed: action.completed,
@@ -96,17 +102,22 @@ export default function reducer(draft: Todo[], action: TodoAction) {
         parentId: action.parentId || null, // 支持添加子任务
         depth: action.depth || 0, // 根任务深度为0
       });
+      draft.updatedAt = dayjs().format();
       break;
     case "changed":
-      let i = draft.findIndex((d) => d.id == action.todo.id);
-      draft[i] = action.todo;
+      let i = draft.tasks.findIndex((d) => d.id == action.todo.id);
+      draft.tasks[i] = action.todo;
+      draft.updatedAt = dayjs().format();
       break;
     // 拖动排序专属
     case "replaced":
-      return action.todoList;
+      draft.tasks = action.todoList;
+      draft.updatedAt = dayjs().format();
+      break;
 
     /* 扁平化结构下，子任务作为普通任务处理，不再需要专门的子任务action */
     /* 新增子任务可以通过添加一个新的Todo项并设置正确的parentId和depth来实现 */
+    default:
+      break;
   }
-  //计算是否全部完成，如果是，打钩
 }

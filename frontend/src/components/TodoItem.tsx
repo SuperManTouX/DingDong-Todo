@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 import { RightOutlined } from "@ant-design/icons";
-import { Priority } from "./constants/index";
-import "./TodoItem.css";
+import { Priority } from "@/constants";
+import "../styles/TodoItem.css";
 import { Col, message, Row } from "antd";
 import dayjs from "dayjs";
-import type { Todo, TodoAction } from "./types.d";
+import type { Todo, TodoAction } from "@/types";
 
 interface TodoItemProps {
   todo: Todo;
@@ -107,24 +107,30 @@ export default function TodoItem({
       <li
         className={`cursor-pointer row d-flex justify-content-between highlight rounded pe-0 ps-0 pt-0 pb-0  ${other ? "opacity-25" : ""}`}
       >
-        <Row justify={"start"} align={"middle"} className="ps-0">
+        <Row justify={"space-between"} align={"middle"} className="ps-0">
           <Col span={1}>
-            {hasSubTasks && onToggleExpand && (
-              <RightOutlined
-                style={{
-                  marginRight: "8px",
-                  cursor: "pointer",
-                  transition: "transform 0.3s",
-                  transform: isExpanded ? "rotate(90deg)" : "rotate(0)",
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleExpand();
-                }}
-              />
-            )}
+            <Row justify={"end"} align={"middle"}>
+              {hasSubTasks && onToggleExpand && (
+                <RightOutlined
+                  style={{
+                    marginRight: "3px",
+                    fontSize: "8px",
+                    cursor: "pointer",
+                    transition: "transform 0.3s",
+                    transform: isExpanded ? "rotate(90deg)" : "rotate(0)",
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleExpand();
+                  }}
+                />
+              )}
+            </Row>
           </Col>
-          <Col span={15} className="d-flex  w-50 lh-base align-items-center">
+          <Col
+            span={23}
+            className="d-flex lh-base align-items-center h-100 border-bottom "
+          >
             <input
               type="checkbox"
               className={`me-1 mt-2 mb-2 ${priClass}`}
@@ -138,14 +144,16 @@ export default function TodoItem({
                 if (e.currentTarget.checked) message.info(`已完成${todo.text}`);
               }}
             />
-            {renderEditInput()}
+            <Row justify={"space-between"} className="w-100 " align={"middle"}>
+              {renderEditInput()}
+              <span>{renderCountdown()}</span>
+            </Row>
           </Col>
-          <Col
+          {/*<Col
             span={8}
             className="d-flex justify-content-end align-items-center"
           >
-            <span>{renderCountdown()}</span>
-          </Col>
+          </Col>*/}
         </Row>
         {/*子任务列表已移除，子任务现在在TodoList中直接渲染*/}
         {/*编辑折叠框*/}

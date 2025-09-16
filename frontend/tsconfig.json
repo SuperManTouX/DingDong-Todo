@@ -14,7 +14,8 @@
       "@/*": [
         "./src/*"
       ]
-    }
+    },
+    "allowSyntheticDefaultImports": true
   },
     "allowSyntheticDefaultImports": true,
     "include": [
