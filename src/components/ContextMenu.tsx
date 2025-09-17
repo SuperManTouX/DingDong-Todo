@@ -14,8 +14,6 @@ import {
   message,
   Space,
 } from "antd";
-// @ts-ignore
-import React from "react";
 import type { RangePickerProps } from "antd/es/date-picker";
 import dayjs from "dayjs";
 

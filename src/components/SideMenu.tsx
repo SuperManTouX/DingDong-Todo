@@ -17,14 +17,16 @@ export default function SideMenu({
   };
 
   return (
-    <Menu
-      className="my-custom-menu"
-      defaultSelectedKeys={["a"]}
-      defaultOpenKeys={["grp2"]}
-      onClick={handleClick}
-      style={{ width: "100%", height: "100%" }}
-      mode="inline"
-      items={menuItem}
-    />
+    <>
+      <Menu
+        className="my-custom-menu"
+        defaultSelectedKeys={["a"]}
+        defaultOpenKeys={["grp2"]}
+        onClick={handleClick}
+        style={{ width: "100%", height: "100%" }}
+        mode="inline"
+        items={menuItem}
+      />
+    </>
   );
 }

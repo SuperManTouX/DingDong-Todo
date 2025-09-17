@@ -12,6 +12,8 @@ export interface TodoListGroupAction {
 export interface AddTodoListGroupAction {
   type: "addListGroup";
   title: string;
+  // 可选的emoji图标
+  emoji?: string;
   // 可选的初始任务
   initialTasks?: Todo[];
 }
@@ -20,6 +22,7 @@ export interface UpdateTodoListGroupAction {
   type: "updateListGroup";
   groupId: string;
   title?: string;
+  emoji?: string;
 }
 
 export interface DeleteTodoListGroupAction {
@@ -42,6 +45,7 @@ export type Priority = (typeof Priority)[keyof typeof Priority];
 export interface TodoListData {
   id: string;
   title: string;
+  emoji?: string; // 清单的emoji图标
   createdAt: string;
   updatedAt: string;
   tasks: Todo[];
@@ -51,7 +55,8 @@ export type ShowType = (typeof ShowType)[keyof typeof ShowType];
 
 export interface Todo {
   id: string;
-  text: string;
+  title: string;
+  text?: string;
   completed: boolean;
   priority: number;
   datetimeLocal?: string;
@@ -62,7 +67,7 @@ export interface Todo {
 
 interface TodoAddAction {
   type: "added";
-  text: string;
+  title: string;
   completed: false;
   parentId?: string | null; // 可选：用于添加子任务
   depth?: number; // 可选：表示嵌套深度
@@ -134,10 +139,6 @@ export interface ContextMenuProps {
   onAddSubTask: (parentId: string, parentDepth: number) => void;
   onTodoChange: (action: TodoAction) => void;
   children: React.ReactNode;
-}
-
-export interface TODOListProps {
-  todoTasks: TodoListData;
 }
 
 export interface SideMenuProps {

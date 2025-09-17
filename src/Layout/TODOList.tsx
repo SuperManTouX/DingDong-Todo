@@ -1,8 +1,7 @@
 import "@/styles/TODOList.css";
-import { v4 as uuidv4 } from "uuid";
 import { useState, useCallback } from "react";
-import Controller from "./Controller";
-import TodoItem from "./TodoItem";
+import Controller from "../components/Controller";
+import TodoItem from "../components/TodoItem";
 import {
   DndContext,
   closestCenter,
@@ -11,17 +10,16 @@ import {
   useSensor,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { SortableList, SortableItem } from "./SortableComponents";
+import { SortableList, SortableItem } from "../components/SortableComponents";
 import type {
   Todo,
   TodoCompleteAllAction,
   TodoListData,
-  TODOListProps,
   TodoAction,
 } from "@/types";
 import { ShowType, type ShowTypeValue } from "../constants";
 import dayjs from "dayjs";
-import ContextMenu from "./ContextMenu";
+import ContextMenu from "../components/ContextMenu";
 import { Col, Row, Space } from "antd";
 import { Collapse } from "react-bootstrap";
 import { Content, Footer, Header } from "antd/es/layout/layout";
@@ -38,8 +36,7 @@ import { Content, Footer, Header } from "antd/es/layout/layout";
 export default function TODOList({
   todoList: propTodoList,
   dispatch,
-  todoTasks: propTodoTasks,
-}: TODOListProps & {
+}: {
   todoList: TodoListData;
   dispatch: React.Dispatch<TodoAction>;
 }) {
@@ -55,20 +52,11 @@ export default function TODOList({
     }),
   ];
 
-  // 使用从父组件传入的initialTodoList，如果没有则创建一个默认的
-  const todoTasks: TodoListData = propTodoTasks || {
-    id: uuidv4(),
-    title: "我的待办事项",
-    createdAt: dayjs().format(),
-    updatedAt: dayjs().format(),
-    tasks: [],
-  };
-  console.log(todoTasks);
   // 读取本地值
   // if (localStorage.getItem('todoList') !== null) {
   //     todoTasks = JSON.parse(localStorage.getItem('todoList') as string) as TodoListData;
   // }
-  const [text, setText] = useState<string>("");
+  const [title, setTitle] = useState<string>("");
   const [showType, setShowType] = useState<ShowTypeValue>(ShowType.uncompleted);
   const todoList = propTodoList;
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>(
@@ -82,15 +70,15 @@ export default function TODOList({
 
   //点击添加按钮 - 添加根任务
   function handleAdded(): void {
-    dispatch({ type: "added", text, completed: false });
-    setText("");
+    dispatch({ type: "added", title: title, completed: false });
+    setTitle("");
   }
 
   // 添加子任务
   function handleAddSubTask(parentId: string, parentDepth: number): void {
     dispatch({
       type: "added",
-      text,
+      title: title,
       completed: false,
       parentId,
       depth: parentDepth + 1,
@@ -306,7 +294,8 @@ export default function TODOList({
 
   return (
     <>
-      <Header className="bg-info rounded-top">
+      {/*rounded-top*/}
+      <Header className="bg-info ">
         <Row align={"middle"} justify="space-between">
           <Col>TODOLIST</Col>
         </Row>
@@ -328,8 +317,8 @@ export default function TODOList({
                     onSwitchShow={handleSwitchShow}
                     onCompleteAll={handleCompleteAll}
                     showType={showType}
-                    text={text}
-                    setText={setText}
+                    text={title}
+                    setText={setTitle}
                     onAdded={handleAdded}
                   />
                 }
