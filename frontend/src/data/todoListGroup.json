@@ -44,6 +44,26 @@
         "deadline": "2025-09-18",
         "parentId": "1",
         "depth": 1
+      },
+      {
+        "id": "a1",
+        "text": "刷完《React 进阶实战》视频课",
+        "completed": false,
+        "priority": 2,
+        "datetimeLocal": "2025-09-16T12:00:00+08:00",
+        "deadline": "2025-09-20",
+        "parentId": null,
+        "depth": 0
+      },
+      {
+        "id": "a2",
+        "text": "整理个人知识库",
+        "completed": false,
+        "priority": 1,
+        "datetimeLocal": "2025-09-16T12:00:00+08:00",
+        "deadline": "2025-09-25",
+        "parentId": null,
+        "depth": 0
       }
     ]
   },
@@ -66,12 +86,32 @@
       {
         "id": "w2",
         "text": "编写技术方案",
-        "completed": false,
+        "completed": true,
         "priority": 2,
         "datetimeLocal": "2025-09-16T12:05:00+08:00",
         "deadline": "2025-09-17",
         "parentId": "w1",
         "depth": 1
+      },
+      {
+        "id": "w3",
+        "text": "准备季度述职 PPT",
+        "completed": false,
+        "priority": 1,
+        "datetimeLocal": "2025-09-16T12:05:00+08:00",
+        "deadline": "2025-09-22",
+        "parentId": null,
+        "depth": 0
+      },
+      {
+        "id": "w4",
+        "text": "组织代码走查会议",
+        "completed": false,
+        "priority": 2,
+        "datetimeLocal": "2025-09-16T12:05:00+08:00",
+        "deadline": "2025-09-19",
+        "parentId": null,
+        "depth": 0
       }
     ]
   },
@@ -98,6 +138,26 @@
         "priority": 1,
         "datetimeLocal": "2025-09-16T12:10:00+08:00",
         "deadline": "2025-09-22",
+        "parentId": null,
+        "depth": 0
+      },
+      {
+        "id": "l3",
+        "text": "买换季床上用品",
+        "completed": false,
+        "priority": 0,
+        "datetimeLocal": "2025-09-16T12:10:00+08:00",
+        "deadline": "2025-09-28",
+        "parentId": null,
+        "depth": 0
+      },
+      {
+        "id": "l4",
+        "text": "给爸妈挑中秋礼物",
+        "completed": false,
+        "priority": 1,
+        "datetimeLocal": "2025-09-16T12:10:00+08:00",
+        "deadline": "2025-09-29",
         "parentId": null,
         "depth": 0
       }
@@ -138,6 +198,26 @@
         "deadline": "2025-10-07",
         "parentId": "r1",
         "depth": 1
+      },
+      {
+        "id": "r4",
+        "text": "读完《设计模式》",
+        "completed": false,
+        "priority": 2,
+        "datetimeLocal": "2025-09-16T12:15:00+08:00",
+        "deadline": "2025-10-15",
+        "parentId": null,
+        "depth": 0
+      },
+      {
+        "id": "r5",
+        "text": "参加线上读书会分享",
+        "completed": false,
+        "priority": 1,
+        "datetimeLocal": "2025-09-16T12:15:00+08:00",
+        "deadline": "2025-10-20",
+        "parentId": null,
+        "depth": 0
       }
     ]
   }

@@ -4,8 +4,9 @@
 *,
 *:before,
 *:after {
-  box-sizing: border-box;
+    box-sizing: border-box;
 }
+
 body,
 h1,
 h2,
@@ -31,380 +32,436 @@ input,
 textarea,
 th,
 td {
-  margin: 0;
-  padding: 0;
+    margin: 0;
+    padding: 0;
 }
 
 html {
-  height: 100%;
-  font-size: 14px;
-  line-height: 1.15;
-  color: #333;
+    height: 100%;
+    font-size: 14px;
+    line-height: 1.15;
+    color: #333;
 }
 
 body {
 
-  margin:5rem;
-  text-align: center;
-  height: 100%;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-  font-family: Helvetica Neue, Helvetica, PingFang SC, Hiragino Sans GB, Microsoft YaHei, Arial, sans-serif;
-  overflow: hidden;
+    text-align: center;
+    height: 100%;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    font-family: Helvetica Neue, Helvetica, PingFang SC, Hiragino Sans GB, Microsoft YaHei, Arial, sans-serif;
+    overflow: hidden;
 }
 
 li {
-  list-style: none;
+    list-style: none;
+    text-align: start;
 }
 
 button + button {
-  margin-left: 12px;
+    margin-left: 12px;
 }
-#root{
-  height: 100%;
+
+#root {
+    height: 100%;
 }
 
 /** 原子类 **/
 
 /* flex */
 .flex {
-  display: flex !important;
+    display: flex !important;
 }
+
 .fxauto {
-  flex: auto !important;
+    flex: auto !important;
 }
+
 .fxnone {
-  flex: none !important;
+    flex: none !important;
 }
+
 .ais {
-  display: flex;
-  align-items: stretch !important;
+    display: flex;
+    align-items: stretch !important;
 }
+
 .ait {
-  display: flex;
-  align-items: flex-start !important;
+    display: flex;
+    align-items: flex-start !important;
 }
+
 .aic {
-  display: flex;
-  align-items: center !important;
+    display: flex;
+    align-items: center !important;
 }
+
 .flwrap {
-  display: flex;
-  flex-flow: wrap !important;
+    display: flex;
+    flex-flow: wrap !important;
 }
+
 .fxbw {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
 }
+
 .fcbw {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
+
 .fxcol {
-  display: flex;
-  flex-direction: column !important;
+    display: flex;
+    flex-direction: column !important;
 }
+
 .gap10 {
-  display: flex;
-  flex-wrap: wrap;
-  align-content: baseline;
-  gap: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: baseline;
+    gap: 10px;
 }
+
 .gap5 {
-  gap: 5px !important;
+    gap: 5px !important;
 }
+
 .gap15 {
-  gap: 15px !important;
+    gap: 15px !important;
 }
+
 .gap20 {
-  gap: 20px !important;
+    gap: 20px !important;
 }
 
 /* align */
 .fl {
-  float: left;
-  position: relative;
+    float: left;
+    position: relative;
 }
+
 .fr {
-  float: right;
-  position: relative;
+    float: right;
+    position: relative;
 }
+
 .al {
-  text-align: left !important;
+    text-align: left !important;
 }
+
 .ac {
-  text-align: center !important;
+    text-align: center !important;
 }
+
 .ar {
-  text-align: right !important;
+    text-align: right !important;
 }
 
 .sticky-t {
-  position: sticky !important;
-  top: 0;
-  z-index: 9;
+    position: sticky !important;
+    top: 0;
+    z-index: 9;
 }
+
 .sticky-b {
-  position: sticky !important;
-  bottom: 0;
+    position: sticky !important;
+    bottom: 0;
 }
 
 /* padding 5px series */
 .pt5 {
-  padding-top: 5px !important;
+    padding-top: 5px !important;
 }
+
 .pr5 {
-  padding-right: 5px !important;
+    padding-right: 5px !important;
 }
+
 .pb5 {
-  padding-bottom: 5px !important;
+    padding-bottom: 5px !important;
 }
+
 .pl5 {
-  padding-left: 5px !important;
+    padding-left: 5px !important;
 }
+
 .pad5 {
-  padding: 5px !important;
+    padding: 5px !important;
 }
 
 /* padding 10px series */
 .pt10 {
-  padding-top: 10px !important;
+    padding-top: 10px !important;
 }
+
 .pr10 {
-  padding-right: 10px !important;
+    padding-right: 10px !important;
 }
+
 .pb10 {
-  padding-bottom: 10px !important;
+    padding-bottom: 10px !important;
 }
+
 .pl10 {
-  padding-left: 10px !important;
+    padding-left: 10px !important;
 }
+
 .pad10 {
-  padding: 10px !important;
+    padding: 10px !important;
 }
 
 /* padding 20px series */
 .pt20 {
-  padding-top: 20px !important;
+    padding-top: 20px !important;
 }
+
 .pr20 {
-  padding-right: 20px !important;
+    padding-right: 20px !important;
 }
+
 .pb20 {
-  padding-bottom: 20px !important;
+    padding-bottom: 20px !important;
 }
+
 .pl20 {
-  padding-left: 20px !important;
+    padding-left: 20px !important;
 }
+
 .pad20 {
-  padding: 20px !important;
+    padding: 20px !important;
 }
 
 /* margin 5px series */
 .mt5 {
-  margin-top: 5px !important;
+    margin-top: 5px !important;
 }
+
 .mr5 {
-  margin-right: 5px !important;
+    margin-right: 5px !important;
 }
+
 .mb5 {
-  margin-bottom: 5px !important;
+    margin-bottom: 5px !important;
 }
+
 .ml5 {
-  margin-left: 5px !important;
+    margin-left: 5px !important;
 }
+
 .mar5 {
-  margin: 5px !important;
+    margin: 5px !important;
 }
 
 /* margin 10px series */
 .mt10 {
-  margin-top: 10px !important;
+    margin-top: 10px !important;
 }
+
 .mr10 {
-  margin-right: 10px !important;
+    margin-right: 10px !important;
 }
+
 .mb10 {
-  margin-bottom: 10px !important;
+    margin-bottom: 10px !important;
 }
+
 .ml10 {
-  margin-left: 10px !important;
+    margin-left: 10px !important;
 }
+
 .mar10 {
-  margin: 10px !important;
+    margin: 10px !important;
 }
 
 /* margin 15px series */
 .mt15 {
-  margin-top: 15px !important;
+    margin-top: 15px !important;
 }
+
 .mr15 {
-  margin-right: 15px !important;
+    margin-right: 15px !important;
 }
+
 .mb15 {
-  margin-bottom: 15px !important;
+    margin-bottom: 15px !important;
 }
+
 .ml15 {
-  margin-left: 15px !important;
+    margin-left: 15px !important;
 }
+
 .ml15 {
-  margin-left: 15px !important;
+    margin-left: 15px !important;
 }
 
 /* margin 20px series */
 .mt20 {
-  margin-top: 20px !important;
+    margin-top: 20px !important;
 }
+
 .mr20 {
-  margin-right: 20px !important;
+    margin-right: 20px !important;
 }
+
 .mb20 {
-  margin-bottom: 20px !important;
+    margin-bottom: 20px !important;
 }
+
 .ml20 {
-  margin-left: 20px !important;
+    margin-left: 20px !important;
 }
+
 .mar20 {
-  margin: 20px !important;
+    margin: 20px !important;
 }
 
 /* . */
 .mb8 {
-  margin-bottom: 8px !important;
+    margin-bottom: 8px !important;
 }
 
 .mt0 {
-  margin-top: 0 !important;
+    margin-top: 0 !important;
 }
+
 .mb0 {
-  margin-bottom: 0 !important;
+    margin-bottom: 0 !important;
 }
 
 .cp {
-  cursor: pointer !important;
+    cursor: pointer !important;
 }
 
 .lh1 {
-  line-height: 1 !important;
+    line-height: 1 !important;
 }
 
 .hide {
-  display: none !important;
+    display: none !important;
 }
 
 .bgw {
-  background: white !important;
+    background: white !important;
 }
 
 .bgnone {
-  background: none !important;
+    background: none !important;
 }
 
 .overhide {
-  overflow: hidden !important;
+    overflow: hidden !important;
 }
+
 .overauto {
-  overflow: auto !important;
+    overflow: auto !important;
 }
 
 .blod {
-  font-weight: bold !important;
+    font-weight: bold !important;
 }
 
 .h100 {
-  height: 100% !important;
+    height: 100% !important;
 }
 
 .block {
-  display: block !important;
+    display: block !important;
 }
 
 /* bfc模型 / 闭合清楚浮动 */
 .bfc-o {
-  overflow: hidden;
-  position: relative;
+    overflow: hidden;
+    position: relative;
 }
+
 .bfc-d {
-  display: inline-block;
-  vertical-align: top;
-  position: relative;
+    display: inline-block;
+    vertical-align: top;
+    position: relative;
 }
+
 .bfc-p {
-  position: absolute;
+    position: absolute;
 }
 
 /* fixed */
 .tf,
 .bf {
-  position: fixed;
-  width: 100%;
-  left: 0;
-  height: 50px;
-  z-index: 999;
+    position: fixed;
+    width: 100%;
+    left: 0;
+    height: 50px;
+    z-index: 999;
 }
+
 .tf {
-  top: 0;
+    top: 0;
 }
+
 .bf {
-  bottom: 0;
+    bottom: 0;
 }
 
 /* mask */
 .mask {
-  position: fixed;
-  width: 100%;
-  height: 100%;
-  background: rgba(39, 39, 39, 0.76);
-  left: 0;
-  bottom: 0;
-  margin: auto;
-  z-index: 9;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background: rgba(39, 39, 39, 0.76);
+    left: 0;
+    bottom: 0;
+    margin: auto;
+    z-index: 9;
 }
 
 /* 上下左右居中 */
 .cc {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  overflow: auto;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    overflow: auto;
 }
 
 /* 单行文字溢出省略号 */
 .toe {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .sticky-padding {
-  --bg: var(--bg-black-8, hsl(0, 0%, 80%));
-  --pad: var(--card-margin, 20px);
-  background: var(--bg);
-  padding: 0 var(--pad);
-  overflow: auto;
+    --bg: var(--bg-black-8, hsl(0, 0%, 80%));
+    --pad: var(--card-margin, 20px);
+    background: var(--bg);
+    padding: 0 var(--pad);
+    overflow: auto;
 }
+
 .sticky-padding::before,
 .sticky-padding::after {
-  content: '';
-  display: block;
-  position: sticky;
-  height: var(--pad);
-  background: var(--bg);
+    content: '';
+    display: block;
+    position: sticky;
+    height: var(--pad);
+    background: var(--bg);
 }
+
 .sticky-padding::before {
-  top: 0;
+    top: 0;
 }
+
 .sticky-padding::after {
-  bottom: 0;
+    bottom: 0;
 }
 
 /* pc端主体显示宽度区域 */
 .main-size {
-  min-width: 1366px;
+    min-width: 1366px;
 }
 
 .highlight {
@@ -421,11 +478,13 @@ button + button {
     background: #e6f7ff;
     /*border-color: #91d5ff;*/
 }
-.highlight:hover{
+
+.highlight:hover {
     /* 使用 antd 官方主色 @primary-1 */
     background: #e6f7ff;
     /*border-color: #91d5ff;*/
 }
+
 .sub-highlight {
     padding: 32px;
     /*height: 2rem;*/
@@ -436,11 +495,25 @@ button + button {
 
 .sub-highlight:hover {
     /* 使用 antd 官方主色 @primary-1 */
-    background: #99f1b8;!important;
+    background: #99f1b8;
+!important;
     /*border-color: #08091a;*/
 }
+
 .ctx-menu-left .ant-dropdown-menu-item {
     text-align: left;
+}
+
+.opacityHover {
+    opacity: .3;
+    transition: opacity .2s;
+}
+
+.opacityHover:hover {
+    opacity: 1;
+}
+.my-custom-menu .ant-menu-submenu .ant-menu-item {
+    padding-left: 20px !important;
 }
 
 /* 暗黑模式 Dark mode */
@@ -464,4 +537,3 @@ button + button {
     backdrop-filter: invert(1) brightness(1.5) hue-rotate(180deg);
   }
 } */
-

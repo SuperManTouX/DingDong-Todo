@@ -1,6 +1,31 @@
 import type { Priority } from "@/constants";
 
 import { ShowType, type ShowTypeValue } from "@/constants";
+import type { MenuProps } from "antd";
+
+// 扩展TodoAction类型，添加groupId字段
+export interface TodoListGroupAction {
+  groupId: string; // 指定操作的列表组 ID
+}
+
+// 新增列表组管理相关的Action类型
+export interface AddTodoListGroupAction {
+  type: "addListGroup";
+  title: string;
+  // 可选的初始任务
+  initialTasks?: Todo[];
+}
+
+export interface UpdateTodoListGroupAction {
+  type: "updateListGroup";
+  groupId: string;
+  title?: string;
+}
+
+export interface DeleteTodoListGroupAction {
+  type: "deleteListGroup";
+  groupId: string;
+}
 
 export interface ControllerProps {
   isAllDone: boolean;
@@ -87,11 +112,20 @@ export type TodoAction =
   | TodoCompleteAllAction
   | TodoDeleteAllCompleteAction;
 
+// 扩展后的Action类型，用于重构后的reducer
+export type TodoActionExtended =
+  | (TodoAction & TodoListGroupAction)
+  | AddTodoListGroupAction
+  | UpdateTodoListGroupAction
+  | DeleteTodoListGroupAction;
+
 export interface TodoItemProps {
   todo: Todo;
   onTodoChange: (action: TodoAction) => void;
-
   other?: boolean;
+  hasSubTasks?: boolean;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
 }
 
 // SubTodoItemProps接口已移除，扁平化后所有任务都使用Todo类型
@@ -103,5 +137,10 @@ export interface ContextMenuProps {
 }
 
 export interface TODOListProps {
-  initialTodoList?: TodoListData;
+  todoTasks: TodoListData;
+}
+
+export interface SideMenuProps {
+  menuItem: MenuProps["items"];
+  onActiveGroupChange: (groupId: string) => void;
 }

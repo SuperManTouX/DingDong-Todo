@@ -4,16 +4,7 @@ import { Priority } from "@/constants";
 import "../styles/TodoItem.css";
 import { Col, message, Row } from "antd";
 import dayjs from "dayjs";
-import type { Todo, TodoAction } from "@/types";
-
-interface TodoItemProps {
-  todo: Todo;
-  onTodoChange: (action: TodoAction) => void;
-  other?: boolean;
-  hasSubTasks?: boolean;
-  isExpanded?: boolean;
-  onToggleExpand?: () => void;
-}
+import type { TodoItemProps } from "@/types";
 
 export default function TodoItem({
   todo,
@@ -60,7 +51,7 @@ export default function TodoItem({
       <input
         type="text"
         autoFocus
-        className="w-50"
+        className="w-100"
         value={text}
         onChange={(e) => handleEditChanged(e.currentTarget.value)}
         onBlur={() => {
@@ -87,12 +78,23 @@ export default function TodoItem({
   const renderCountdown = () => {
     if (!todo.deadline && !todo.datetimeLocal) return null;
     const leftDay = dayjs(todo.deadline).diff(dayjs(), "day");
-    if (leftDay > 1) return <span className="text-primary">{leftDay}天</span>;
-    if (leftDay == 0) return <span className="text-primary">今天</span>;
-    if (leftDay == 1) return <span className="text-primary">明天</span>;
+    if (leftDay > 1)
+      return (
+        <span className="text-primary d-inline-block text-end w-100">
+          {leftDay}天
+        </span>
+      );
+    if (leftDay == 0)
+      return (
+        <span className="text-primary d-inline-block text-end w-100">今天</span>
+      );
+    if (leftDay == 1)
+      return (
+        <span className="text-primary d-inline-block text-end w-100">明天</span>
+      );
     if (leftDay < 0)
       return (
-        <span className="text-danger">
+        <span className="text-danger d-inline-block text-end w-100">
           {dayjs(todo.deadline).format("MM月DD日")}
         </span>
       );
@@ -144,16 +146,12 @@ export default function TodoItem({
                 if (e.currentTarget.checked) message.info(`已完成${todo.text}`);
               }}
             />
-            <Row justify={"space-between"} className="w-100 " align={"middle"}>
-              {renderEditInput()}
-              <span>{renderCountdown()}</span>
+            <Row justify={"end"} className="w-100 " align={"middle"}>
+              <Col span={20}>{renderEditInput()}</Col>
+
+              <Col span={4}>{renderCountdown()}</Col>
             </Row>
           </Col>
-          {/*<Col
-            span={8}
-            className="d-flex justify-content-end align-items-center"
-          >
-          </Col>*/}
         </Row>
         {/*子任务列表已移除，子任务现在在TodoList中直接渲染*/}
         {/*编辑折叠框*/}

@@ -7,7 +7,7 @@ import "@ant-design/v5-patch-for-react-19";
 // import App from './TicTacToe.tsx'
 // import TaskApp from "./TaskApp";
 // import NestedList from "./Test";
-import AppLayout from "./components/AppLayout";
+import AppLayout from "./Layout/AppLayout";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
