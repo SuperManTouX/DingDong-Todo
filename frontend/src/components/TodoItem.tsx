@@ -14,16 +14,7 @@ export default function TodoItem({
   isExpanded = false,
   onToggleExpand,
 }: TodoItemProps) {
-  const [text, setText] = useState<string>(todo.text);
-
-  // // 当todo.text为空时，自动进入编辑模式
-  // useEffect(() => {
-  //   if (todo.text === "") {
-  //     setText("");
-  //   } else {
-  //     setText(todo.text);
-  //   }
-  // }, [todo.text]);
+  const [title, setTitle] = useState<string>(todo.title);
 
   let priClass;
   switch (todo.priority) {
@@ -42,7 +33,7 @@ export default function TodoItem({
 
   // 更新Todo
   function handleEditChanged(changeTest: string) {
-    setText(changeTest);
+    setTitle(changeTest);
   }
 
   // 渲染双击编辑输入框
@@ -52,14 +43,14 @@ export default function TodoItem({
         type="text"
         autoFocus
         className="w-100"
-        value={text}
+        value={title}
         onChange={(e) => handleEditChanged(e.currentTarget.value)}
         onBlur={() => {
           onTodoChange({
             type: "changed",
             todo: {
               ...todo,
-              text,
+              title: title,
             },
           });
         }}
@@ -98,7 +89,7 @@ export default function TodoItem({
           {dayjs(todo.deadline).format("MM月DD日")}
         </span>
       );
-    // <span className="text-danger">已逾期{Math.abs(dayjs(todo.deadline).diff(dayjs(), 'day'))}天</span>
+    // <span className="title-danger">已逾期{Math.abs(dayjs(todo.deadline).diff(dayjs(), 'day'))}天</span>
   };
 
   // SubList函数已移除，子任务现在在TodoList中直接渲染
@@ -143,7 +134,8 @@ export default function TodoItem({
                   todoId: todo.id,
                   newCompleted: e.currentTarget.checked,
                 });
-                if (e.currentTarget.checked) message.info(`已完成${todo.text}`);
+                if (e.currentTarget.checked)
+                  message.info(`已完成${todo.title}`);
               }}
             />
             <Row justify={"end"} className="w-100 " align={"middle"}>

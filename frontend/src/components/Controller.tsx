@@ -20,6 +20,7 @@ export default function Controller({
       <Row justify={"space-between"} align={"middle"}>
         <Col span={20}>
           <Row justify={"start"} align={"middle"}>
+            {/*完成全部*/}
             <input
               style={{ marginLeft: "8px" }}
               className="me-2"
@@ -35,6 +36,7 @@ export default function Controller({
               }}
             />
             <div className="input-group input-group-sm w-50">
+              {/*添加任务全部*/}
               <input
                 type="text"
                 value={text}

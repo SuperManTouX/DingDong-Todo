@@ -1,20 +1,14 @@
 import Sider from "antd/es/layout/Sider";
 import React, { useState, useMemo } from "react";
 import SideMenu from "../components/SideMenu";
-
-import TODOList from "../components/TODOList";
-import { Layout, type MenuProps, Row } from "antd";
+import ListGroupManager from "../components/ListGroupManager";
+import { Layout, type MenuProps } from "antd";
 import todoListGroup from "../data/todoListGroup.json";
-import {
-  AppstoreOutlined,
-  PieChartOutlined,
-  PlusOutlined,
-  SettingOutlined,
-} from "@ant-design/icons";
-import { Content } from "antd/es/layout/layout";
-import type { TodoListData } from "@/types";
+import type { TodoActionExtended, TodoListData } from "@/types";
 import { useImmerReducer } from "use-immer";
 import reducer from "../utils/reducer";
+import EditTodo from "@/Layout/EditTodo";
+import TODOList from "@/Layout/TODOList";
 
 /**
  * 应用布局组件
@@ -25,7 +19,10 @@ export default function AppLayout() {
   const [activeGroupId, setActiveGroupId] = useState<string>("a");
 
   // 使用整个todoListGroup数组初始化reducer
-  const [todoListGroups, dispatch] = useImmerReducer(reducer, todoListGroup);
+  const [todoListGroups, dispatch] = useImmerReducer<
+    TodoListData[],
+    TodoActionExtended
+  >(reducer, todoListGroup);
 
   // 找出激活的组
   const activeGroup: TodoListData = useMemo(() => {
@@ -34,7 +31,8 @@ export default function AppLayout() {
       todoListGroups[0]
     );
   }, [todoListGroups, activeGroupId]);
-
+  // 选中右侧编辑todo
+  const [selectTodoId, setSelectTodoId] = useState<string>("");
   // 创建一个新的dispatch函数，自动添加groupId参数
   const dispatchWithGroupId = React.useCallback(
     (action: any) => {
@@ -52,67 +50,16 @@ export default function AppLayout() {
     color: "#fff",
     backgroundColor: "#3af152",
   };
-  const renderTodoListGroups = (): MenuProps["items"] => {
-    return todoListGroup.map((tg) => {
-      return {
-        key: tg.id,
-        icon: <AppstoreOutlined />,
-        label: tg.title,
-      };
-    });
-  };
-  // 菜单项配置
-  const menuItem: MenuProps["items"] = [
-    {
-      key: "1",
-      icon: <PieChartOutlined />,
-      label: "今天",
-    },
-    {
-      key: "2",
-      icon: <PieChartOutlined />,
-      label: "最近七天",
-    },
-    { type: "divider" },
-    {
-      key: "grp2",
-      label: (
-        <Row justify={"space-between"} className="text-secondary fs-6">
-          清单
-          <PlusOutlined
-            className={"opacityHover"}
-            onClick={(e) => {
-              e.stopPropagation();
-              console.log("加号");
-            }}
-          />
-        </Row>
-      ),
-      children: renderTodoListGroups(),
-    },
-    {
-      key: "grp3",
-      label: "标签",
-      children: [
-        {
-          key: "3",
-          icon: <SettingOutlined />,
-          label: "设置",
-        },
-      ],
-    },
-    { type: "divider", style: { margin: "2rem 0" } },
-    {
-      key: "3-1",
-      icon: <SettingOutlined />,
-      label: "已完成",
-    },
-    {
-      key: "3-2",
-      icon: <SettingOutlined />,
-      label: "回收站",
-    },
-  ];
+
+  // 使用ListGroupManager组件管理清单组
+  const listGroupManager = ListGroupManager({
+    todoListGroups,
+    dispatch,
+    onActiveGroupChange: setActiveGroupId,
+  });
+
+  // 直接使用listGroupManager.menuItem作为第一层菜单
+  const menuItem: MenuProps["items"] = listGroupManager.menuItem;
 
   return (
     <Layout className="w-100 h-100">
@@ -135,10 +82,16 @@ export default function AppLayout() {
             }
           }
           dispatch={dispatchWithGroupId}
-          todoTasks={activeGroup}
         ></TODOList>
       </Layout>
-      <Content>1234</Content>
+      <Layout>
+        <EditTodo />
+      </Layout>
+      {/* 添加清单模态框 */}
+      {listGroupManager.addModal}
+
+      {/* 编辑清单模态框 */}
+      {listGroupManager.editModal}
     </Layout>
   );
 }
