@@ -1,9 +1,8 @@
 import "@/styles/TODOList.css";
 import { v4 as uuidv4 } from "uuid";
-import { useImmerReducer } from "use-immer";
 import { useState, useCallback } from "react";
-import Controller from "./components/Controller";
-import TodoItem from "./components/TodoItem";
+import Controller from "./Controller";
+import TodoItem from "./TodoItem";
 import {
   DndContext,
   closestCenter,
@@ -12,17 +11,17 @@ import {
   useSensor,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { SortableList, SortableItem } from "./components/SortableComponents";
-import reducer from "./utils/reducer";
+import { SortableList, SortableItem } from "./SortableComponents";
 import type {
   Todo,
   TodoCompleteAllAction,
   TodoListData,
   TODOListProps,
-} from "./types";
-import { ShowType, type ShowTypeValue } from "./constants";
+  TodoAction,
+} from "@/types";
+import { ShowType, type ShowTypeValue } from "../constants";
 import dayjs from "dayjs";
-import ContextMenu from "./components/ContextMenu";
+import ContextMenu from "./ContextMenu";
 import { Col, Row, Space } from "antd";
 import { Collapse } from "react-bootstrap";
 import { Content, Footer, Header } from "antd/es/layout/layout";
@@ -37,8 +36,13 @@ import { Content, Footer, Header } from "antd/es/layout/layout";
 // 8. 完成  批量删除已完成 / 底部增加“清除已完成”按钮，一键删掉所有 done === true 的项。
 
 export default function TODOList({
-  initialTodoList: propInitialTodoList,
-}: TODOListProps) {
+  todoList: propTodoList,
+  dispatch,
+  todoTasks: propTodoTasks,
+}: TODOListProps & {
+  todoList: TodoListData;
+  dispatch: React.Dispatch<TodoAction>;
+}) {
   // 设置@dnd-kit传感器
   const sensors = [
     useSensor(PointerSensor, {
@@ -52,20 +56,21 @@ export default function TODOList({
   ];
 
   // 使用从父组件传入的initialTodoList，如果没有则创建一个默认的
-  const initialTodoList: TodoListData = propInitialTodoList || {
+  const todoTasks: TodoListData = propTodoTasks || {
     id: uuidv4(),
     title: "我的待办事项",
     createdAt: dayjs().format(),
     updatedAt: dayjs().format(),
     tasks: [],
   };
+  console.log(todoTasks);
   // 读取本地值
   // if (localStorage.getItem('todoList') !== null) {
-  //     initialTodoList = JSON.parse(localStorage.getItem('todoList') as string) as TodoListData;
+  //     todoTasks = JSON.parse(localStorage.getItem('todoList') as string) as TodoListData;
   // }
   const [text, setText] = useState<string>("");
   const [showType, setShowType] = useState<ShowTypeValue>(ShowType.uncompleted);
-  const [todoList, dispatch] = useImmerReducer(reducer, initialTodoList);
+  const todoList = propTodoList;
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>(
     {},
   );
@@ -307,7 +312,7 @@ export default function TODOList({
         </Row>
       </Header>
 
-      <Content className="minHeight-large pe-4 ps-4">
+      <Content className="minHeight-large pe-2 ps-2">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -335,6 +340,7 @@ export default function TODOList({
                     return (
                       <SortableItem key={item.id} id={item.id}>
                         <ContextMenu
+                          key={item.id}
                           todo={item}
                           onTodoChange={dispatch}
                           onAddSubTask={handleAddSubTask}
@@ -369,6 +375,7 @@ export default function TODOList({
                           className="sub-task-container"
                         >
                           <ContextMenu
+                            key={subTodo.id}
                             todo={subTodo}
                             onTodoChange={dispatch}
                             onAddSubTask={handleAddSubTask}
@@ -390,20 +397,20 @@ export default function TODOList({
                     ));
                   }
                 })}
+                {/*虚化Todo*/}
                 <div style={{ opacity: `.3` }}>
-                  {getHierarchicalTasks(false).map((item) => {
-                    if ("id" in item) {
-                      return (
-                        <TodoItem
-                          key={item.id}
-                          todo={item}
-                          onTodoChange={dispatch}
-                          hasSubTasks={hasSubTasks(item.id)}
-                          isExpanded={expandedTasks[item.id]}
-                          onToggleExpand={() => toggleTaskExpand(item.id)}
-                        />
-                      );
-                    } else {
+                  {renderOtherTodos().map((item) => {
+                    /* if ("id" in item) {*/
+                    return (
+                      <TodoItem
+                        key={item.id}
+                        todo={item}
+                        onTodoChange={dispatch}
+                        isExpanded={expandedTasks[item.id]}
+                        onToggleExpand={() => toggleTaskExpand(item.id)}
+                      />
+                    );
+                    /*} else {
                       return item.map((subTodo) => (
                         <ContextMenu
                           todo={subTodo}
@@ -431,7 +438,7 @@ export default function TODOList({
                           </div>
                         </ContextMenu>
                       ));
-                    }
+                    }*/
                   })}
                 </div>
               </Space>
