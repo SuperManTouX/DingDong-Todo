@@ -1,14 +1,22 @@
 import Sider from "antd/es/layout/Sider";
 import React, { useState, useMemo } from "react";
-import SideMenu from "../components/SideMenu";
+import SideMenu from "./SideMenu";
 import ListGroupManager from "../components/ListGroupManager";
 import { Layout, type MenuProps } from "antd";
 import todoListGroup from "../data/todoListGroup.json";
-import type { Todo, TodoActionExtended, TodoListData } from "@/types";
+import todoTag from "../data/todoTags.json";
+import {
+  Tag,
+  TagReducerAction,
+  Todo,
+  TodoActionExtended,
+  TodoListData,
+} from "@/types";
 import { useImmerReducer } from "use-immer";
 import reducer from "../utils/reducer";
 import EditTodo from "@/Layout/EditTodo";
 import TODOList from "@/Layout/TODOList";
+import tagReducer from "@/utils/tagReducer";
 
 /**
  * 应用布局组件
@@ -19,10 +27,14 @@ export default function AppLayout() {
   const [activeGroupId, setActiveGroupId] = useState<string>("a");
 
   // 使用整个todoListGroup数组初始化reducer
-  const [todoListGroups, dispatch] = useImmerReducer<
+  const [todoListGroups, dispatchTodo] = useImmerReducer<
     TodoListData[],
     TodoActionExtended
   >(reducer, todoListGroup);
+  const [todoTags, dispatchTag] = useImmerReducer<Tag[], TagReducerAction>(
+    tagReducer,
+    todoTag,
+  );
 
   // 找出激活的组
   const activeGroup: TodoListData = useMemo(() => {
@@ -37,7 +49,7 @@ export default function AppLayout() {
   const selectTodo = useMemo(() => {
     if (!selectTodoId) return null;
     for (const group of todoListGroups) {
-      const todo = group.tasks.find(t => t.id === selectTodoId);
+      const todo = group.tasks.find((t) => t.id === selectTodoId);
       if (todo) return todo;
     }
     return null;
@@ -50,12 +62,12 @@ export default function AppLayout() {
   // 创建一个新的dispatch函数，自动添加groupId参数
   const dispatchWithGroupId = React.useCallback(
     (action: any) => {
-      dispatch({
+      dispatchTodo({
         ...action,
         groupId: activeGroupId,
       });
     },
-    [dispatch, activeGroupId],
+    [dispatchTodo, activeGroupId],
   );
 
   const siderStyle1: React.CSSProperties = {
@@ -68,7 +80,8 @@ export default function AppLayout() {
   // 使用ListGroupManager组件管理清单组
   const listGroupManager = ListGroupManager({
     todoListGroups,
-    dispatch,
+    todoTags,
+    dispatch: dispatchTodo,
     onActiveGroupChange: setActiveGroupId,
   });
 
@@ -79,7 +92,7 @@ export default function AppLayout() {
       <Sider width="5%" style={siderStyle1}>
         SiderNav
       </Sider>
-      <Sider width="15%">
+      <Sider width="18%">
         <SideMenu menuItem={menuItem} onActiveGroupChange={setActiveGroupId} />
       </Sider>
       <Layout>
@@ -108,11 +121,8 @@ export default function AppLayout() {
           />
         )}
       </Layout>
-      {/* 添加清单模态框 */}
-      {listGroupManager.addModal}
-
-      {/* 编辑清单模态框 */}
-      {listGroupManager.editModal}
+      {/* 清单管理模态框 */}
+      {listGroupManager.groupModal}
     </Layout>
   );
 }

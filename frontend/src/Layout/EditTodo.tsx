@@ -1,21 +1,9 @@
 import { Content, Footer, Header } from "antd/es/layout/layout";
-import {
-  Col,
-  DatePicker,
-  DatePickerProps,
-  Input,
-  message,
-  Row,
-  Select,
-  Tag,
-} from "antd";
+import { Col, DatePicker, Input, message, Row, Select, Tag } from "antd";
 import type { Todo, TodoAction } from "@/types";
-import { Priority, PriorityName } from "@/constants";
+import { Priority } from "@/constants";
 import dayjs from "dayjs";
 import type { RangePickerProps } from "antd/es/date-picker";
-import type { SelectProps } from "antd/es/select";
-import type { InputProps } from "antd/es/input";
-
 export default function EditTodo({
   selectTodo,
   onTodoChange,

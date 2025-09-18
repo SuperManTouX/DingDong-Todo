@@ -14,6 +14,8 @@ export interface AddTodoListGroupAction {
   title: string;
   // 可选的emoji图标
   emoji?: string;
+  // 可选的颜色
+  color?: string;
   // 可选的初始任务
   initialTasks?: Todo[];
 }
@@ -23,6 +25,7 @@ export interface UpdateTodoListGroupAction {
   groupId: string;
   title?: string;
   emoji?: string;
+  color?: string;
 }
 
 export interface DeleteTodoListGroupAction {
@@ -64,6 +67,7 @@ export interface Todo {
   deadline?: string;
   parentId?: string | null; // 新增：指向父任务ID
   depth: number; // 新增：表示嵌套深度
+  tags?: string[]; // 新增：任务标签数组，存储标签ID
 }
 
 interface TodoAddAction {
@@ -105,6 +109,25 @@ interface TodoDeleteAllCompleteAction {
   todoList: Todo[];
 }
 
+// 标签相关的Action类型
+interface AddTagToTodoAction {
+  type: "addTagToTodo";
+  todoId: string;
+  tagId: string;
+}
+
+interface RemoveTagFromTodoAction {
+  type: "removeTagFromTodo";
+  todoId: string;
+  tagId: string;
+}
+
+interface UpdateTodoTagsAction {
+  type: "updateTodoTags";
+  todoId: string;
+  tags?: string[];
+}
+
 // ========= 新增 Action 类型 =========
 // 扁平化后，子任务相关的Action可以被通用的TodoAction替代
 // 但为了兼容性，我们保留部分Action类型
@@ -116,7 +139,10 @@ export type TodoAction =
   | TodoDeletedAction
   | TodoReplaceAction
   | TodoCompleteAllAction
-  | TodoDeleteAllCompleteAction;
+  | TodoDeleteAllCompleteAction
+  | AddTagToTodoAction
+  | RemoveTagFromTodoAction
+  | UpdateTodoTagsAction;
 
 // 扩展后的Action类型，用于重构后的reducer
 export type TodoActionExtended =
@@ -135,6 +161,16 @@ export interface TodoItemProps {
   onToggleExpand?: () => void;
 }
 
+// 标签接口定义
+export interface Tag {
+  id: string;
+  name: string;
+  parentId: string | null;
+  emoji?: string;
+  color?: string;
+  subTags?: Tag[]; // 可选：用于树形结构展示的子标签
+}
+
 // SubTodoItemProps接口已移除，扁平化后所有任务都使用Todo类型
 export interface ContextMenuProps {
   todo: Todo;
@@ -147,3 +183,6 @@ export interface SideMenuProps {
   menuItem: MenuProps["items"];
   onActiveGroupChange: (groupId: string) => void;
 }
+
+// 从tagReducer.ts导出标签相关的action类型
+export { type TagReducerAction } from '@/utils/tagReducer';
