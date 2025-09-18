@@ -165,13 +165,14 @@ export default function reducer(
     }
     // 列表组管理相关操作
     case "addListGroup": {
-      const { title, initialTasks = [], emoji } = action;
+      const { title, initialTasks = [], emoji, color } = action;
       const now = dayjs().format();
 
       draft.push({
         id: `group_${Date.now()}`,
         title,
         emoji,
+        color,
         createdAt: now,
         updatedAt: now,
         tasks: initialTasks,
@@ -179,7 +180,7 @@ export default function reducer(
       break;
     }
     case "updateListGroup": {
-      const { groupId, title, emoji } = action;
+      const { groupId, title, emoji, color } = action;
       const targetGroup = draft.find((group) => group.id === groupId);
 
       if (!targetGroup) return;
@@ -191,6 +192,9 @@ export default function reducer(
       // 处理emoji更新
       if (emoji !== undefined) {
         targetGroup.emoji = emoji;
+      }
+      if (color !== "") {
+        targetGroup.color = color;
       }
 
       targetGroup.updatedAt = dayjs().format();
@@ -205,6 +209,57 @@ export default function reducer(
       }
       break;
     }
+    // 为任务添加标签
+    case "addTagToTodo": {
+      const { todoId, tagId, groupId } = action;
+      const targetGroup = draft.find((group) => group.id === groupId);
+      
+      if (!targetGroup) return;
+      
+      const todo = targetGroup.tasks.find((t) => t.id === todoId);
+      if (todo) {
+        if (!todo.tags) {
+          todo.tags = [];
+        }
+        // 确保标签ID不重复
+        if (!todo.tags.includes(tagId)) {
+          todo.tags.push(tagId);
+        }
+        targetGroup.updatedAt = dayjs().format();
+      }
+      break;
+    }
+    
+    // 从任务中移除标签
+    case "removeTagFromTodo": {
+      const { todoId, tagId, groupId } = action;
+      const targetGroup = draft.find((group) => group.id === groupId);
+      
+      if (!targetGroup) return;
+      
+      const todo = targetGroup.tasks.find((t) => t.id === todoId);
+      if (todo && todo.tags) {
+        todo.tags = todo.tags.filter((id) => id !== tagId);
+        targetGroup.updatedAt = dayjs().format();
+      }
+      break;
+    }
+    
+    // 更新任务的所有标签
+    case "updateTodoTags": {
+      const { todoId, tags, groupId } = action;
+      const targetGroup = draft.find((group) => group.id === groupId);
+      
+      if (!targetGroup) return;
+      
+      const todo = targetGroup.tasks.find((t) => t.id === todoId);
+      if (todo) {
+        todo.tags = tags || [];
+        targetGroup.updatedAt = dayjs().format();
+      }
+      break;
+    }
+    
     default:
       break;
   }

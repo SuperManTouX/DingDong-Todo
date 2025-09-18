@@ -13,7 +13,8 @@
         "datetimeLocal": "2025-09-16T12:00:00+08:00",
         "deadline": "2025-09-22",
         "parentId": null,
-        "depth": 0
+        "depth": 0,
+        "tags": ["学习", "React", "前端"]
       },
       {
         "id": "t2",
@@ -23,7 +24,8 @@
         "datetimeLocal": "2025-09-16T12:00:00+08:00",
         "deadline": "2025-09-30",
         "parentId": "1",
-        "depth": 1
+        "depth": 1,
+        "tags": ["学习", "React", "组件"]
       },
       {
         "id": "3",
@@ -33,7 +35,8 @@
         "datetimeLocal": "2025-09-16T12:00:00+08:00",
         "deadline": "2025-09-18",
         "parentId": "1",
-        "depth": 1
+        "depth": 1,
+        "tags": ["学习", "React", "Hooks"]
       },
       {
         "id": "t4",
@@ -43,7 +46,8 @@
         "datetimeLocal": "2025-09-16T12:00:00+08:00",
         "deadline": "2025-09-18",
         "parentId": "1",
-        "depth": 1
+        "depth": 1,
+        "tags": ["学习", "React", "状态管理"]
       },
       {
         "id": "a1",
@@ -53,7 +57,8 @@
         "datetimeLocal": "2025-09-16T12:00:00+08:00",
         "deadline": "2025-09-20",
         "parentId": null,
-        "depth": 0
+        "depth": 0,
+        "tags": ["学习", "React", "视频课程"]
       },
       {
         "id": "a2",
@@ -63,7 +68,8 @@
         "datetimeLocal": "2025-09-16T12:00:00+08:00",
         "deadline": "2025-09-25",
         "parentId": null,
-        "depth": 0
+        "depth": 0,
+        "tags": ["学习", "知识管理", "文档"]
       }
     ]
   },
@@ -81,7 +87,8 @@
         "datetimeLocal": "2025-09-16T12:05:00+08:00",
         "deadline": "2025-09-14",
         "parentId": null,
-        "depth": 0
+        "depth": 0,
+        "tags": ["工作", "需求", "评审"]
       },
       {
         "id": "w2",
@@ -91,7 +98,8 @@
         "datetimeLocal": "2025-09-16T12:05:00+08:00",
         "deadline": "2025-09-17",
         "parentId": "w1",
-        "depth": 1
+        "depth": 1,
+        "tags": ["工作", "技术", "方案"]
       },
       {
         "id": "w3",
@@ -101,7 +109,8 @@
         "datetimeLocal": "2025-09-16T12:05:00+08:00",
         "deadline": "2025-09-22",
         "parentId": null,
-        "depth": 0
+        "depth": 0,
+        "tags": ["工作", "述职", "PPT"]
       },
       {
         "id": "w4",
@@ -111,7 +120,8 @@
         "datetimeLocal": "2025-09-16T12:05:00+08:00",
         "deadline": "2025-09-19",
         "parentId": null,
-        "depth": 0
+        "depth": 0,
+        "tags": ["工作", "代码质量", "会议"]
       }
     ]
   },
@@ -129,7 +139,8 @@
         "datetimeLocal": "2025-09-16T12:10:00+08:00",
         "deadline": "2025-09-20",
         "parentId": null,
-        "depth": 0
+        "depth": 0,
+        "tags": ["生活", "账单", "家务"]
       },
       {
         "id": "l2",
@@ -139,7 +150,8 @@
         "datetimeLocal": "2025-09-16T12:10:00+08:00",
         "deadline": "2025-09-22",
         "parentId": null,
-        "depth": 0
+        "depth": 0,
+        "tags": ["生活", "健康", "医疗"]
       },
       {
         "id": "l3",
@@ -149,7 +161,8 @@
         "datetimeLocal": "2025-09-16T12:10:00+08:00",
         "deadline": "2025-09-28",
         "parentId": null,
-        "depth": 0
+        "depth": 0,
+        "tags": ["生活", "购物", "家居"]
       },
       {
         "id": "l4",
@@ -159,7 +172,8 @@
         "datetimeLocal": "2025-09-16T12:10:00+08:00",
         "deadline": "2025-09-29",
         "parentId": null,
-        "depth": 0
+        "depth": 0,
+        "tags": ["生活", "节日", "礼物"]
       }
     ]
   },
@@ -177,7 +191,8 @@
         "datetimeLocal": "2025-09-16T12:15:00+08:00",
         "deadline": "2025-10-01",
         "parentId": null,
-        "depth": 0
+        "depth": 0,
+        "tags": ["阅读", "技术", "计算机基础"]
       },
       {
         "id": "r2",
@@ -187,7 +202,8 @@
         "datetimeLocal": "2025-09-16T12:15:00+08:00",
         "deadline": "2025-10-05",
         "parentId": "r1",
-        "depth": 1
+        "depth": 1,
+        "tags": ["阅读", "练习", "巩固"]
       },
       {
         "id": "r3",
@@ -197,7 +213,8 @@
         "datetimeLocal": "2025-09-16T12:15:00+08:00",
         "deadline": "2025-10-07",
         "parentId": "r1",
-        "depth": 1
+        "depth": 1,
+        "tags": ["阅读", "笔记", "总结"]
       },
       {
         "id": "r4",
@@ -207,7 +224,8 @@
         "datetimeLocal": "2025-09-16T12:15:00+08:00",
         "deadline": "2025-10-15",
         "parentId": null,
-        "depth": 0
+        "depth": 0,
+        "tags": ["阅读", "技术", "编程思想"]
       },
       {
         "id": "r5",
@@ -217,7 +235,8 @@
         "datetimeLocal": "2025-09-16T12:15:00+08:00",
         "deadline": "2025-10-20",
         "parentId": null,
-        "depth": 0
+        "depth": 0,
+        "tags": ["阅读", "社交", "分享"]
       }
     ]
   }
