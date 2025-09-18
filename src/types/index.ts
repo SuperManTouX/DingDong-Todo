@@ -166,7 +166,6 @@ export interface Tag {
   id: string;
   name: string;
   parentId: string | null;
-  emoji?: string;
   color?: string;
   subTags?: Tag[]; // 可选：用于树形结构展示的子标签
 }
@@ -185,4 +184,4 @@ export interface SideMenuProps {
 }
 
 // 从tagReducer.ts导出标签相关的action类型
-export { type TagReducerAction } from '@/utils/tagReducer';
+export { type TagReducerAction } from "@/utils/tagReducer";
