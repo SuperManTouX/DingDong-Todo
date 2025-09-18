@@ -1,21 +1,20 @@
-import { useState } from "react";
 import { RightOutlined } from "@ant-design/icons";
 import { Priority } from "@/constants";
 import "../styles/TodoItem.css";
 import { Col, message, Row } from "antd";
 import dayjs from "dayjs";
 import type { TodoItemProps } from "@/types";
-
+import isoWeek from "dayjs/plugin/isoWeek";
+dayjs.extend(isoWeek);
 export default function TodoItem({
   todo,
   onTodoChange,
+  onTodoSelect,
   other = false,
   hasSubTasks = false,
   isExpanded = false,
   onToggleExpand,
 }: TodoItemProps) {
-  const [title, setTitle] = useState<string>(todo.title);
-
   let priClass;
   switch (todo.priority) {
     case Priority.Low:
@@ -31,28 +30,24 @@ export default function TodoItem({
       priClass = "";
   }
 
-  // 更新Todo
-  function handleEditChanged(changeTest: string) {
-    setTitle(changeTest);
-  }
-
-  // 渲染双击编辑输入框
+  // 渲染编辑输入框
   function renderEditInput() {
     return (
       <input
         type="text"
         autoFocus
         className="w-100"
-        value={title}
-        onChange={(e) => handleEditChanged(e.currentTarget.value)}
-        onBlur={() => {
-          onTodoChange({
-            type: "changed",
-            todo: {
-              ...todo,
-              title: title,
-            },
-          });
+        value={todo.title}
+        onChange={(e) => {
+          if (todo) {
+            onTodoChange({
+              type: "changed",
+              todo: {
+                ...todo,
+                title: e.currentTarget.value,
+              },
+            });
+          }
         }}
         style={{
           border: "none",
@@ -69,26 +64,81 @@ export default function TodoItem({
   const renderCountdown = () => {
     if (!todo.deadline && !todo.datetimeLocal) return null;
     const leftDay = dayjs(todo.deadline).diff(dayjs(), "day");
-    if (leftDay > 1)
-      return (
-        <span className="text-primary d-inline-block text-end w-100">
-          {leftDay}天
-        </span>
-      );
-    if (leftDay == 0)
-      return (
-        <span className="text-primary d-inline-block text-end w-100">今天</span>
-      );
-    if (leftDay == 1)
-      return (
-        <span className="text-primary d-inline-block text-end w-100">明天</span>
-      );
-    if (leftDay < 0)
+    const countWeek = () => {
+      if (dayjs(todo.deadline).isoWeek() - dayjs().isoWeek() === 0) {
+        return "本";
+      } else if (dayjs(todo.deadline).isoWeek() - dayjs().isoWeek() === 1) {
+        return "下";
+      } else {
+        return "";
+      }
+    };
+    const daedDay = () => {
+      let d: string;
+      switch (dayjs(todo.deadline).day()) {
+        case 0:
+          d = "日";
+          break;
+        case 1:
+          d = "一";
+          break;
+        case 2:
+          d = "二";
+          break;
+        case 3:
+          d = "三";
+          break;
+        case 4:
+          d = "四";
+          break;
+        case 5:
+          d = "五";
+          break;
+        case 6:
+          d = "六";
+          break;
+      }
+      return <span>{d}</span>;
+    };
+
+    if (leftDay < 0) {
       return (
         <span className="text-danger d-inline-block text-end w-100">
           {dayjs(todo.deadline).format("MM月DD日")}
         </span>
       );
+    } else {
+      if (leftDay > 1)
+        if (countWeek() !== "") {
+          // 本周下周之内
+          return (
+            <span className="text-primary d-inline-block text-end w-100">
+              {countWeek()}周{daedDay()}
+            </span>
+          );
+        } else {
+          //   大于下周
+          return (
+            <span className="text-primary d-inline-block text-end w-100">
+              {leftDay}天
+            </span>
+          );
+        }
+
+      if (leftDay == 0)
+        return (
+          <span className="text-primary d-inline-block text-end w-100">
+            今天
+          </span>
+        );
+      if (leftDay == 1)
+        return (
+          <span className="text-primary d-inline-block text-end w-100">
+            明天
+          </span>
+        );
+    }
+
     // <span className="title-danger">已逾期{Math.abs(dayjs(todo.deadline).diff(dayjs(), 'day'))}天</span>
   };
 
@@ -99,6 +149,11 @@ export default function TodoItem({
     <>
       <li
         className={`cursor-pointer row d-flex justify-content-between highlight rounded pe-0 ps-0 pt-0 pb-0  ${other ? "opacity-25" : ""}`}
+        onClick={() => {
+          if (onTodoSelect) {
+            onTodoSelect(todo);
+          }
+        }}
       >
         <Row justify={"space-between"} align={"middle"} className="ps-0">
           <Col span={1}>

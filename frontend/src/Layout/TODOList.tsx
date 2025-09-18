@@ -10,17 +10,17 @@ import {
   useSensor,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { SortableList, SortableItem } from "../components/SortableComponents";
+import { SortableList, SortableItem } from "@/components/SortableComponents";
 import type {
   Todo,
   TodoCompleteAllAction,
   TodoListData,
   TodoAction,
 } from "@/types";
-import { ShowType, type ShowTypeValue } from "../constants";
+import { ShowType, type ShowTypeValue } from "@/constants";
 import dayjs from "dayjs";
 import ContextMenu from "../components/ContextMenu";
-import { Col, Row, Space } from "antd";
+import { Row, Space } from "antd";
 import { Collapse } from "react-bootstrap";
 import { Content, Footer, Header } from "antd/es/layout/layout";
 
@@ -34,11 +34,15 @@ import { Content, Footer, Header } from "antd/es/layout/layout";
 // 8. 完成  批量删除已完成 / 底部增加“清除已完成”按钮，一键删掉所有 done === true 的项。
 
 export default function TODOList({
+  groupName,
   todoList: propTodoList,
   dispatch,
+  onTodoSelect,
 }: {
+  groupName: string;
   todoList: TodoListData;
   dispatch: React.Dispatch<TodoAction>;
+  onTodoSelect: (todo: Todo) => void;
 }) {
   // 设置@dnd-kit传感器
   const sensors = [
@@ -67,7 +71,6 @@ export default function TODOList({
 
   // 设置本地值
   // localStorage.setItem('todoList', JSON.stringify(todoList))
-
   //点击添加按钮 - 添加根任务
   function handleAdded(): void {
     dispatch({ type: "added", title: title, completed: false });
@@ -273,7 +276,6 @@ export default function TODOList({
       // 执行排序操作
       const [removed] = updatedTasks.splice(draggedIndex, 1);
       updatedTasks.splice(targetIndex, 0, removed);
-      console.log(updatedTasks);
       // 一次性替换整个列表
       dispatch({ type: "replaced", todoList: updatedTasks });
     },
@@ -296,8 +298,8 @@ export default function TODOList({
     <>
       {/*rounded-top*/}
       <Header className="bg-info ">
-        <Row align={"middle"} justify="space-between">
-          <Col>TODOLIST</Col>
+        <Row className={"h-100"} align={"top"} justify="start">
+          <span className={"h-100 d-inline-block"}>{groupName}</span>
         </Row>
       </Header>
 
@@ -338,6 +340,7 @@ export default function TODOList({
                             <TodoItem
                               todo={item}
                               onTodoChange={dispatch}
+                              onTodoSelect={onTodoSelect}
                               hasSubTasks={hasSubTasks(item.id)}
                               isExpanded={expandedTasks[item.id]}
                               onToggleExpand={() => toggleTaskExpand(item.id)}
@@ -373,6 +376,7 @@ export default function TODOList({
                               <TodoItem
                                 todo={subTodo}
                                 onTodoChange={dispatch}
+                                onTodoSelect={onTodoSelect}
                                 hasSubTasks={hasSubTasks(subTodo.id)}
                                 isExpanded={expandedTasks[subTodo.id]}
                                 onToggleExpand={() =>
@@ -395,39 +399,11 @@ export default function TODOList({
                         key={item.id}
                         todo={item}
                         onTodoChange={dispatch}
+                        onTodoSelect={onTodoSelect}
                         isExpanded={expandedTasks[item.id]}
                         onToggleExpand={() => toggleTaskExpand(item.id)}
                       />
                     );
-                    /*} else {
-                      return item.map((subTodo) => (
-                        <ContextMenu
-                          todo={subTodo}
-                          onTodoChange={dispatch}
-                          onAddSubTask={handleAddSubTask}
-                        >
-                          <div style={{ cursor: "context-menu" }}>
-                            <div
-                              key={subTodo.id}
-                              style={{
-                                marginLeft: `${subTodo.depth * 20}px`,
-                              }}
-                              className="sub-task-container"
-                            >
-                              <TodoItem
-                                todo={subTodo}
-                                onTodoChange={dispatch}
-                                hasSubTasks={hasSubTasks(subTodo.id)}
-                                isExpanded={expandedTasks[subTodo.id]}
-                                onToggleExpand={() =>
-                                  toggleTaskExpand(subTodo.id)
-                                }
-                              />
-                            </div>
-                          </div>
-                        </ContextMenu>
-                      ));
-                    }*/
                   })}
                 </div>
               </Space>

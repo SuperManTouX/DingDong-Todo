@@ -4,7 +4,7 @@ import SideMenu from "../components/SideMenu";
 import ListGroupManager from "../components/ListGroupManager";
 import { Layout, type MenuProps } from "antd";
 import todoListGroup from "../data/todoListGroup.json";
-import type { TodoActionExtended, TodoListData } from "@/types";
+import type { Todo, TodoActionExtended, TodoListData } from "@/types";
 import { useImmerReducer } from "use-immer";
 import reducer from "../utils/reducer";
 import EditTodo from "@/Layout/EditTodo";
@@ -31,8 +31,22 @@ export default function AppLayout() {
       todoListGroups[0]
     );
   }, [todoListGroups, activeGroupId]);
-  // 选中右侧编辑todo
-  const [selectTodoId, setSelectTodoId] = useState<string>("");
+  // 选中右侧编辑todo的ID
+  const [selectTodoId, setSelectTodoId] = useState<string>(null);
+  // 从todoListGroups中派生当前选中的todo对象
+  const selectTodo = useMemo(() => {
+    if (!selectTodoId) return null;
+    for (const group of todoListGroups) {
+      const todo = group.tasks.find(t => t.id === selectTodoId);
+      if (todo) return todo;
+    }
+    return null;
+  }, [todoListGroups, selectTodoId]);
+  // 验证函数，确保setSelectTodoId被正确调用
+  const handleSelectTodoId = (todo: Todo) => {
+    console.log("Selected todo:", todo);
+    setSelectTodoId(todo.id);
+  };
   // 创建一个新的dispatch函数，自动添加groupId参数
   const dispatchWithGroupId = React.useCallback(
     (action: any) => {
@@ -60,7 +74,6 @@ export default function AppLayout() {
 
   // 直接使用listGroupManager.menuItem作为第一层菜单
   const menuItem: MenuProps["items"] = listGroupManager.menuItem;
-
   return (
     <Layout className="w-100 h-100">
       <Sider width="5%" style={siderStyle1}>
@@ -72,6 +85,7 @@ export default function AppLayout() {
       <Layout>
         <TODOList
           key={activeGroupId}
+          groupName={activeGroup.title}
           todoList={
             activeGroup || {
               id: "",
@@ -82,10 +96,17 @@ export default function AppLayout() {
             }
           }
           dispatch={dispatchWithGroupId}
+          onTodoSelect={handleSelectTodoId}
         ></TODOList>
       </Layout>
       <Layout>
-        <EditTodo />
+        {selectTodo && (
+          <EditTodo
+            key={selectTodo.id}
+            selectTodo={selectTodo}
+            onTodoChange={dispatchWithGroupId}
+          />
+        )}
       </Layout>
       {/* 添加清单模态框 */}
       {listGroupManager.addModal}
