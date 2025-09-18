@@ -14,8 +14,9 @@ import {
   EditOutlined,
   EllipsisOutlined,
   PlusOutlined,
+  TagOutlined,
 } from "@ant-design/icons";
-import type { Tag, Todo, TodoActionExtended, TodoListData } from "@/types";
+import type { Tag, TodoActionExtended, TodoListData } from "@/types";
 import { ListColorNames, ListColors } from "@/constants";
 
 interface ListGroupManagerProps {
@@ -198,18 +199,14 @@ export default function ListGroupManager({
     });
   };
   //递归创建层次标签数组
-  function buildHierarchicalTags(parentId: string | null): Tag[] {
-    const result: Tag[] = [];
+  function renderTagsList(parentId: string | null): MenuProps["items"] {
+    const result: MenuProps["items"] = [];
+
     const tags: Tag[] = todoTags.filter((tg) => tg.parentId === parentId);
+    if (tags.length === 0) {
+      return undefined;
+    }
     tags.forEach((tag) => {
-      result.push(tag);
-      tag.subTags = buildHierarchicalTags(tag.id);
-    });
-    return result;
-  }
-  // 渲染标签
-  function renderTagsList() {
-    return buildHierarchicalTags(null).map((tag: Tag) => {
       const dropdownMenu = {
         items: [
           {
@@ -242,13 +239,9 @@ export default function ListGroupManager({
           },
         ],
       };
-      return {
+      result.push({
         key: tag.id,
-        icon: tag.emoji ? (
-          <span style={{ fontSize: "16px" }}>{tag.emoji}</span>
-        ) : (
-          <AppstoreOutlined />
-        ),
+        icon: <TagOutlined />,
         label: (
           <Row justify={"space-between"} align={"middle"}>
             <span>{tag.name}</span>
@@ -276,8 +269,10 @@ export default function ListGroupManager({
             </Col>
           </Row>
         ),
-      };
+        children: renderTagsList(tag.id),
+      });
     });
+    return result;
   }
 
   // 菜单项配置
@@ -311,8 +306,20 @@ export default function ListGroupManager({
     },
     {
       key: "grp3",
-      label: "标签",
-      children: renderTagsList(),
+      icon: <TagOutlined />,
+      label: (
+        <Row justify={"space-between"} className="text-secondary fs-6">
+          标签
+          <PlusOutlined
+            className={"opacityHover3-1"}
+            onClick={(e) => {
+              e.stopPropagation();
+              showModal("add");
+            }}
+          />
+        </Row>
+      ),
+      children: renderTagsList(null),
     },
     { type: "divider", style: { margin: "2rem 0" } },
     {

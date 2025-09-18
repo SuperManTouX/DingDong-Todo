@@ -522,9 +522,12 @@ button + button {
 .ant-menu-item-active .opacityHover0-1{
     opacity: 1;
 }
-.my-custom-menu .ant-menu-submenu .ant-menu-item {
-    padding-left: 20px !important;
-}
+/*.my-custom-menu .ant-menu-submenu .ant-menu-item {*/
+/*    padding-left: 40px !important;*/
+/*}*/
+/*.my-custom-menu .ant-menu-submenu .ant-menu-submenu-title {*/
+/*    padding-left: 10px !important;*/
+/*}*/
 .ant-layout-header{
     height: 50px;
     padding: 0 25px;
