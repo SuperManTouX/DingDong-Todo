@@ -46,6 +46,7 @@ export interface TodoListData {
   id: string;
   title: string;
   emoji?: string; // 清单的emoji图标
+  color?: string; // 清单的颜色
   createdAt: string;
   updatedAt: string;
   tasks: Todo[];
@@ -127,6 +128,7 @@ export type TodoActionExtended =
 export interface TodoItemProps {
   todo: Todo;
   onTodoChange: (action: TodoAction) => void;
+  onTodoSelect?: (todo: Todo) => void;
   other?: boolean;
   hasSubTasks?: boolean;
   isExpanded?: boolean;

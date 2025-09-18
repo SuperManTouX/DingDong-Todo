@@ -2,17 +2,14 @@ import {
   CalendarOutlined,
   DeleteOutlined,
   EditOutlined,
-  ExclamationOutlined,
 } from "@ant-design/icons";
-import type { ContextMenuProps, Priority } from "@/types";
+import type { ContextMenuProps } from "@/types";
 import {
-  Button,
   DatePicker,
   type DatePickerProps,
   Dropdown,
   type MenuProps,
   message,
-  Space,
 } from "antd";
 import type { RangePickerProps } from "antd/es/date-picker";
 import dayjs from "dayjs";
@@ -37,10 +34,7 @@ export default function ContextMenu({
     });
     message.info("时间更改成功");
   };
-  // 更改任务优先级
-  const setPriority = (p: Priority) => {
-    onTodoChange({ type: "changed", todo: { ...todo, priority: p } });
-  };
+
   const items: MenuProps["items"] = [
     {
       key: "date",
@@ -50,53 +44,8 @@ export default function ContextMenu({
     },
     {
       key: "date_set",
-      label: <DatePicker showTime onOk={onOk} />,
+      label: <DatePicker value={dayjs(todo.deadline)} showTime onOk={onOk} />,
       disabled: true,
-    },
-    {
-      key: "priority",
-      icon: <ExclamationOutlined />,
-      label: <span>优先级</span>,
-      disabled: true,
-    },
-    {
-      key: "priority_set",
-      label: (
-        <Space>
-          <Button
-            onClick={() => setPriority(3)}
-            size="small"
-            variant="solid"
-            color="danger"
-          >
-            高
-          </Button>
-          <Button
-            onClick={() => setPriority(2)}
-            size="small"
-            variant="solid"
-            color="yellow"
-          >
-            中
-          </Button>
-          <Button
-            onClick={() => setPriority(1)}
-            size="small"
-            variant="solid"
-            color="blue"
-          >
-            低
-          </Button>
-          <Button
-            onClick={() => setPriority(0)}
-            size="small"
-            variant="solid"
-            color="geekblue"
-          >
-            无
-          </Button>
-        </Space>
-      ),
     },
     {
       key: "add_sub",

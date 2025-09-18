@@ -525,6 +525,20 @@ button + button {
 .my-custom-menu .ant-menu-submenu .ant-menu-item {
     padding-left: 20px !important;
 }
+.ant-layout-header{
+    height: 50px;
+    padding: 0 25px;
+    line-height: 50px;
+}
+.ant-layout-footer{
+    height: 50px;
+    padding: 0 25px;
+    line-height: 50px;
+}
+.p-select .ant-select-selector{
+    background-color: transparent !important;
+    border: none !important;
+}
 
 /* 暗黑模式 Dark mode */
 /* @media (prefers-color-scheme: dark) {

@@ -67,6 +67,7 @@ export default function reducer(
         if (childTasks.length > 0) {
           // 递归更新所有子任务及其子任务
           function updateChildTasks(parentId: string, newCompleted: boolean) {
+            // @ts-ignore
             const children = targetGroup.tasks.filter(
               (t) => t.parentId === parentId,
             );
@@ -144,7 +145,6 @@ export default function reducer(
     case "changed": {
       const { todo, groupId } = action;
       const targetGroup = draft.find((group) => group.id === groupId);
-
       if (!targetGroup) return;
 
       let i = targetGroup.tasks.findIndex((d) => d.id == todo.id);
