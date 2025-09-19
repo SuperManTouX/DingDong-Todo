@@ -16,7 +16,7 @@ import type {
   TodoCompleteAllAction,
   TodoListData,
   TodoAction,
-  Tag as TagT
+  Tag as TagT,
 } from "@/types";
 import { ShowType, type ShowTypeValue } from "@/constants";
 import dayjs from "dayjs";
@@ -24,6 +24,7 @@ import ContextMenu from "../components/ContextMenu";
 import { Row, Space } from "antd";
 import { Collapse } from "react-bootstrap";
 import { Content, Footer, Header } from "antd/es/layout/layout";
+import { useTodoStore } from "@/store/todoStore";
 
 // 1. 完成   / 未完成 过滤栏添加三个按钮：All / Active / Completed，点谁就只显示对应列表。
 // 2. 完成  一键全选 / 取消全选顶部放 checkbox，逻辑：若已全选则 取消全选，否则全部勾选。
@@ -37,16 +38,15 @@ import { Content, Footer, Header } from "antd/es/layout/layout";
 export default function TODOList({
   groupName,
   todoList: propTodoList,
-  dispatch,
   onTodoSelect,
-  tags = []
+  tags = [],
 }: {
   groupName: string;
   todoList: TodoListData;
-  dispatch: React.Dispatch<TodoAction>;
   onTodoSelect: (todo: Todo) => void;
   tags?: TagT[];
 }) {
+  const { dispatchTodo } = useTodoStore();
   // 设置@dnd-kit传感器
   const sensors = [
     useSensor(PointerSensor, {
@@ -76,18 +76,27 @@ export default function TODOList({
   // localStorage.setItem('todoList', JSON.stringify(todoList))
   //点击添加按钮 - 添加根任务
   function handleAdded(): void {
-    dispatch({ type: "added", title: title, completed: false });
+    const { activeGroupId } = useTodoStore.getState();
+    dispatchTodo({
+      type: "added",
+      title: title,
+      completed: false,
+      groupId: activeGroupId,
+    });
     setTitle("");
   }
 
   // 添加子任务
   function handleAddSubTask(parentId: string, parentDepth: number): void {
-    dispatch({
+    const { activeGroupId, getGroupByTodoId } = useTodoStore.getState();
+    const groupId = getGroupByTodoId(parentId) || activeGroupId;
+    dispatchTodo({
       type: "added",
       title: title,
       completed: false,
       parentId,
       depth: parentDepth + 1,
+      groupId: groupId,
     });
   }
 
@@ -200,7 +209,8 @@ export default function TODOList({
 
   //当一键完成或一键取消完成的时候
   function handleCompleteAll(action: TodoCompleteAllAction) {
-    dispatch({ ...action, showType });
+    const { activeGroupId } = useTodoStore.getState();
+    dispatchTodo({ ...action, showType, groupId: activeGroupId });
   }
 
   //计算未完成的个数
@@ -280,14 +290,24 @@ export default function TODOList({
       const [removed] = updatedTasks.splice(draggedIndex, 1);
       updatedTasks.splice(targetIndex, 0, removed);
       // 一次性替换整个列表
-      dispatch({ type: "replaced", todoList: updatedTasks });
+      const { activeGroupId } = useTodoStore.getState();
+      dispatchTodo({
+        type: "replaced",
+        todoList: updatedTasks,
+        groupId: activeGroupId,
+      });
     },
-    [todoList, dispatch],
+    [todoList, dispatchTodo],
   );
 
   // 删除所有已完成
   function handleDeleteAllCompleted() {
-    dispatch({ type: "deletedAll", todoList: todoList.tasks });
+    const { activeGroupId } = useTodoStore.getState();
+    dispatchTodo({
+      type: "deletedAll",
+      todoList: todoList.tasks,
+      groupId: activeGroupId,
+    });
   }
 
   // 获取所有可排序的任务ID
@@ -336,14 +356,14 @@ export default function TODOList({
                         <ContextMenu
                           key={item.id}
                           todo={item}
-                          onTodoChange={dispatch}
+                          onTodoChange={dispatchTodo}
                           onAddSubTask={handleAddSubTask}
                           tags={tags}
                         >
                           <div style={{ cursor: "context-menu" }}>
                             <TodoItem
                               todo={item}
-                              onTodoChange={dispatch}
+                              onTodoChange={dispatchTodo}
                               onTodoSelect={onTodoSelect}
                               hasSubTasks={hasSubTasks(item.id)}
                               isExpanded={expandedTasks[item.id]}
@@ -371,16 +391,16 @@ export default function TODOList({
                           className="sub-task-container"
                         >
                           <ContextMenu
-                              key={subTodo.id}
-                              todo={subTodo}
-                              onTodoChange={dispatch}
-                              onAddSubTask={handleAddSubTask}
-                              tags={tags}
-                            >
+                            key={subTodo.id}
+                            todo={subTodo}
+                            onTodoChange={dispatchTodo}
+                            onAddSubTask={handleAddSubTask}
+                            tags={tags}
+                          >
                             <div style={{ cursor: "context-menu" }}>
                               <TodoItem
                                 todo={subTodo}
-                                onTodoChange={dispatch}
+                                onTodoChange={dispatchTodo}
                                 onTodoSelect={onTodoSelect}
                                 hasSubTasks={hasSubTasks(subTodo.id)}
                                 isExpanded={expandedTasks[subTodo.id]}
@@ -403,7 +423,7 @@ export default function TODOList({
                       <TodoItem
                         key={item.id}
                         todo={item}
-                        onTodoChange={dispatch}
+                        onTodoChange={dispatchTodo}
                         onTodoSelect={onTodoSelect}
                         isExpanded={expandedTasks[item.id]}
                         onToggleExpand={() => toggleTaskExpand(item.id)}

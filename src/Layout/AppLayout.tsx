@@ -1,23 +1,12 @@
 import Sider from "antd/es/layout/Sider";
-import React, { useMemo, useState } from "react";
+import React from "react";
 import SideMenu from "./SideMenu";
 import ListGroupManager from "../components/ListGroupManager";
 import { Layout, type MenuProps } from "antd";
-import todoListGroup from "../data/todoListGroup.json";
-import todoTag from "../data/todoTags.json";
-import type {
-  Tag,
-  TagReducerAction,
-  Todo,
-  TodoActionExtended,
-  TodoListData,
-} from "@/types";
-import { useImmerReducer } from "use-immer";
-import reducer from "../utils/reducer";
+import { useTodoStore, useActiveGroup, useSelectTodo } from "@/store/todoStore";
 import EditTodo from "@/Layout/EditTodo";
 import TODOList from "@/Layout/TODOList";
-import tagReducer from "@/utils/tagReducer";
-import dayjs from "dayjs";
+import { useTodoActions } from "@/store/hooks";
 
 /**
  * 应用布局组件
@@ -25,113 +14,15 @@ import dayjs from "dayjs";
  */
 
 export default function AppLayout() {
-  const [activeGroupId, setActiveGroupId] = useState<string>("a");
-
-  // 使用整个todoListGroup数组初始化reducer
-  const [todoListGroups, dispatchTodo] = useImmerReducer<
-    TodoListData[],
-    TodoActionExtended
-  >(reducer, todoListGroup);
-  const [todoTags, dispatchTag] = useImmerReducer<Tag[], TagReducerAction>(
-    tagReducer,
-    todoTag,
-  );
-
-  // 找出激活的组
-  const activeGroup: TodoListData = useMemo(() => {
-    const filterData: TodoListData = {
-      createdAt: "",
-      id: "",
-      tasks: [],
-      title: "",
-      updatedAt: "",
-    };
-    let ag =
-      todoListGroups.find((item) => item.id === activeGroupId) || filterData;
-    if (ag.tasks.length > 0) return ag;
-    // 格式化清单名
-    const formatGroupName = (): string => {
-      switch (activeGroupId) {
-        case "aa":
-          return "今天";
-        case "bb":
-          return "最近七天";
-        default:
-          return todoTags.find((t) => t.id === activeGroupId)?.name;
-      }
-    };
-    // 给title重新命名
-    if (filterData.title === "") {
-      filterData.title = formatGroupName();
-    }
-    // 将符合条件的todo推入filterData
-    todoListGroups.forEach((tg) => {
-      tg.tasks.forEach((t) => {
-        switch (activeGroupId) {
-          // 今天
-          case "aa":
-            if (t.deadline)
-              if (dayjs(t.deadline).isSame(dayjs(), "day"))
-                filterData.tasks.push(t);
-            return;
-
-          // 最近七天
-          case "bb":
-            if (t.deadline)
-              if (
-                dayjs(t.deadline).isAfter(dayjs().subtract(7, "day")) &&
-                dayjs(t.deadline).isBefore(dayjs().add(7, "day"))
-              )
-                filterData.tasks.push(t);
-            return;
-          //   标签数组
-          default:
-            t.tags?.forEach((ttId) => {
-              if (activeGroupId === ttId) filterData.tasks.push(t);
-            });
-
-            const subTags = todoTags.filter(
-              (ot) => activeGroupId === ot.parentId,
-            );
-            subTags.forEach((tt) => {
-              t.tags?.forEach((ttId) => {
-                if (tt.id === ttId) filterData.tasks.push(t);
-              });
-            });
-        }
-      });
-    });
-    filterData.tasks = Array.from(
-      new Map(filterData.tasks.map((o) => [o.id, o])).values(),
-    );
-    return filterData;
-  }, [todoListGroups, activeGroupId]);
-  // 选中右侧编辑todo的ID
-  const [selectTodoId, setSelectTodoId] = useState<string>(null);
-  // 从todoListGroups中派生当前选中的todo对象
-  const selectTodo = useMemo(() => {
-    if (!selectTodoId) return null;
-    for (const group of todoListGroups) {
-      const todo = group.tasks.find((t) => t.id === selectTodoId);
-      if (todo) return todo;
-    }
-    return null;
-  }, [todoListGroups, selectTodoId]);
+  const { todoListGroups, todoTags, setActiveGroupId, setSelectTodoId } = useTodoStore();
+  const activeGroup = useActiveGroup();
+  const selectTodo = useSelectTodo();
+  const { handleAddTodo } = useTodoActions();
   // 验证函数，确保setSelectTodoId被正确调用
   const handleSelectTodoId = (todo: Todo) => {
     console.log("Selected todo:", todo);
     setSelectTodoId(todo.id);
   };
-  // 创建一个新的dispatch函数，自动添加groupId参数
-  const dispatchWithGroupId = React.useCallback(
-    (action: any) => {
-      dispatchTodo({
-        ...action,
-        groupId: activeGroupId,
-      });
-    },
-    [dispatchTodo, activeGroupId],
-  );
 
   const siderStyle1: React.CSSProperties = {
     textAlign: "center",
@@ -144,8 +35,8 @@ export default function AppLayout() {
   const listGroupManager = ListGroupManager({
     todoListGroups,
     todoTags,
-    dispatchTodo,
-    dispatchTag,
+    dispatchTodo: useTodoStore.getState().dispatchTodo,
+    dispatchTag: useTodoStore.getState().dispatchTag,
     onActiveGroupChange: setActiveGroupId,
   });
 
@@ -161,7 +52,7 @@ export default function AppLayout() {
       </Sider>
       <Layout>
         <TODOList
-          key={activeGroupId}
+          key={useTodoStore.getState().activeGroupId}
           groupName={activeGroup.title}
           todoList={
             activeGroup || {
@@ -172,7 +63,6 @@ export default function AppLayout() {
               updatedAt: "",
             }
           }
-          dispatch={dispatchWithGroupId}
           onTodoSelect={handleSelectTodoId}
           tags={todoTags}
         ></TODOList>
@@ -183,7 +73,7 @@ export default function AppLayout() {
             todoTags={todoTags}
             key={selectTodo.id}
             selectTodo={selectTodo}
-            onTodoChange={dispatchWithGroupId}
+            onTodoChange={useTodoStore.getState().dispatchTodo}
           />
         )}
       </Layout>

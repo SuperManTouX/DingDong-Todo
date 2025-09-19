@@ -2,16 +2,18 @@ import { useState } from "react";
 import { Modal, Input, Select, message } from "antd";
 import type { Tag, TodoActionExtended } from "@/types";
 import { ListColorNames, ListColors } from "@/constants";
+import { useTodoStore } from "@/store/todoStore";
 
 interface TagManagerProps {
-  dispatchTag: React.Dispatch<TodoActionExtended>;
+  // 组件现在不接收dispatchTag，而是从store中获取
 }
 
 /**
  * 标签管理组件
  * 负责标签的添加、编辑等功能
  */
-export default function TagManager({ dispatchTag }: TagManagerProps) {
+export default function TagManager(_props: TagManagerProps) {
+  const { dispatchTag } = useTodoStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mode, setMode] = useState<"add" | "edit">("add");
   const [tagName, setTagName] = useState("");
