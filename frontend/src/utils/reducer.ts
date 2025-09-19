@@ -154,7 +154,9 @@ export default function reducer(
     }
     // 拖动排序专属
     case "replaced": {
+      //AppLayout.tsx提供 dispatchWithGroupId
       const { todoList, groupId } = action;
+      console.log(action);
       const targetGroup = draft.find((group) => group.id === groupId);
 
       if (!targetGroup) return;

@@ -9,6 +9,7 @@ import {
   Select,
 } from "antd";
 import { useState } from "react";
+import { useTodoStore } from "@/store/todoStore";
 import {
   AppstoreOutlined,
   EditOutlined,
@@ -21,10 +22,6 @@ import { ListColorNames, ListColors } from "@/constants";
 import TagManager from "./TagManager";
 
 interface ListGroupManagerProps {
-  todoListGroups: TodoListData[];
-  todoTags: Tag[];
-  dispatchTodo: React.Dispatch<TodoActionExtended>;
-  dispatchTag: React.Dispatch<TodoActionExtended>;
   onActiveGroupChange: (groupId: string) => void;
 }
 
@@ -33,12 +30,11 @@ interface ListGroupManagerProps {
  * 负责清单组的添加、编辑、删除等功能
  */
 export default function ListGroupManager({
-  todoListGroups,
-  todoTags,
-  dispatchTodo,
-  dispatchTag,
   onActiveGroupChange,
 }: ListGroupManagerProps) {
+  // 从store获取数据和方法
+  const { todoListGroups, todoTags, dispatchTodo, dispatchTag } =
+    useTodoStore();
   // 统一管理添加和编辑的状态
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mode, setMode] = useState<"add" | "edit">("add"); // 模式：添加或编辑
@@ -48,9 +44,7 @@ export default function ListGroupManager({
   const [groupId, setGroupId] = useState("");
 
   // 初始化标签管理器
-  const { showModal: showTagModal, tagModal } = TagManager({
-    dispatchTag,
-  });
+  const { showModal: showTagModal, tagModal } = TagManager();
 
   // 显示模态框 - 统一处理添加和编辑
   const showModal = (
