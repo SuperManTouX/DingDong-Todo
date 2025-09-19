@@ -68,6 +68,7 @@ export interface Todo {
   parentId?: string | null; // 新增：指向父任务ID
   depth: number; // 新增：表示嵌套深度
   tags?: string[]; // 新增：任务标签数组，存储标签ID
+  groupId: string; // 新增：指向所属列表组ID
 }
 
 interface TodoAddAction {

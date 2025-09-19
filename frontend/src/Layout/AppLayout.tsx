@@ -1,5 +1,5 @@
 import Sider from "antd/es/layout/Sider";
-import React, { useState, useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import SideMenu from "./SideMenu";
 import ListGroupManager from "../components/ListGroupManager";
 import { Layout, type MenuProps } from "antd";
@@ -17,6 +17,7 @@ import reducer from "../utils/reducer";
 import EditTodo from "@/Layout/EditTodo";
 import TODOList from "@/Layout/TODOList";
 import tagReducer from "@/utils/tagReducer";
+import dayjs from "dayjs";
 
 /**
  * 应用布局组件
@@ -38,10 +39,72 @@ export default function AppLayout() {
 
   // 找出激活的组
   const activeGroup: TodoListData = useMemo(() => {
-    return (
-      todoListGroups.find((item) => item.id === activeGroupId) ||
-      todoListGroups[0]
+    const filterData: TodoListData = {
+      createdAt: "",
+      id: "",
+      tasks: [],
+      title: "",
+      updatedAt: "",
+    };
+    let ag =
+      todoListGroups.find((item) => item.id === activeGroupId) || filterData;
+    if (ag.tasks.length > 0) return ag;
+    // 格式化清单名
+    const formatGroupName = (): string => {
+      switch (activeGroupId) {
+        case "aa":
+          return "今天";
+        case "bb":
+          return "最近七天";
+        default:
+          return todoTags.find((t) => t.id === activeGroupId)?.name;
+      }
+    };
+    // 给title重新命名
+    if (filterData.title === "") {
+      filterData.title = formatGroupName();
+    }
+    // 将符合条件的todo推入filterData
+    todoListGroups.forEach((tg) => {
+      tg.tasks.forEach((t) => {
+        switch (activeGroupId) {
+          // 今天
+          case "aa":
+            if (t.deadline)
+              if (dayjs(t.deadline).isSame(dayjs(), "day"))
+                filterData.tasks.push(t);
+            return;
+
+          // 最近七天
+          case "bb":
+            if (t.deadline)
+              if (
+                dayjs(t.deadline).isAfter(dayjs().subtract(7, "day")) &&
+                dayjs(t.deadline).isBefore(dayjs().add(7, "day"))
+              )
+                filterData.tasks.push(t);
+            return;
+          //   标签数组
+          default:
+            t.tags?.forEach((ttId) => {
+              if (activeGroupId === ttId) filterData.tasks.push(t);
+            });
+
+            const subTags = todoTags.filter(
+              (ot) => activeGroupId === ot.parentId,
+            );
+            subTags.forEach((tt) => {
+              t.tags?.forEach((ttId) => {
+                if (tt.id === ttId) filterData.tasks.push(t);
+              });
+            });
+        }
+      });
+    });
+    filterData.tasks = Array.from(
+      new Map(filterData.tasks.map((o) => [o.id, o])).values(),
     );
+    return filterData;
   }, [todoListGroups, activeGroupId]);
   // 选中右侧编辑todo的ID
   const [selectTodoId, setSelectTodoId] = useState<string>(null);
@@ -81,7 +144,8 @@ export default function AppLayout() {
   const listGroupManager = ListGroupManager({
     todoListGroups,
     todoTags,
-    dispatch: dispatchTodo,
+    dispatchTodo,
+    dispatchTag,
     onActiveGroupChange: setActiveGroupId,
   });
 
@@ -110,6 +174,7 @@ export default function AppLayout() {
           }
           dispatch={dispatchWithGroupId}
           onTodoSelect={handleSelectTodoId}
+          tags={todoTags}
         ></TODOList>
       </Layout>
       <Layout>
@@ -124,6 +189,8 @@ export default function AppLayout() {
       </Layout>
       {/* 清单管理模态框 */}
       {listGroupManager.groupModal}
+      {/* 标签管理模态框 */}
+      {listGroupManager.tagModal}
     </Layout>
   );
 }

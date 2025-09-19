@@ -2,17 +2,21 @@ import { Content, Footer, Header } from "antd/es/layout/layout";
 import {
   Col,
   DatePicker,
-  DatePickerProps,
+  type DatePickerProps,
+  Dropdown,
   Input,
   message,
   Row,
   Select,
   Tag,
+  theme,
 } from "antd";
 import type { Todo, Tag as TagT, TodoAction } from "@/types";
 import { Priority } from "@/constants";
 import dayjs from "dayjs";
 import type { RangePickerProps } from "antd/es/date-picker";
+import { PlusOutlined } from "@ant-design/icons";
+
 export default function EditTodo({
   todoTags,
   selectTodo,
@@ -22,6 +26,7 @@ export default function EditTodo({
   selectTodo: Todo;
   onTodoChange: (action: TodoAction) => void;
 }) {
+  console.log(selectTodo);
   let priClass;
   switch (selectTodo.priority) {
     case Priority.Low:
@@ -48,6 +53,51 @@ export default function EditTodo({
       },
     });
     message.info("时间更改成功");
+  };
+
+  const { token } = theme.useToken();
+
+  // 处理标签点击添加
+  const handleTagClick = (tagId: string) => {
+    // 如果标签已经存在，则不重复添加
+    if (selectTodo.tags?.includes(tagId)) {
+      message.info("该标签已添加");
+      return;
+    }
+    // 添加新标签
+    const updatedTags = [...(selectTodo.tags || []), tagId];
+    console.log(selectTodo);
+    onTodoChange({
+      type: "changed",
+      todo: {
+        ...selectTodo,
+        tags: updatedTags,
+        groupId: selectTodo.groupId,
+      },
+    });
+
+    // 查找标签名称并显示成功消息
+    const tagItem = todoTags.find((t) => t.id === tagId);
+    message.info(`已添加标签: ${tagItem?.name || "未知标签"}`);
+  };
+
+  // 生成Dropdown菜单的items
+  const dropdownItems = todoTags.map((tag) => ({
+    key: tag.id,
+    label: (
+      <span style={{ display: "flex", alignItems: "center" }}>
+        <Tag color={tag.color || "magenta"} className="mr-2">
+          {tag.name}
+        </Tag>
+      </span>
+    ),
+    onClick: () => handleTagClick(tag.id),
+  }));
+
+  const tagPlusStyle: React.CSSProperties = {
+    height: 22,
+    background: token.colorBgContainer,
+    borderStyle: "dashed",
   };
 
   return (
@@ -106,6 +156,7 @@ export default function EditTodo({
       <Content className="minHeight-large pe-2 ps-2">
         <Row className={"h-100"} justify="start">
           <Col className="p-4 w-100">
+            {/*待办标题*/}
             <input
               type="text"
               autoFocus
@@ -133,6 +184,7 @@ export default function EditTodo({
                 marginBottom: "16px",
               }}
             />
+            {/*长文本内容编辑框*/}
             <Input.TextArea
               value={selectTodo.text || ""}
               onChange={(e) => {
@@ -155,41 +207,54 @@ export default function EditTodo({
               }}
               autoSize={{ minRows: 20 }}
             />
+            {/*标签列表*/}
+            {selectTodo.tags?.map((tagId) => {
+              // 查找标签信息，如果找不到则提供默认值
+              const tagItem = todoTags.find((t) => t.id === tagId);
+
+              // 如果标签不存在，显示为"未知标签"并允许删除
+              const tagName = tagItem?.name || `未知标签(${tagId})`;
+
+              return (
+                <Tag
+                  key={tagId}
+                  color={tagItem?.color || "magenta"}
+                  closeIcon
+                  onClose={() => {
+                    // 从tags数组中移除当前点击的标签
+                    const updatedTags =
+                      selectTodo.tags?.filter((id) => id !== tagId) || [];
+                    onTodoChange({
+                      type: "changed",
+                      todo: {
+                        ...selectTodo,
+                        tags: updatedTags,
+                      },
+                    });
+                    message.info(`已移除标签: ${tagName}`);
+                  }}
+                >
+                  {tagName}
+                </Tag>
+              );
+            })}
+            <Dropdown
+              menu={{
+                items: dropdownItems,
+                style: { maxHeight: "300px", overflowY: "auto" },
+              }}
+              trigger={["hover"]}
+              placement="bottomLeft"
+            >
+              <Tag style={tagPlusStyle}>
+                <PlusOutlined /> New Tag
+              </Tag>
+            </Dropdown>
           </Col>
         </Row>
       </Content>
       <Footer className={"bg-primary"}>
         <Row justify={"start"} align={"middle"}>
-          {selectTodo.tags?.map((tagId, index) => {
-            // 查找标签信息，如果找不到则提供默认值
-            const tagItem = todoTags.find((t) => t.id === tagId);
-            
-            // 如果标签不存在，显示为"未知标签"并允许删除
-            const tagName = tagItem?.name || `未知标签(${tagId})`;
-            
-            return (
-              <Tag
-                key={tagId}
-                color={tagItem?.color || "magenta"}
-                closeIcon
-                onClose={() => {
-                  // 从tags数组中移除当前点击的标签
-                  const updatedTags = 
-                    selectTodo.tags?.filter((id) => id !== tagId) || [];
-                  onTodoChange({
-                    type: "changed",
-                    todo: {
-                      ...selectTodo,
-                      tags: updatedTags,
-                    },
-                  });
-                  message.info(`已移除标签: ${tagName}`);
-                }}
-              >
-                {tagName}
-              </Tag>
-            );
-          })}
           所属组，标签
         </Row>
       </Footer>
