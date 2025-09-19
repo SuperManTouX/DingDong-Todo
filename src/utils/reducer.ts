@@ -134,6 +134,7 @@ export default function reducer(
       targetGroup.tasks.push({
         id: uuidv4(),
         title: title,
+        groupId: groupId,
         completed: completed,
         priority: Priority.None,
         parentId: parentId || null, // 支持添加子任务
@@ -143,11 +144,10 @@ export default function reducer(
       break;
     }
     case "changed": {
-      const { todo, groupId } = action;
-      const targetGroup = draft.find((group) => group.id === groupId);
+      const { todo } = action;
+      const targetGroup = draft.find((group) => group.id === todo.groupId);
       if (!targetGroup) return;
-
-      let i = targetGroup.tasks.findIndex((d) => d.id == todo.id);
+      let i = targetGroup.tasks.findIndex((d) => d.id === todo.id);
       targetGroup.tasks[i] = todo;
       targetGroup.updatedAt = dayjs().format();
       break;
@@ -213,9 +213,9 @@ export default function reducer(
     case "addTagToTodo": {
       const { todoId, tagId, groupId } = action;
       const targetGroup = draft.find((group) => group.id === groupId);
-      
+
       if (!targetGroup) return;
-      
+
       const todo = targetGroup.tasks.find((t) => t.id === todoId);
       if (todo) {
         if (!todo.tags) {
@@ -229,14 +229,14 @@ export default function reducer(
       }
       break;
     }
-    
+
     // 从任务中移除标签
     case "removeTagFromTodo": {
       const { todoId, tagId, groupId } = action;
       const targetGroup = draft.find((group) => group.id === groupId);
-      
+
       if (!targetGroup) return;
-      
+
       const todo = targetGroup.tasks.find((t) => t.id === todoId);
       if (todo && todo.tags) {
         todo.tags = todo.tags.filter((id) => id !== tagId);
@@ -244,14 +244,14 @@ export default function reducer(
       }
       break;
     }
-    
+
     // 更新任务的所有标签
     case "updateTodoTags": {
       const { todoId, tags, groupId } = action;
       const targetGroup = draft.find((group) => group.id === groupId);
-      
+
       if (!targetGroup) return;
-      
+
       const todo = targetGroup.tasks.find((t) => t.id === todoId);
       if (todo) {
         todo.tags = tags || [];
@@ -259,7 +259,7 @@ export default function reducer(
       }
       break;
     }
-    
+
     default:
       break;
   }

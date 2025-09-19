@@ -16,6 +16,7 @@ import type {
   TodoCompleteAllAction,
   TodoListData,
   TodoAction,
+  Tag as TagT
 } from "@/types";
 import { ShowType, type ShowTypeValue } from "@/constants";
 import dayjs from "dayjs";
@@ -38,11 +39,13 @@ export default function TODOList({
   todoList: propTodoList,
   dispatch,
   onTodoSelect,
+  tags = []
 }: {
   groupName: string;
   todoList: TodoListData;
   dispatch: React.Dispatch<TodoAction>;
   onTodoSelect: (todo: Todo) => void;
+  tags?: TagT[];
 }) {
   // 设置@dnd-kit传感器
   const sensors = [
@@ -335,6 +338,7 @@ export default function TODOList({
                           todo={item}
                           onTodoChange={dispatch}
                           onAddSubTask={handleAddSubTask}
+                          tags={tags}
                         >
                           <div style={{ cursor: "context-menu" }}>
                             <TodoItem
@@ -367,11 +371,12 @@ export default function TODOList({
                           className="sub-task-container"
                         >
                           <ContextMenu
-                            key={subTodo.id}
-                            todo={subTodo}
-                            onTodoChange={dispatch}
-                            onAddSubTask={handleAddSubTask}
-                          >
+                              key={subTodo.id}
+                              todo={subTodo}
+                              onTodoChange={dispatch}
+                              onAddSubTask={handleAddSubTask}
+                              tags={tags}
+                            >
                             <div style={{ cursor: "context-menu" }}>
                               <TodoItem
                                 todo={subTodo}

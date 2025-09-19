@@ -1,4 +1,3 @@
-import React, { useState } from "react";
 import {
   Button,
   Col,
@@ -9,6 +8,7 @@ import {
   Row,
   Select,
 } from "antd";
+import { useState } from "react";
 import {
   AppstoreOutlined,
   EditOutlined,
@@ -18,11 +18,13 @@ import {
 } from "@ant-design/icons";
 import type { Tag, TodoActionExtended, TodoListData } from "@/types";
 import { ListColorNames, ListColors } from "@/constants";
+import TagManager from "./TagManager";
 
 interface ListGroupManagerProps {
   todoListGroups: TodoListData[];
   todoTags: Tag[];
-  dispatch: React.Dispatch<TodoActionExtended>;
+  dispatchTodo: React.Dispatch<TodoActionExtended>;
+  dispatchTag: React.Dispatch<TodoActionExtended>;
   onActiveGroupChange: (groupId: string) => void;
 }
 
@@ -33,7 +35,8 @@ interface ListGroupManagerProps {
 export default function ListGroupManager({
   todoListGroups,
   todoTags,
-  dispatch,
+  dispatchTodo,
+  dispatchTag,
   onActiveGroupChange,
 }: ListGroupManagerProps) {
   // 统一管理添加和编辑的状态
@@ -43,6 +46,11 @@ export default function ListGroupManager({
   const [selectedEmoji, setSelectedEmoji] = useState("");
   const [selectedColor, setSelectedColor] = useState(ListColors.none);
   const [groupId, setGroupId] = useState("");
+
+  // 初始化标签管理器
+  const { showModal: showTagModal, tagModal } = TagManager({
+    dispatchTag,
+  });
 
   // 显示模态框 - 统一处理添加和编辑
   const showModal = (
@@ -71,7 +79,7 @@ export default function ListGroupManager({
     if (groupName.trim()) {
       if (mode === "add") {
         // 添加新清单
-        dispatch({
+        dispatchTodo({
           type: "addListGroup",
           title: groupName.trim(),
           emoji: selectedEmoji,
@@ -80,7 +88,7 @@ export default function ListGroupManager({
         message.success("清单添加成功");
       } else if (mode === "edit") {
         // 编辑现有清单
-        dispatch({
+        dispatchTodo({
           type: "updateListGroup",
           groupId: groupId,
           title: groupName.trim(),
@@ -107,7 +115,7 @@ export default function ListGroupManager({
       okType: "danger",
       cancelText: "取消",
       onOk() {
-        dispatch({
+        dispatchTodo({
           type: "deleteListGroup",
           groupId: groupId,
         });
@@ -122,6 +130,29 @@ export default function ListGroupManager({
             onActiveGroupChange(remainingGroups[0].id);
           }
         }
+      },
+    });
+  };
+
+  const handleDeleteTag = (tagId: string, tagName: string) => {
+    // 检查是否有子标签
+    const hasChildren = todoTags.some((t) => t.parentId === tagId);
+    const confirmContent = hasChildren
+      ? `确定要删除标签 "${tagName}" 吗？此操作无法撤销。`
+      : `确定要删除标签 "${tagName}" 吗？此操作无法撤销。`;
+
+    Modal.confirm({
+      title: "确认删除标签",
+      content: confirmContent,
+      okText: "确认删除",
+      okType: "danger",
+      cancelText: "取消",
+      onOk() {
+        dispatchTodo({
+          type: "deleteTag",
+          payload: tagId,
+        } as any);
+        message.success("标签已删除");
       },
     });
   };
@@ -215,7 +246,12 @@ export default function ListGroupManager({
               <span
                 onClick={(e) => {
                   e.stopPropagation();
-                  showModal("edit", tag.id);
+                  showTagModal("edit", {
+                    id: tag.id,
+                    name: tag.name,
+                    color: tag.color,
+                    parentId: tag.parentId,
+                  });
                 }}
               >
                 <EditOutlined />
@@ -229,16 +265,17 @@ export default function ListGroupManager({
               <span
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDeleteListGroup(tag.id, tag.name);
+                  handleDeleteTag(tag.id, tag.name);
                 }}
                 style={{ color: "#ff4d4f" }}
               >
-                删除清单
+                删除标签
               </span>
             ),
           },
         ],
       };
+      //菜单Tag列表推入（push）
       result.push({
         key: tag.id,
         icon: <TagOutlined />,
@@ -269,6 +306,10 @@ export default function ListGroupManager({
             </Col>
           </Row>
         ),
+
+        onTitleClick: () => {
+          onActiveGroupChange(tag.id);
+        },
         children: renderTagsList(tag.id),
       });
     });
@@ -278,12 +319,12 @@ export default function ListGroupManager({
   // 菜单项配置
   const menuItem: MenuProps["items"] = [
     {
-      key: "u1",
+      key: "aa",
       icon: <AppstoreOutlined />,
       label: "今天",
     },
     {
-      key: "u2",
+      key: "bb",
       icon: <AppstoreOutlined />,
       label: "最近七天",
     },
@@ -314,11 +355,12 @@ export default function ListGroupManager({
             className={"opacityHover3-1"}
             onClick={(e) => {
               e.stopPropagation();
-              showModal("add");
+              showTagModal("add");
             }}
           />
         </Row>
       ),
+
       children: renderTagsList(null),
     },
     { type: "divider", style: { margin: "2rem 0" } },
@@ -430,5 +472,6 @@ export default function ListGroupManager({
         )}
       </Modal>
     ),
+    tagModal,
   };
 }

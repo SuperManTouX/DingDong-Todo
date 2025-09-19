@@ -1,6 +1,7 @@
 import { Menu } from "antd";
 import type { MenuProps } from "antd";
 import type { SideMenuProps } from "@/types";
+import { useState } from "react";
 
 /**
  * 侧边菜单组件
@@ -10,21 +11,32 @@ export default function SideMenu({
   menuItem,
   onActiveGroupChange,
 }: SideMenuProps) {
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  const [openKeys, setOpenKeys] = useState<string[]>([]);
   // 菜单项点击处理函数
-  const handleClick: MenuProps["onClick"] = (e) => {
-    console.log("点击菜单项:", e.key);
-    onActiveGroupChange(e.key);
+  const handleClick: MenuProps["onClick"] = ({ key, keyPath }) => {
+    setSelectedKeys([key]);
+    /* 如果点的是“父级” */
+    if (keyPath.length > 1) {
+      setOpenKeys((prev) =>
+        prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
+      );
+    }
+    onActiveGroupChange(key);
   };
 
   return (
     <>
       <Menu
-        className="my-custom-menu"
+        className="my-custom-menu h-100"
         defaultSelectedKeys={["a"]}
         defaultOpenKeys={["grp2"]}
         onClick={handleClick}
-        style={{ width: "100%", height: "100%" }}
+        style={{ width: "100%", height: "100%", overflowY: "auto" }}
         mode="inline"
+        selectedKeys={selectedKeys}
+        openKeys={openKeys}
+        onOpenChange={(keys) => setOpenKeys(keys)}
         items={menuItem}
       />
     </>
