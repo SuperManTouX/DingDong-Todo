@@ -5,7 +5,7 @@ import ListGroupManager from "../components/ListGroupManager";
 import { Layout, type MenuProps } from "antd";
 import todoListGroup from "../data/todoListGroup.json";
 import todoTag from "../data/todoTags.json";
-import {
+import type {
   Tag,
   TagReducerAction,
   Todo,
@@ -115,6 +115,7 @@ export default function AppLayout() {
       <Layout>
         {selectTodo && (
           <EditTodo
+            todoTags={todoTags}
             key={selectTodo.id}
             selectTodo={selectTodo}
             onTodoChange={dispatchWithGroupId}

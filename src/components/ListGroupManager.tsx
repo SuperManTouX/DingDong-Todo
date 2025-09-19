@@ -278,12 +278,12 @@ export default function ListGroupManager({
   // 菜单项配置
   const menuItem: MenuProps["items"] = [
     {
-      key: "1",
+      key: "u1",
       icon: <AppstoreOutlined />,
       label: "今天",
     },
     {
-      key: "2",
+      key: "u2",
       icon: <AppstoreOutlined />,
       label: "最近七天",
     },
