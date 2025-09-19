@@ -1,13 +1,24 @@
 import { Content, Footer, Header } from "antd/es/layout/layout";
-import { Col, DatePicker, Input, message, Row, Select, Tag } from "antd";
-import type { Todo, TodoAction } from "@/types";
+import {
+  Col,
+  DatePicker,
+  DatePickerProps,
+  Input,
+  message,
+  Row,
+  Select,
+  Tag,
+} from "antd";
+import type { Todo, Tag as TagT, TodoAction } from "@/types";
 import { Priority } from "@/constants";
 import dayjs from "dayjs";
 import type { RangePickerProps } from "antd/es/date-picker";
 export default function EditTodo({
+  todoTags,
   selectTodo,
   onTodoChange,
 }: {
+  todoTags: TagT[];
   selectTodo: Todo;
   onTodoChange: (action: TodoAction) => void;
 }) {
@@ -123,7 +134,6 @@ export default function EditTodo({
               }}
             />
             <Input.TextArea
-              autoFocus
               value={selectTodo.text || ""}
               onChange={(e) => {
                 if (selectTodo) {
@@ -150,7 +160,36 @@ export default function EditTodo({
       </Content>
       <Footer className={"bg-primary"}>
         <Row justify={"start"} align={"middle"}>
-          <Tag color="magenta">magenta</Tag>
+          {selectTodo.tags?.map((tagId, index) => {
+            // 查找标签信息，如果找不到则提供默认值
+            const tagItem = todoTags.find((t) => t.id === tagId);
+            
+            // 如果标签不存在，显示为"未知标签"并允许删除
+            const tagName = tagItem?.name || `未知标签(${tagId})`;
+            
+            return (
+              <Tag
+                key={tagId}
+                color={tagItem?.color || "magenta"}
+                closeIcon
+                onClose={() => {
+                  // 从tags数组中移除当前点击的标签
+                  const updatedTags = 
+                    selectTodo.tags?.filter((id) => id !== tagId) || [];
+                  onTodoChange({
+                    type: "changed",
+                    todo: {
+                      ...selectTodo,
+                      tags: updatedTags,
+                    },
+                  });
+                  message.info(`已移除标签: ${tagName}`);
+                }}
+              >
+                {tagName}
+              </Tag>
+            );
+          })}
           所属组，标签
         </Row>
       </Footer>

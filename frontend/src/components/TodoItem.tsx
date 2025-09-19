@@ -1,7 +1,7 @@
 import { RightOutlined } from "@ant-design/icons";
 import { Priority } from "@/constants";
 import "../styles/TodoItem.css";
-import { Col, message, Row } from "antd";
+import { Col, message, Row, Tag } from "antd";
 import dayjs from "dayjs";
 import type { TodoItemProps } from "@/types";
 import isoWeek from "dayjs/plugin/isoWeek";
@@ -64,6 +64,7 @@ export default function TodoItem({
   const renderCountdown = () => {
     if (!todo.deadline && !todo.datetimeLocal) return null;
     const leftDay = dayjs(todo.deadline).diff(dayjs(), "day");
+    // 计算本周下周
     const countWeek = () => {
       if (dayjs(todo.deadline).isoWeek() - dayjs().isoWeek() === 0) {
         return "本";
@@ -73,7 +74,8 @@ export default function TodoItem({
         return "";
       }
     };
-    const daedDay = () => {
+    // 计算周几
+    const deadDay = () => {
       let d: string;
       switch (dayjs(todo.deadline).day()) {
         case 0:
@@ -98,47 +100,34 @@ export default function TodoItem({
           d = "六";
           break;
       }
-      return <span>{d}</span>;
+      return d;
     };
-
+    let text = "";
     if (leftDay < 0) {
-      return (
-        <span className="text-danger d-inline-block text-end w-100">
-          {dayjs(todo.deadline).format("MM月DD日")}
-        </span>
-      );
+      text = `${dayjs(todo.deadline).format("MM月DD日")}`;
     } else {
       if (leftDay > 1)
         if (countWeek() !== "") {
           // 本周下周之内
-          return (
-            <span className="text-primary d-inline-block text-end w-100">
-              {countWeek()}周{daedDay()}
-            </span>
-          );
+          text = `${countWeek()}周${deadDay()}`;
         } else {
           //   大于下周
-          return (
-            <span className="text-primary d-inline-block text-end w-100">
-              {leftDay}天
-            </span>
-          );
+          text = `${leftDay}天`;
         }
-
-      if (leftDay == 0)
-        return (
-          <span className="text-primary d-inline-block text-end w-100">
-            今天
-          </span>
-        );
-      if (leftDay == 1)
-        return (
-          <span className="text-primary d-inline-block text-end w-100">
-            明天
-          </span>
-        );
+      if (leftDay == 0) {
+        text = "今天";
+      }
+      if (leftDay == 1) {
+        text = "明天";
+      }
     }
-
+    return (
+      <span
+        className={`${leftDay < 0 ? "text-danger" : "text-primary"} d-inline-block text-end`}
+      >
+        {text}
+      </span>
+    );
     // <span className="title-danger">已逾期{Math.abs(dayjs(todo.deadline).diff(dayjs(), 'day'))}天</span>
   };
 
@@ -193,10 +182,24 @@ export default function TodoItem({
                   message.info(`已完成${todo.title}`);
               }}
             />
-            <Row justify={"end"} className="w-100 " align={"middle"}>
-              <Col span={20}>{renderEditInput()}</Col>
+            <Row justify={"space-between"} className="w-100 " align={"middle"}>
+              <Col className={"w-100"}>{renderEditInput()}</Col>
 
-              <Col span={4}>{renderCountdown()}</Col>
+              <Row
+                style={{
+                  position: "absolute",
+                  right: 0,
+                  background: "#f5f5f5",
+                }}
+                justify={"end"}
+                align={"middle"}
+              >
+                {todo.tags && <Tag color="magenta">+{todo.tags.length}</Tag>}
+                {/*{todo.tags?.map((tag, i) => (*/}
+                {/*  <Tag color="magenta">{tag}</Tag>*/}
+                {/*))}*/}
+                {renderCountdown()}
+              </Row>
             </Row>
           </Col>
         </Row>
