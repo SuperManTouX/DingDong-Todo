@@ -26,7 +26,6 @@ export default function EditTodo({
   selectTodo: Todo;
   onTodoChange: (action: TodoAction) => void;
 }) {
-  console.log(selectTodo);
   let priClass;
   switch (selectTodo.priority) {
     case Priority.Low:
@@ -113,6 +112,7 @@ export default function EditTodo({
                 onTodoChange({
                   type: "toggle",
                   todoId: selectTodo.id,
+                  groupId: selectTodo.groupId,
                   newCompleted: e.currentTarget.checked,
                 });
                 if (e.currentTarget.checked)

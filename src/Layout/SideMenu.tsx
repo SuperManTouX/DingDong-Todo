@@ -11,8 +11,10 @@ export default function SideMenu({
   menuItem,
   onActiveGroupChange,
 }: SideMenuProps) {
-  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
-  const [openKeys, setOpenKeys] = useState<string[]>([]);
+  // 默认选中菜单项
+  const [selectedKeys, setSelectedKeys] = useState<string[]>(["a"]);
+  // 默认打开菜单栏
+  const [openKeys, setOpenKeys] = useState<string[]>(["grp2"]);
   // 菜单项点击处理函数
   const handleClick: MenuProps["onClick"] = ({ key, keyPath }) => {
     setSelectedKeys([key]);
@@ -29,8 +31,6 @@ export default function SideMenu({
     <>
       <Menu
         className="my-custom-menu h-100"
-        defaultSelectedKeys={["a"]}
-        defaultOpenKeys={["grp2"]}
         onClick={handleClick}
         style={{ width: "100%", height: "100%", overflowY: "auto" }}
         mode="inline"

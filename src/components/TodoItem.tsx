@@ -176,6 +176,7 @@ export default function TodoItem({
                 onTodoChange({
                   type: "toggle",
                   todoId: todo.id,
+                  groupId: todo.groupId,
                   newCompleted: e.currentTarget.checked,
                 });
                 if (e.currentTarget.checked)

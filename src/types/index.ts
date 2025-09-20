@@ -74,6 +74,7 @@ export interface Todo {
 interface TodoAddAction {
   type: "added";
   title: string;
+  groupId: string;
   completed: false;
   parentId?: string | null; // 可选：用于添加子任务
   depth?: number; // 可选：表示嵌套深度
@@ -82,6 +83,7 @@ interface TodoAddAction {
 interface TodoToggleAction {
   type: "toggle";
   todoId: string;
+  groupId: string;
   newCompleted: boolean;
 }
 interface TodoChangedAction {
@@ -129,6 +131,31 @@ interface UpdateTodoTagsAction {
   tags?: string[];
 }
 
+export interface TagAction {
+  type: string;
+  payload?: any;
+}
+
+export interface AddTagAction extends TagAction {
+  type: "addTag";
+  payload: Omit<Tag, "id"> & { id?: string };
+}
+
+export interface UpdateTagAction extends TagAction {
+  type: "updateTag";
+  payload: { id: string; updates: Partial<Tag> };
+}
+
+export interface DeleteTagAction extends TagAction {
+  type: "deleteTag";
+  payload: string;
+}
+
+export interface InitializeTagsAction extends TagAction {
+  type: "initializeTags";
+  payload?: Tag[];
+}
+
 // ========= 新增 Action 类型 =========
 // 扁平化后，子任务相关的Action可以被通用的TodoAction替代
 // 但为了兼容性，我们保留部分Action类型
@@ -151,6 +178,12 @@ export type TodoActionExtended =
   | AddTodoListGroupAction
   | UpdateTodoListGroupAction
   | DeleteTodoListGroupAction;
+
+export type TagReducerAction =
+  | AddTagAction
+  | UpdateTagAction
+  | DeleteTagAction
+  | InitializeTagsAction;
 
 export interface TodoItemProps {
   todo: Todo;
@@ -183,6 +216,3 @@ export interface SideMenuProps {
   menuItem: MenuProps["items"];
   onActiveGroupChange: (groupId: string) => void;
 }
-
-// 从tagReducer.ts导出标签相关的action类型
-export { type TagReducerAction } from "@/utils/tagReducer";
