@@ -19,20 +19,19 @@ import type { RangePickerProps } from "antd/es/date-picker";
 import type { TreeSelectProps } from "antd/es/tree-select";
 import type { Tag as TagT } from "@/types";
 import dayjs from "dayjs";
+import { MESSAGES } from "@/constants/messages";
 import { useTodoStore } from "@/store/todoStore";
 
-export default function ContextMenu({
-  todo,
-  children,
-  onTodoChange,
-  onAddSubTask,
-  tags = [],
-}: ContextMenuProps & { tags?: TagT[] }) {
+export default function ContextMenu({ todo, children }: ContextMenuProps) {
+  // 使用 Ant Design 官方的 message.useMessage() hook
+  const [messageApi, contextHolder] = message.useMessage();
+  const { dispatchTodo, todoTags } = useTodoStore();
+
   // 编辑时间
   const onOk = (
     deadLine: DatePickerProps["value"] | RangePickerProps["value"],
   ) => {
-    onTodoChange({
+    dispatchTodo({
       type: "changed",
       todo: {
         ...todo,
@@ -40,11 +39,25 @@ export default function ContextMenu({
         deadline: dayjs(deadLine).format(),
       },
     });
-    message.info("时间更改成功");
+    messageApi.info(MESSAGES.INFO.DEADLINE_UPDATED);
   };
+
+  // 添加子任务
+  function handleAddSubTask(parentId: string, parentDepth: number): void {
+    const { activeGroupId } = useTodoStore.getState();
+    dispatchTodo({
+      type: "added",
+      title: "",
+      completed: false,
+      parentId,
+      depth: parentDepth + 1,
+      groupId: activeGroupId,
+    });
+  }
 
   // 将扁平的标签数组转换为TreeSelect所需的树形结构
   const buildTreeData = (tags: TagT[]): TreeSelectProps["treeData"] => {
+    // @ts-ignore
     const tagMap = new Map<string, TreeSelectProps["treeData"][0]>();
     const treeData: TreeSelectProps["treeData"] = [];
 
@@ -90,14 +103,14 @@ export default function ContextMenu({
     keys.map((item) => a.push(item.value));
     console.log(a);
     // 确保转换为字符串数组后更新任务标签
-    onTodoChange({
+    dispatchTodo({
       type: "changed",
       todo: {
         ...todo,
         tags: a.slice(),
       },
     });
-    message.info("标签更新成功");
+    messageApi.info(MESSAGES.INFO.TAGS_UPDATED);
   };
 
   // 构建标签树形数据
@@ -105,7 +118,7 @@ export default function ContextMenu({
   const restoreFromBin = useTodoStore((state) => state.restoreFromBin);
   const deleteFromBin = useTodoStore((state) => state.deleteFromBin);
   const activeGroupId = useTodoStore((state) => state.activeGroupId);
-  const treeData = buildTreeData(tags);
+  const treeData = buildTreeData(todoTags);
   const normalItems: MenuProps["items"] = [
     {
       key: "date",
@@ -126,6 +139,7 @@ export default function ContextMenu({
           <TreeSelect
             mode="multiple"
             treeData={treeData}
+            // @ts-ignore
             value={(todo.tags || []).filter(
               (tagId) => typeof tagId === "string",
             )}
@@ -145,10 +159,10 @@ export default function ContextMenu({
       icon: <EditOutlined />,
       label: "添加子任务",
       onClick: () => {
-        if (onAddSubTask) {
-          onAddSubTask(todo.id, todo.depth);
+        if (handleAddSubTask) {
+          handleAddSubTask(todo.id, todo.depth);
         } else {
-          message.warning("添加子任务功能不可用");
+          messageApi.warning(MESSAGES.WARNING.SUBTASK_NOT_AVAILABLE);
         }
       },
     },
@@ -158,7 +172,7 @@ export default function ContextMenu({
       label: "删除",
       onClick: () => {
         moveToBin(todo);
-        message.success("删除成功");
+        messageApi.success(MESSAGES.SUCCESS.TASK_DELETED);
       },
     },
   ];
@@ -169,7 +183,7 @@ export default function ContextMenu({
       label: <span>恢复</span>,
       onClick: () => {
         restoreFromBin(todo.id);
-        message.success("恢复完成");
+        messageApi.success(MESSAGES.SUCCESS.TASK_RESTORED);
       },
     },
     {
@@ -185,12 +199,12 @@ export default function ContextMenu({
           onOk() {
             return new Promise<void>((resolve) => {
               deleteFromBin(todo.id);
-              message.success("删除完成");
+              messageApi.success(MESSAGES.SUCCESS.TASK_PERMANENTLY_DELETED);
               resolve();
             });
           },
           onCancel() {
-            message.info("已取消删除");
+            messageApi.info(MESSAGES.INFO.DELETE_CANCELLED);
           },
         });
       },
@@ -209,6 +223,7 @@ export default function ContextMenu({
       >
         {children}
       </Dropdown>
+      {contextHolder}
     </>
   );
 }

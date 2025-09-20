@@ -8,6 +8,7 @@ import {
   Row,
   Select,
 } from "antd";
+import { MESSAGES } from "@/constants/messages";
 import { useState } from "react";
 import { useTodoStore } from "@/store/todoStore";
 import {
@@ -17,7 +18,7 @@ import {
   PlusOutlined,
   TagOutlined,
 } from "@ant-design/icons";
-import type { Tag, TodoActionExtended, TodoListData } from "@/types";
+import type { Tag, TodoListData } from "@/types";
 import { ListColorNames, ListColors } from "@/constants";
 import TagManager from "./TagManager";
 
@@ -32,9 +33,11 @@ interface ListGroupManagerProps {
 export default function ListGroupManager({
   onActiveGroupChange,
 }: ListGroupManagerProps) {
+  // 使用 Ant Design 官方的 message.useMessage() hook
+  const [messageApi, contextHolder] = message.useMessage();
+
   // 从store获取数据和方法
-  const { todoListGroups, todoTags, dispatchTodo, dispatchTag } =
-    useTodoStore();
+  const { todoListGroups, todoTags, dispatchTodo } = useTodoStore();
   // 统一管理添加和编辑的状态
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mode, setMode] = useState<"add" | "edit">("add"); // 模式：添加或编辑
@@ -62,6 +65,7 @@ export default function ListGroupManager({
       // 编辑模式：设置现有数据
       setGroupName(groupData.title);
       setSelectedEmoji(groupData.emoji || "");
+      // @ts-ignore
       setSelectedColor(groupData.color || ListColors.none);
       setGroupId(groupData.id);
     }
@@ -79,7 +83,7 @@ export default function ListGroupManager({
           emoji: selectedEmoji,
           color: selectedColor,
         });
-        message.success("清单添加成功");
+        messageApi.success(MESSAGES.SUCCESS.LIST_ADDED);
       } else if (mode === "edit") {
         // 编辑现有清单
         dispatchTodo({
@@ -89,11 +93,11 @@ export default function ListGroupManager({
           emoji: selectedEmoji,
           color: selectedColor,
         });
-        message.success("清单更新成功");
+        messageApi.success(MESSAGES.SUCCESS.LIST_UPDATED);
       }
       setIsModalOpen(false);
     } else {
-      message.warning("清单名称不能为空");
+      messageApi.warning(MESSAGES.WARNING.EMPTY_LIST_NAME);
     }
   };
 
@@ -113,7 +117,7 @@ export default function ListGroupManager({
           type: "deleteListGroup",
           groupId: groupId,
         });
-        message.success("清单已删除");
+        messageApi.success(MESSAGES.SUCCESS.LIST_DELETED);
 
         // 如果删除的是当前激活的清单，切换到第一个清单
         if (todoListGroups.length > 0) {
@@ -146,7 +150,7 @@ export default function ListGroupManager({
           type: "deleteTag",
           payload: tagId,
         } as any);
-        message.success("标签已删除");
+        messageApi.success(MESSAGES.SUCCESS.TAG_DELETED);
       },
     });
   };
@@ -371,6 +375,7 @@ export default function ListGroupManager({
   ];
 
   return {
+    contextHolder,
     menuItem,
     groupModal: (
       <Modal

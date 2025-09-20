@@ -5,7 +5,7 @@ import type { MenuProps } from "antd";
 
 // 扩展TodoAction类型，添加groupId字段
 export interface TodoListGroupAction {
-  groupId: string; // 指定操作的列表组 ID
+  groupId?: string; // 指定操作的列表组 ID
 }
 
 // 新增列表组管理相关的Action类型
@@ -187,8 +187,6 @@ export type TagReducerAction =
 
 export interface TodoItemProps {
   todo: Todo;
-  onTodoChange: (action: TodoAction) => void;
-  onTodoSelect?: (todo: Todo) => void;
   other?: boolean;
   hasSubTasks?: boolean;
   isExpanded?: boolean;
@@ -207,8 +205,6 @@ export interface Tag {
 // SubTodoItemProps接口已移除，扁平化后所有任务都使用Todo类型
 export interface ContextMenuProps {
   todo: Todo;
-  onAddSubTask: (parentId: string, parentDepth: number) => void;
-  onTodoChange: (action: TodoAction) => void;
   children: React.ReactNode;
 }
 

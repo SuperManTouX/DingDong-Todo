@@ -11,23 +11,23 @@ import {
   Tag,
   theme,
 } from "antd";
-import type { Todo, Tag as TagT, TodoAction } from "@/types";
+import type { TodoAction } from "@/types";
 import { Priority } from "@/constants";
 import dayjs from "dayjs";
 import type { RangePickerProps } from "antd/es/date-picker";
 import { PlusOutlined } from "@ant-design/icons";
+import { useSelectTodo, useTodoStore } from "@/store/todoStore";
 
 export default function EditTodo({
-  todoTags,
-  selectTodo,
   onTodoChange,
 }: {
-  todoTags: TagT[];
-  selectTodo: Todo;
   onTodoChange: (action: TodoAction) => void;
 }) {
+  const todoTags = useTodoStore((state) => state.todoTags);
+  const selectTodo = useSelectTodo();
+  if (!selectTodo) return;
   let priClass;
-  switch (selectTodo.priority) {
+  switch (selectTodo?.priority) {
     case Priority.Low:
       priClass = "low-todo";
       break;
