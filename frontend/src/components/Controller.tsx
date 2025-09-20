@@ -3,7 +3,8 @@ import type { ControllerProps } from "@/types";
 import { ShowType, ShowTypeLabels, type ShowTypeValue } from "@/constants";
 import { Dropdown } from "react-bootstrap";
 import { Col, message, Row } from "antd";
-
+import type { MessageInstance } from 'antd/es/message/interface';
+import { MESSAGES } from '@/constants/messages';
 export default function Controller({
   onSwitchShow,
   onCompleteAll,
@@ -13,6 +14,8 @@ export default function Controller({
   setText,
   onAdded,
 }: ControllerProps) {
+  // 使用 Ant Design 官方的 message.useMessage() hook
+  const [messageApi, contextHolder] = message.useMessage();
   return (
     <li
       className={`row d-flex justify-content-between highlight rounded pe-0 ps-0 pt-0 pb-0  `}
@@ -32,7 +35,7 @@ export default function Controller({
                   completeOrUncomplete: e.target.checked,
                   showType: showType,
                 });
-                if (e.currentTarget.checked) message.info(`已完成全部`);
+                if (e.currentTarget.checked) messageApi.info(MESSAGES.INFO.ALL_COMPLETED);
               }}
             />
             <div className="input-group input-group-sm w-50">
@@ -77,9 +80,10 @@ export default function Controller({
                 );
               })}
             </Dropdown.Menu>
-          </Dropdown>
-        </Col>
-      </Row>
-    </li>
-  );
+        </Dropdown>
+      </Col>
+    </Row>
+    {contextHolder}
+  </li>
+);
 }

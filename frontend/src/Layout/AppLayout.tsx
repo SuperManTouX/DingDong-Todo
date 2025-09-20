@@ -12,15 +12,14 @@ import TODOList from "@/Layout/TODOList";
  * 封装了Ant Design的Layout结构，包含侧边栏和主内容区域
  */
 export default function AppLayout() {
-  const { todoListGroups, todoTags, setActiveGroupId, setSelectTodoId } =
-    useTodoStore();
+  const { setActiveGroupId } = useTodoStore();
   const activeGroup = useActiveGroup();
   const selectTodo = useSelectTodo();
-  // 验证函数，确保setSelectTodoId被正确调用
-  const handleSelectTodoId = (todo: Todo) => {
-    console.log("Selected todo:", todo);
-    setSelectTodoId(todo.id);
-  };
+  // // 验证函数，确保setSelectTodoId被正确调用
+  // const handleSelectTodoId = (todo: Todo) => {
+  //   console.log("Selected todo:", todo);
+  //   setSelectTodoId(todo.id);
+  // };
 
   const siderStyle1: React.CSSProperties = {
     textAlign: "center",
@@ -31,10 +30,6 @@ export default function AppLayout() {
 
   // 使用ListGroupManager组件管理清单组
   const listGroupManager = ListGroupManager({
-    todoListGroups,
-    todoTags,
-    dispatchTodo: useTodoStore.getState().dispatchTodo,
-    dispatchTag: useTodoStore.getState().dispatchTag,
     onActiveGroupChange: setActiveGroupId,
   });
 
@@ -61,16 +56,12 @@ export default function AppLayout() {
               updatedAt: "",
             }
           }
-          onTodoSelect={handleSelectTodoId}
-          tags={todoTags}
         ></TODOList>
       </Layout>
       <Layout>
         {selectTodo && (
           <EditTodo
-            todoTags={todoTags}
             key={selectTodo.id}
-            selectTodo={selectTodo}
             onTodoChange={useTodoStore.getState().dispatchTodo}
           />
         )}

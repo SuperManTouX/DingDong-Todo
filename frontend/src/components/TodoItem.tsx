@@ -4,17 +4,21 @@ import "../styles/TodoItem.css";
 import { Col, message, Row, Tag } from "antd";
 import dayjs from "dayjs";
 import type { TodoItemProps } from "@/types";
+import { formatMessage, MESSAGES } from "@/constants/messages";
 import isoWeek from "dayjs/plugin/isoWeek";
+import { useTodoStore } from "@/store/todoStore";
 dayjs.extend(isoWeek);
 export default function TodoItem({
   todo,
-  onTodoChange,
-  onTodoSelect,
   other = false,
   hasSubTasks = false,
   isExpanded = false,
   onToggleExpand,
 }: TodoItemProps) {
+  // 使用 Ant Design 官方的 message.useMessage() hook
+  const [messageApi, contextHolder] = message.useMessage();
+  const { dispatchTodo, setSelectTodoId } = useTodoStore();
+
   let priClass;
   switch (todo.priority) {
     case Priority.Low:
@@ -40,7 +44,7 @@ export default function TodoItem({
         value={todo.title}
         onChange={(e) => {
           if (todo) {
-            onTodoChange({
+            dispatchTodo({
               type: "changed",
               todo: {
                 ...todo,
@@ -139,8 +143,8 @@ export default function TodoItem({
       <li
         className={`cursor-pointer row d-flex justify-content-between highlight rounded pe-0 ps-0 pt-0 pb-0  ${other ? "opacity-25" : ""}`}
         onClick={() => {
-          if (onTodoSelect) {
-            onTodoSelect(todo);
+          if (setSelectTodoId) {
+            setSelectTodoId(todo.id);
           }
         }}
       >
@@ -173,14 +177,18 @@ export default function TodoItem({
               className={`me-1 mt-2 mb-2 ${priClass}`}
               checked={todo.completed}
               onChange={(e) => {
-                onTodoChange({
+                dispatchTodo({
                   type: "toggle",
                   todoId: todo.id,
                   groupId: todo.groupId,
                   newCompleted: e.currentTarget.checked,
                 });
                 if (e.currentTarget.checked)
-                  message.info(`已完成${todo.title}`);
+                  messageApi.info(
+                    formatMessage(MESSAGES.INFO.TASK_COMPLETED, {
+                      taskTitle: todo.title,
+                    }),
+                  );
               }}
             />
             <Row justify={"space-between"} className="w-100 " align={"middle"}>
@@ -207,6 +215,7 @@ export default function TodoItem({
         {/*子任务列表已移除，子任务现在在TodoList中直接渲染*/}
         {/*编辑折叠框*/}
       </li>
+      {contextHolder}
     </>
   );
 }
