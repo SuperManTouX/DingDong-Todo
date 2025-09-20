@@ -359,12 +359,12 @@ export default function ListGroupManager({
     },
     { type: "divider", style: { margin: "2rem 0" } },
     {
-      key: "3-1",
+      key: "cp",
       icon: <AppstoreOutlined />,
       label: "已完成",
     },
     {
-      key: "3-2",
+      key: "bin",
       icon: <AppstoreOutlined />,
       label: "回收站",
     },

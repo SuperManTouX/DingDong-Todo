@@ -6,18 +6,16 @@ import { Layout, type MenuProps } from "antd";
 import { useTodoStore, useActiveGroup, useSelectTodo } from "@/store/todoStore";
 import EditTodo from "@/Layout/EditTodo";
 import TODOList from "@/Layout/TODOList";
-import { useTodoActions } from "@/store/hooks";
 
 /**
  * 应用布局组件
  * 封装了Ant Design的Layout结构，包含侧边栏和主内容区域
  */
-
 export default function AppLayout() {
-  const { todoListGroups, todoTags, setActiveGroupId, setSelectTodoId } = useTodoStore();
+  const { todoListGroups, todoTags, setActiveGroupId, setSelectTodoId } =
+    useTodoStore();
   const activeGroup = useActiveGroup();
   const selectTodo = useSelectTodo();
-  const { handleAddTodo } = useTodoActions();
   // 验证函数，确保setSelectTodoId被正确调用
   const handleSelectTodoId = (todo: Todo) => {
     console.log("Selected todo:", todo);

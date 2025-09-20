@@ -88,15 +88,14 @@ export default function TODOList({
 
   // 添加子任务
   function handleAddSubTask(parentId: string, parentDepth: number): void {
-    const { activeGroupId, getGroupByTodoId } = useTodoStore.getState();
-    const groupId = getGroupByTodoId(parentId) || activeGroupId;
+    const { activeGroupId } = useTodoStore.getState();
     dispatchTodo({
       type: "added",
       title: title,
       completed: false,
       parentId,
       depth: parentDepth + 1,
-      groupId: groupId,
+      groupId: activeGroupId,
     });
   }
 

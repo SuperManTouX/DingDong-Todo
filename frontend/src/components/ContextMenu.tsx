@@ -2,6 +2,7 @@ import {
   CalendarOutlined,
   DeleteOutlined,
   EditOutlined,
+  RedoOutlined,
 } from "@ant-design/icons";
 import type { ContextMenuProps } from "@/types";
 import {
@@ -10,6 +11,7 @@ import {
   Dropdown,
   type MenuProps,
   message,
+  Modal,
   TreeSelect,
   Tag,
 } from "antd";
@@ -17,6 +19,7 @@ import type { RangePickerProps } from "antd/es/date-picker";
 import type { TreeSelectProps } from "antd/es/tree-select";
 import type { Tag as TagT } from "@/types";
 import dayjs from "dayjs";
+import { useTodoStore } from "@/store/todoStore";
 
 export default function ContextMenu({
   todo,
@@ -98,8 +101,12 @@ export default function ContextMenu({
   };
 
   // 构建标签树形数据
+  const moveToBin = useTodoStore((state) => state.moveToBin);
+  const restoreFromBin = useTodoStore((state) => state.restoreFromBin);
+  const deleteFromBin = useTodoStore((state) => state.deleteFromBin);
+  const activeGroupId = useTodoStore((state) => state.activeGroupId);
   const treeData = buildTreeData(tags);
-  const items: MenuProps["items"] = [
+  const normalItems: MenuProps["items"] = [
     {
       key: "date",
       icon: <CalendarOutlined />,
@@ -150,11 +157,42 @@ export default function ContextMenu({
       icon: <DeleteOutlined />,
       label: "删除",
       onClick: () => {
-        onTodoChange({
-          type: "deleted",
-          deleteId: todo.id,
+        moveToBin(todo);
+        message.success("删除成功");
+      },
+    },
+  ];
+  const binItems: MenuProps["items"] = [
+    {
+      key: "recover",
+      icon: <RedoOutlined />,
+      label: <span>恢复</span>,
+      onClick: () => {
+        restoreFromBin(todo.id);
+        message.success("恢复完成");
+      },
+    },
+    {
+      key: "true-delete",
+      icon: <DeleteOutlined />,
+      label: <span>彻底删除</span>,
+      onClick: () => {
+        Modal.confirm({
+          title: "确认删除",
+          content: "这将会彻底删除这个任务，你确定吗？",
+          okText: "确定",
+          cancelText: "取消",
+          onOk() {
+            return new Promise<void>((resolve) => {
+              deleteFromBin(todo.id);
+              message.success("删除完成");
+              resolve();
+            });
+          },
+          onCancel() {
+            message.info("已取消删除");
+          },
         });
-        message.info("删除成功");
       },
     },
   ];
@@ -165,7 +203,7 @@ export default function ContextMenu({
         key={todo.id}
         trigger={["contextMenu"]}
         menu={{
-          items,
+          items: activeGroupId === "bin" ? binItems : normalItems,
           className: "ctx-menu-left",
         }}
       >
