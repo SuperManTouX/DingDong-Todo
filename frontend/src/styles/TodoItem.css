@@ -10,16 +10,16 @@
     cursor: pointer;
 
     /* 2. 自定义边框 */
-    border: 1px solid #ee5a56;   /* 红色边框 */
+    border: 1px solid var(--theme-errorColor);   /* 使用主题错误色 */
     border-radius: 4px;
-    background: #fff;
+    background: var(--theme-bgColor);
     position: relative;
 }
 
 /* 3. 选中时背景变红 + 画白勾 */
 .high-todo:checked {
-    background: #ee5a56;
-    border-color: #ee5a56;
+    background: var(--theme-errorColor);
+    border-color: var(--theme-errorColor);
 }
 .high-todo:checked::after {
     content: '';
@@ -34,13 +34,12 @@
 
 /* 4. 聚焦时补一条红晕（可删） */
 .high-todo:focus-visible {
-    outline: 1px solid #ee5a56;
+    outline: 1px solid var(--theme-errorColor);
     outline-offset: 1px;
 }
 /* 4. 聚焦时补一条红晕（可删） */
 .high-todo:hover {
-    border: 1px solid #e30f0a;
-
+    border: 1px solid var(--theme-errorColor);
 }
 
 /* 1. 剥掉系统默认 */
@@ -55,16 +54,16 @@
     cursor: pointer;
 
     /* 2. 自定义边框 */
-    border: 1px solid #ffc107;   /* 红色边框 */
+    border: 1px solid var(--theme-warningColor);   /* 使用主题警告色 */
     border-radius: 4px;
-    background: #fff;
+    background: var(--theme-bgColor);
     position: relative;
 }
 
 /* 3. 选中时背景变红 + 画白勾 */
 .medium-todo:checked {
-    background: #ffc107;
-    border-color: #ffc107;
+    background: var(--theme-warningColor);
+    border-color: var(--theme-warningColor);
 }
 .medium-todo:checked::after {
     content: '';
@@ -79,13 +78,12 @@
 
 /* 4. 聚焦时补一条红晕（可删） */
 .medium-todo:focus-visible {
-    outline: 1px solid #ffc107;
+    outline: 1px solid var(--theme-warningColor);
     outline-offset: 1px;
 }
 
 .medium-todo:hover {
-    border: 1px solid #d9a801;
-
+    border: 1px solid var(--theme-warningColor);
 }
 
 
@@ -103,16 +101,16 @@
     cursor: pointer;
 
     /* 2. 自定义边框 */
-    border: 1px solid #0d6efd;   /* 红色边框 */
+    border: 1px solid var(--theme-primaryColor);   /* 使用主题主色 */
     border-radius: 4px;
-    background: #fff;
+    background: var(--theme-bgColor);
     position: relative;
 }
 
 /* 3. 选中时背景变红 + 画白勾 */
 .low-todo:checked {
-    background: #0d6efd;
-    border-color: #0d6efd;
+    background: var(--theme-primaryColor);
+    border-color: var(--theme-primaryColor);
 }
 .low-todo:checked::after {
     content: '';
@@ -127,14 +125,25 @@
 
 /* 4. 聚焦时补一条红晕（可删） */
 .low-todo:focus-visible {
-    outline: 1px solid #0d6efd;
+    outline: 1px solid var(--theme-primaryColor);
     outline-offset: 1px;
 }
 /* 4. 聚焦时补一条红晕（可删） */
 .low-todo:hover {
-    border: 1px solid #014ebd;
-
+    border: 1px solid var(--theme-primaryColor);
 }
 .cursor-pointer {
     cursor: pointer;
+}
+
+/* 为TodoItem列表项添加悬停效果，使用主题定义的悬停高亮颜色 */
+.highlight:hover {
+    background-color: var(--theme-hoverColor);
+}
+
+/* 清除Ant Design Input组件聚焦时的边框 */
+.ant-input:focus,
+.ant-input-focused {
+    box-shadow: none;
+    border-color: transparent;
 }
