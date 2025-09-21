@@ -3,9 +3,9 @@ import type { Priority } from "@/constants";
 import { ShowType, type ShowTypeValue } from "@/constants";
 import type { MenuProps } from "antd";
 
-// 扩展TodoAction类型，添加groupId字段
+// 扩展TodoAction类型，添加listId字段
 export interface TodoListGroupAction {
-  groupId?: string; // 指定操作的列表组 ID
+  listId?: string; // 指定操作的列表组 ID
 }
 
 // 新增列表组管理相关的Action类型
@@ -16,13 +16,11 @@ export interface AddTodoListGroupAction {
   emoji?: string;
   // 可选的颜色
   color?: string;
-  // 可选的初始任务
-  initialTasks?: Todo[];
 }
 
 export interface UpdateTodoListGroupAction {
   type: "updateListGroup";
-  groupId: string;
+  listId: string;
   title?: string;
   emoji?: string;
   color?: string;
@@ -30,7 +28,7 @@ export interface UpdateTodoListGroupAction {
 
 export interface DeleteTodoListGroupAction {
   type: "deleteListGroup";
-  groupId: string;
+  listId: string;
 }
 
 export interface ControllerProps {
@@ -52,7 +50,6 @@ export interface TodoListData {
   color?: string; // 清单的颜色
   createdAt: string;
   updatedAt: string;
-  tasks: Todo[];
 }
 
 export type ShowType = (typeof ShowType)[keyof typeof ShowType];
@@ -68,13 +65,13 @@ export interface Todo {
   parentId?: string | null; // 新增：指向父任务ID
   depth: number; // 新增：表示嵌套深度
   tags?: string[]; // 新增：任务标签数组，存储标签ID
-  groupId: string; // 新增：指向所属列表组ID
+  listId: string; // 新增：指向所属清单ID
 }
 
 interface TodoAddAction {
   type: "added";
   title: string;
-  groupId: string;
+  listId: string;
   completed: false;
   parentId?: string | null; // 可选：用于添加子任务
   depth?: number; // 可选：表示嵌套深度
@@ -83,7 +80,7 @@ interface TodoAddAction {
 interface TodoToggleAction {
   type: "toggle";
   todoId: string;
-  groupId: string;
+  listId: string;
   newCompleted: boolean;
 }
 interface TodoChangedAction {
@@ -173,8 +170,11 @@ export type TodoAction =
   | UpdateTodoTagsAction;
 
 // 扩展后的Action类型，用于重构后的reducer
-export type TodoActionExtended =
-  | (TodoAction & TodoListGroupAction)
+// 任务相关的Action类型
+export type TodoActionExtended = TodoAction & TodoListGroupAction;
+
+// 清单组相关的Action类型
+export type ListGroupAction =
   | AddTodoListGroupAction
   | UpdateTodoListGroupAction
   | DeleteTodoListGroupAction;
@@ -210,5 +210,5 @@ export interface ContextMenuProps {
 
 export interface SideMenuProps {
   menuItem: MenuProps["items"];
-  onActiveGroupChange: (groupId: string) => void;
+  onActiveGroupChange: (listId: string) => void;
 }

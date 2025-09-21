@@ -1,4 +1,4 @@
-import { ThemeConfig } from "@/types/theme";
+import type { ThemeConfig } from "@/types/theme";
 
 // 浅色主题配置
 export const lightTheme: ThemeConfig = {

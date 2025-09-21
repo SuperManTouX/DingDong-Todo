@@ -1,7 +1,7 @@
-import "@/styles/TODOList.css";
+import "@/styles/FilteredTodoList.css";
 import { useState, useCallback } from "react";
 import Controller from "../components/Controller";
-import TodoItem from "../components/TodoItem";
+import TodoTask from "../components/TodoTask";
 import {
   DndContext,
   closestCenter,
@@ -11,7 +11,7 @@ import {
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { SortableList, SortableItem } from "@/components/SortableComponents";
-import type { Todo, TodoCompleteAllAction, TodoListData } from "@/types";
+import type { Todo, TodoCompleteAllAction } from "@/types";
 import { ShowType, type ShowTypeValue } from "@/constants";
 import dayjs from "dayjs";
 import ContextMenu from "../components/ContextMenu";
@@ -20,12 +20,12 @@ import { Collapse } from "react-bootstrap";
 import { Content, Footer, Header } from "antd/es/layout/layout";
 import { useTodoStore } from "@/store/todoStore";
 
-export default function TODOList({
+export default function FilteredTodoList({
   groupName,
-  todoList: propTodoList,
+  tasks,
 }: {
   groupName: string;
-  todoList: TodoListData;
+  tasks: Todo[];
 }) {
   const { dispatchTodo } = useTodoStore();
   // 设置@dnd-kit传感器
@@ -41,28 +41,26 @@ export default function TODOList({
   ];
 
   // 读取本地值
-  // if (localStorage.getItem('todoList') !== null) {
-  //     todoTasks = JSON.parse(localStorage.getItem('todoList') as string) as TodoListData;
+  // if (localStorage.getItem('tasks') !== null) {
+  //     todoTasks = JSON.parse(localStorage.getItem('tasks') as string) as TodoListData;
   // }
   const [title, setTitle] = useState<string>("");
   const [showType, setShowType] = useState<ShowTypeValue>(ShowType.uncompleted);
-  const todoList = propTodoList;
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>(
     {},
   );
-  let isAllDone =
-    todoList.tasks.length > 0 && todoList.tasks.every((t) => t.completed);
+  let isAllDone = tasks.length > 0 && tasks.every((t) => t.completed);
 
   // 设置本地值
-  // localStorage.setItem('todoList', JSON.stringify(todoList))
+  // localStorage.setItem('tasks', JSON.stringify(tasks))
   //点击添加按钮 - 添加根任务
   function handleAdded(): void {
-    const { activeGroupId } = useTodoStore.getState();
+    const { activeListId } = useTodoStore.getState();
     dispatchTodo({
       type: "added",
       title: title,
       completed: false,
-      groupId: activeGroupId,
+      listId: activeListId,
     });
     setTitle("");
   }
@@ -133,22 +131,20 @@ export default function TODOList({
 
   // 检查任务是否有子任务
   const hasSubTasks = (taskId: string): boolean => {
-    return todoList.tasks.some((task) => task.parentId === taskId);
+    return tasks.some((task) => task.parentId === taskId);
   };
 
   //todo模板初始化
   function renderTodos(): Todo[] {
     switch (showType) {
       case ShowType.all:
-        return todoList.tasks;
+        return tasks;
       case ShowType.completed:
-        return todoList.tasks.filter((t) => t.completed);
+        return tasks.filter((t) => t.completed);
       case ShowType.uncompleted:
-        return todoList.tasks.filter((t) => !t.completed);
+        return tasks.filter((t) => !t.completed);
       case ShowType.overdue:
-        return todoList.tasks.filter(
-          (t) => dayjs(t.deadline).diff(dayjs(), "day") >= 0,
-        );
+        return tasks.filter((t) => dayjs(t.deadline).diff(dayjs(), "day") >= 0);
       default:
         return [];
     }
@@ -160,15 +156,13 @@ export default function TODOList({
         return [];
       //   已完成
       case ShowType.completed:
-        return todoList.tasks.filter((t) => !t.completed);
+        return tasks.filter((t) => !t.completed);
       //未完成
       case ShowType.uncompleted:
-        return todoList.tasks.filter((t) => t.completed);
+        return tasks.filter((t) => t.completed);
       //已逾期
       case ShowType.overdue:
-        return todoList.tasks.filter(
-          (t) => dayjs(t.deadline).diff(dayjs(), "day") < 0,
-        );
+        return tasks.filter((t) => dayjs(t.deadline).diff(dayjs(), "day") < 0);
       default:
         return [];
     }
@@ -176,13 +170,13 @@ export default function TODOList({
 
   //当一键完成或一键取消完成的时候
   function handleCompleteAll(action: TodoCompleteAllAction) {
-    const { activeGroupId } = useTodoStore.getState();
-    dispatchTodo({ ...action, showType, groupId: activeGroupId });
+    const { activeListId } = useTodoStore.getState();
+    dispatchTodo({ ...action, showType, listId: activeListId });
   }
 
   //计算未完成的个数
   function calculateUncompletedCount() {
-    return todoList.tasks.reduce((l, n) => {
+    return tasks.reduce((l, n) => {
       if (!n.completed) return l + 1;
       return l;
     }, 0);
@@ -199,13 +193,13 @@ export default function TODOList({
       }
 
       // 获取拖动和放置的任务
-      const draggedTask = todoList.tasks.find((item) => item.id === active.id);
-      const targetTask = todoList.tasks.find((item) => item.id === over.id);
+      const draggedTask = tasks.find((item) => item.id === active.id);
+      const targetTask = tasks.find((item) => item.id === over.id);
 
       if (!draggedTask || !targetTask) return;
 
       // 深拷贝任务列表以进行修改
-      const updatedTasks: Todo[] = JSON.parse(JSON.stringify(todoList.tasks));
+      const updatedTasks: Todo[] = JSON.parse(JSON.stringify(tasks));
       const draggedIndex = updatedTasks.findIndex(
         (item) => item.id === active.id,
       );
@@ -257,23 +251,23 @@ export default function TODOList({
       const [removed] = updatedTasks.splice(draggedIndex, 1);
       updatedTasks.splice(targetIndex, 0, removed);
       // 一次性替换整个列表
-      const { activeGroupId } = useTodoStore.getState();
+      const { activeListId } = useTodoStore.getState();
       dispatchTodo({
         type: "replaced",
         todoList: updatedTasks,
-        groupId: activeGroupId,
+        listId: activeListId,
       });
     },
-    [todoList, dispatchTodo],
+    [tasks, dispatchTodo],
   );
 
   // 删除所有已完成
   function handleDeleteAllCompleted() {
-    const { activeGroupId } = useTodoStore.getState();
+    const { activeListId } = useTodoStore.getState();
     dispatchTodo({
       type: "deletedAll",
-      todoList: todoList.tasks,
-      groupId: activeGroupId,
+      todoList: tasks,
+      listId: activeListId,
     });
   }
 
@@ -322,7 +316,7 @@ export default function TODOList({
                       <SortableItem key={item.id} id={item.id}>
                         <ContextMenu key={item.id} todo={item}>
                           <div style={{ cursor: "context-menu" }}>
-                            <TodoItem
+                            <TodoTask
                               todo={item}
                               hasSubTasks={hasSubTasks(item.id)}
                               isExpanded={expandedTasks[item.id]}
@@ -351,7 +345,7 @@ export default function TODOList({
                         >
                           <ContextMenu key={subTodo.id} todo={subTodo}>
                             <div style={{ cursor: "context-menu" }}>
-                              <TodoItem
+                              <TodoTask
                                 todo={subTodo}
                                 hasSubTasks={hasSubTasks(subTodo.id)}
                                 isExpanded={expandedTasks[subTodo.id]}
@@ -371,7 +365,7 @@ export default function TODOList({
                   {renderOtherTodos().map((item) => {
                     /* if ("id" in item) {*/
                     return (
-                      <TodoItem
+                      <TodoTask
                         key={item.id}
                         todo={item}
                         isExpanded={expandedTasks[item.id]}

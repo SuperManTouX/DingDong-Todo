@@ -3,9 +3,14 @@ import React from "react";
 import SideMenu from "./SideMenu";
 import ListGroupManager from "../components/ListGroupManager";
 import { Layout, type MenuProps, ConfigProvider } from "antd";
-import { useTodoStore, useActiveGroup, useSelectTodo } from "@/store/todoStore";
+import {
+  useTodoStore,
+  getActiveListData,
+  useSelectTodo,
+  getActiveListTasks,
+} from "@/store/todoStore";
 import EditTodo from "@/Layout/EditTodo";
-import TODOList from "@/Layout/TODOList";
+import FilteredTodoList from "@/Layout/FilteredTodoList";
 import ThemeSwitcher from "../components/ThemeSwitcher"; // 导入主题切换组件
 import { useThemeStore } from "@/store/themeStore"; // 导入主题状态管理
 import { generateAntdThemeConfig } from "@/theme/themeConfig"; // 导入主题配置生成函数
@@ -15,8 +20,9 @@ import { generateAntdThemeConfig } from "@/theme/themeConfig"; // 导入主题�
  * 封装了Ant Design的Layout结构，包含侧边栏和主内容区域
  */
 export default function AppLayout() {
-  const { setActiveGroupId } = useTodoStore();
-  const activeGroup = useActiveGroup();
+  const { setActiveListId } = useTodoStore();
+  const activeListData = getActiveListData();
+  const activeListTasks = getActiveListTasks();
   const selectTodo = useSelectTodo();
   const { currentTheme } = useThemeStore(); // 获取当前主题
 
@@ -32,7 +38,7 @@ export default function AppLayout() {
 
   // 使用ListGroupManager组件管理清单组
   const listGroupManager = ListGroupManager({
-    onActiveGroupChange: setActiveGroupId,
+    onActiveGroupChange: setActiveListId,
   });
 
   // 主题切换器容器样式
@@ -57,25 +63,20 @@ export default function AppLayout() {
           SiderNav
         </Sider>
         <Sider width="18%">
-          <SideMenu
-            menuItem={menuItem}
-            onActiveGroupChange={setActiveGroupId}
-          />
+          <SideMenu menuItem={menuItem} onActiveGroupChange={setActiveListId} />
         </Sider>
         <Layout>
-          <TODOList
-            key={useTodoStore.getState().activeGroupId}
-            groupName={activeGroup.title}
-            todoList={
-              activeGroup || {
+          <FilteredTodoList
+            key={useTodoStore.getState().activeListId}
+            groupName={activeListData.title}
+            tasks={
+              activeListTasks || {
                 id: "",
                 title: "",
-                tasks: [],
                 createdAt: "",
-                updatedAt: "",
               }
             }
-          ></TODOList>
+          ></FilteredTodoList>
         </Layout>
         <Layout>
           {selectTodo && (

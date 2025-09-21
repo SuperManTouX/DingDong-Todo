@@ -1,4 +1,4 @@
-import { ThemeConfig } from "@/types/theme";
+import type { ThemeConfig } from "@/types/theme";
 
 /**
  * 将主题配置应用到HTML文档

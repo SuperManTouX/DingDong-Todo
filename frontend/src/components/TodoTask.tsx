@@ -1,6 +1,7 @@
 import { RightOutlined } from "@ant-design/icons";
 import { Priority } from "@/constants";
-import { Col, Input, message, Row, Tag, theme } from "antd";
+import { Col, Input, Row, Tag, theme } from "antd";
+import { message } from "@/utils/antdStatic";
 import dayjs from "dayjs";
 import type { TodoItemProps } from "@/types";
 import { formatMessage, MESSAGES } from "@/constants/messages";
@@ -9,15 +10,13 @@ import { useTodoStore } from "@/store/todoStore";
 import TimeCountDownNode from "./TimeCountDownNode";
 
 dayjs.extend(isoWeek);
-export default function TodoItem({
+export default function TodoTask({
   todo,
   other = false,
   hasSubTasks = false,
   isExpanded = false,
   onToggleExpand,
 }: TodoItemProps) {
-  // 使用 Ant Design 官方的 message.useMessage() hook
-  const [messageApi, contextHolder] = message.useMessage();
   const { dispatchTodo, setSelectTodoId } = useTodoStore();
   const { token } = theme.useToken(); // 获取主题令牌
 
@@ -164,11 +163,11 @@ export default function TodoItem({
                   dispatchTodo({
                     type: "toggle",
                     todoId: todo.id,
-                    groupId: todo.groupId,
+                    listId: todo.listId,
                     newCompleted: e.currentTarget.checked,
                   });
                   if (e.currentTarget.checked)
-                    messageApi.info(
+                    message.info(
                       formatMessage(MESSAGES.INFO.TASK_COMPLETED, {
                         taskTitle: todo.title,
                       }),
@@ -218,7 +217,6 @@ export default function TodoItem({
         {/*子任务列表已移除，子任务现在在TodoList中直接渲染*/}
         {/*编辑折叠框*/}
       </li>
-      {contextHolder}
     </>
   );
 }

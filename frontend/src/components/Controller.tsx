@@ -2,9 +2,10 @@
 import type { ControllerProps } from "@/types";
 import { ShowType, ShowTypeLabels, type ShowTypeValue } from "@/constants";
 import { Dropdown } from "react-bootstrap";
-import { Button, Col, Input, message, Row } from "antd";
-import type { MessageInstance } from "antd/es/message/interface";
+import { Button, Col, Input, Row } from "antd";
+import { message } from "@/utils/antdStatic";
 import { MESSAGES } from "@/constants/messages";
+
 export default function Controller({
   onSwitchShow,
   onCompleteAll,
@@ -14,8 +15,6 @@ export default function Controller({
   setText,
   onAdded,
 }: ControllerProps) {
-  // 使用 Ant Design 官方的 message.useMessage() hook
-  const [messageApi, contextHolder] = message.useMessage();
   return (
     <li
       className={`row d-flex justify-content-between highlight rounded pe-0 ps-0 pt-0 pb-0  `}
@@ -36,7 +35,7 @@ export default function Controller({
                   showType: showType,
                 });
                 if (e.currentTarget.checked)
-                  messageApi.info(MESSAGES.INFO.ALL_COMPLETED);
+                  message.info(MESSAGES.INFO.ALL_COMPLETED);
               }}
             />
             {/*添加任务全部*/}
@@ -82,7 +81,6 @@ export default function Controller({
           </Dropdown>
         </Col>
       </Row>
-      {contextHolder}
     </li>
   );
 }

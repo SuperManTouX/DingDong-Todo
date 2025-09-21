@@ -2,8 +2,9 @@ import { createRoot } from "react-dom/client";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./styles/currentCSS.css";
 import "@ant-design/v5-patch-for-react-19";
-import { ConfigProvider } from "antd";
+import { App, ConfigProvider } from "antd";
 import React, { StrictMode } from "react";
+import { AntdStaticHolder } from "./utils/antdStatic";
 // import App from './TicTacToe.tsx'
 // import TaskApp from "./TaskApp";
 // import NestedList from "./Test";
@@ -19,7 +20,10 @@ const AppWithTheme: React.FC = () => {
 
   return (
     <ConfigProvider theme={getAntdTheme()}>
-      <AppLayout />
+      <App className={"w-100 h-100"}>
+        <AntdStaticHolder />
+        <AppLayout />
+      </App>
     </ConfigProvider>
   );
 };
