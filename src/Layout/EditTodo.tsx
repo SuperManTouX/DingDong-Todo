@@ -4,18 +4,19 @@ import {
   type DatePickerProps,
   Dropdown,
   Input,
-  message,
   Row,
   Select,
   Tag,
   theme,
   Layout,
 } from "antd";
+import { message } from "@/utils/antdStatic";
 import type { TodoAction } from "@/types";
 import { Priority } from "@/constants";
 import dayjs from "dayjs";
 import type { RangePickerProps } from "antd/es/date-picker";
 import { PlusOutlined } from "@ant-design/icons";
+import { useMemo } from "react";
 import { useSelectTodo, useTodoStore } from "@/store/todoStore";
 import { useThemeStore } from "@/store/themeStore";
 import TimeCountDownNode from "@/components/TimeCountDownNode"; // 导入主题状态管理
@@ -29,6 +30,7 @@ export default function EditTodo({
   onTodoChange: (action: TodoAction) => void;
 }) {
   const todoTags = useTodoStore((state) => state.todoTags);
+  const todoListData = useTodoStore((state) => state.todoListData);
   const selectTodo = useSelectTodo();
   const { currentTheme } = useThemeStore(); // 获取当前主题
 
@@ -78,7 +80,7 @@ export default function EditTodo({
       todo: {
         ...selectTodo,
         tags: updatedTags,
-        groupId: selectTodo.groupId,
+        listId: selectTodo.listId,
       },
     });
 
@@ -106,6 +108,14 @@ export default function EditTodo({
     borderStyle: "dashed",
   };
 
+  // 使用useMemo缓存options，避免每次渲染都创建新数组
+  const listOptions = useMemo(() => {
+    return todoListData.map((list) => ({
+      value: list.id,
+      label: list.title,
+    }));
+  }, [todoListData]);
+
   return (
     <Layout className="h-100">
       <Header
@@ -126,7 +136,7 @@ export default function EditTodo({
                 onTodoChange({
                   type: "toggle",
                   todoId: selectTodo.id,
-                  groupId: selectTodo.groupId,
+                  listId: selectTodo.listId,
                   newCompleted: e.currentTarget.checked,
                 });
                 if (e.currentTarget.checked)
@@ -301,7 +311,40 @@ export default function EditTodo({
         }}
       >
         <Row justify={"start"} align={"middle"}>
-          所属组，标签
+          <span style={{ marginRight: "12px" }}>所属清单：</span>
+          <Select
+            value={selectTodo.listId}
+            style={{
+              width: 200,
+              color: currentTheme.textColor,
+            }}
+            showSearch
+            placeholder="选择清单"
+            optionFilterProp="label"
+            filterOption={(input, option) =>
+              option?.label?.toLowerCase().includes(input.toLowerCase())
+            }
+            onChange={(newListId) => {
+              if (newListId !== selectTodo.listId) {
+                onTodoChange({
+                  type: "changed",
+                  todo: {
+                    ...selectTodo,
+                    listId: newListId,
+                  },
+                });
+
+                // 查找新清单的名称
+                const newList = todoListData.find(
+                  (list) => list.id === newListId,
+                );
+                message.success(
+                  `已成功移动至清单：${newList?.name || "未知清单"}`,
+                );
+              }
+            }}
+            options={listOptions}
+          />
         </Row>
       </Footer>
     </Layout>

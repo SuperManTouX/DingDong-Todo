@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Modal, Input, Select, message } from "antd";
+import { Modal, Input, Select } from "antd";
 import { ListColorNames, ListColors } from "@/constants";
+import { message } from "@/utils/antdStatic";
 import { MESSAGES } from "@/constants/messages";
 import { useTodoStore } from "@/store/todoStore";
 
@@ -9,9 +10,6 @@ import { useTodoStore } from "@/store/todoStore";
  * 负责标签的添加、编辑等功能
  */
 export default function TagManager() {
-  // 使用 Ant Design 官方的 message.useMessage() hook
-  const [messageApi, contextHolder] = message.useMessage();
-
   const { dispatchTag } = useTodoStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mode, setMode] = useState<"add" | "edit">("add");
@@ -66,7 +64,7 @@ export default function TagManager() {
             parentId,
           },
         } as any);
-        messageApi.success(MESSAGES.SUCCESS.TAG_ADDED);
+        message.success(MESSAGES.SUCCESS.TAG_ADDED);
       } else if (mode === "edit") {
         // 编辑现有标签
         dispatchTag({
@@ -80,11 +78,11 @@ export default function TagManager() {
             },
           },
         } as any);
-        messageApi.success(MESSAGES.SUCCESS.TAG_UPDATED);
+        message.success(MESSAGES.SUCCESS.TAG_UPDATED);
       }
       setIsModalOpen(false);
     } else {
-      messageApi.warning(MESSAGES.WARNING.EMPTY_TAG_NAME);
+      message.warning(MESSAGES.WARNING.EMPTY_TAG_NAME);
     }
   };
 
@@ -106,7 +104,6 @@ export default function TagManager() {
         onCancel={handleCancel}
         width={400}
       >
-        {contextHolder}
         <div className="mb-3">
           <label htmlFor="tagName" className="form-label">
             标签名称

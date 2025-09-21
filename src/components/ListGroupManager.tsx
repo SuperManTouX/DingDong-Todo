@@ -3,7 +3,6 @@ import {
   Col,
   Dropdown,
   type MenuProps,
-  message,
   Modal,
   Row,
   Select,
@@ -21,9 +20,10 @@ import {
 import type { Tag, TodoListData } from "@/types";
 import { ListColorNames, ListColors } from "@/constants";
 import TagManager from "./TagManager";
+import { message, modal } from "@/utils/antdStatic";
 
 interface ListGroupManagerProps {
-  onActiveGroupChange: (groupId: string) => void;
+  onActiveGroupChange: (listId: string) => void;
 }
 
 /**
@@ -33,18 +33,16 @@ interface ListGroupManagerProps {
 export default function ListGroupManager({
   onActiveGroupChange,
 }: ListGroupManagerProps) {
-  // 使用 Ant Design 官方的 message.useMessage() hook
-  const [messageApi, contextHolder] = message.useMessage();
-
+  // 从全局导入的 message 和 modal，无需单独创建
   // 从store获取数据和方法
-  const { todoListGroups, todoTags, dispatchTodo } = useTodoStore();
+  const { todoListData, todoTags, dispatchList, dispatchTag } = useTodoStore();
   // 统一管理添加和编辑的状态
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mode, setMode] = useState<"add" | "edit">("add"); // 模式：添加或编辑
   const [groupName, setGroupName] = useState("");
   const [selectedEmoji, setSelectedEmoji] = useState("");
   const [selectedColor, setSelectedColor] = useState(ListColors.none);
-  const [groupId, setGroupId] = useState("");
+  const [listId, setListId] = useState("");
 
   // 初始化标签管理器
   const { showModal: showTagModal, tagModal } = TagManager();
@@ -60,14 +58,14 @@ export default function ListGroupManager({
       setGroupName("");
       setSelectedEmoji("");
       setSelectedColor(ListColors.none);
-      setGroupId("");
+      setListId("");
     } else if (type === "edit" && groupData) {
       // 编辑模式：设置现有数据
       setGroupName(groupData.title);
       setSelectedEmoji(groupData.emoji || "");
       // @ts-ignore
       setSelectedColor(groupData.color || ListColors.none);
-      setGroupId(groupData.id);
+      setListId(groupData.id);
     }
     setIsModalOpen(true);
   };
@@ -77,27 +75,27 @@ export default function ListGroupManager({
     if (groupName.trim()) {
       if (mode === "add") {
         // 添加新清单
-        dispatchTodo({
+        dispatchList({
           type: "addListGroup",
           title: groupName.trim(),
           emoji: selectedEmoji,
           color: selectedColor,
         });
-        messageApi.success(MESSAGES.SUCCESS.LIST_ADDED);
+        message.success(MESSAGES.SUCCESS.LIST_ADDED);
       } else if (mode === "edit") {
         // 编辑现有清单
-        dispatchTodo({
+        dispatchList({
           type: "updateListGroup",
-          groupId: groupId,
+          listId: listId,
           title: groupName.trim(),
           emoji: selectedEmoji,
           color: selectedColor,
         });
-        messageApi.success(MESSAGES.SUCCESS.LIST_UPDATED);
+        message.success(MESSAGES.SUCCESS.LIST_UPDATED);
       }
       setIsModalOpen(false);
     } else {
-      messageApi.warning(MESSAGES.WARNING.EMPTY_LIST_NAME);
+      message.warning(MESSAGES.WARNING.EMPTY_LIST_NAME);
     }
   };
 
@@ -105,25 +103,23 @@ export default function ListGroupManager({
     setIsModalOpen(false);
   };
 
-  const handleDeleteListGroup = (groupId: string, groupTitle: string) => {
-    Modal.confirm({
+  const handleDeleteListGroup = (listId: string, groupTitle: string) => {
+    modal.confirm({
       title: "确认删除清单",
       content: `确定要删除清单 "${groupTitle}" 吗？此操作无法撤销。`,
       okText: "确认删除",
       okType: "danger",
       cancelText: "取消",
       onOk() {
-        dispatchTodo({
+        dispatchList({
           type: "deleteListGroup",
-          groupId: groupId,
+          listId: listId,
         });
-        messageApi.success(MESSAGES.SUCCESS.LIST_DELETED);
+        message.success(MESSAGES.SUCCESS.LIST_DELETED);
 
         // 如果删除的是当前激活的清单，切换到第一个清单
-        if (todoListGroups.length > 0) {
-          const remainingGroups = todoListGroups.filter(
-            (g) => g.id !== groupId,
-          );
+        if (todoListData.length > 0) {
+          const remainingGroups = todoListData.filter((g) => g.id !== listId);
           if (remainingGroups.length > 0) {
             onActiveGroupChange(remainingGroups[0].id);
           }
@@ -139,24 +135,24 @@ export default function ListGroupManager({
       ? `确定要删除标签 "${tagName}" 吗？此操作无法撤销。`
       : `确定要删除标签 "${tagName}" 吗？此操作无法撤销。`;
 
-    Modal.confirm({
+    modal.confirm({
       title: "确认删除标签",
       content: confirmContent,
       okText: "确认删除",
       okType: "danger",
       cancelText: "取消",
       onOk() {
-        dispatchTodo({
+        dispatchTag({
           type: "deleteTag",
           payload: tagId,
-        } as any);
-        messageApi.success(MESSAGES.SUCCESS.TAG_DELETED);
+        });
+        message.success(MESSAGES.SUCCESS.TAG_DELETED);
       },
     });
   };
 
   const renderTodoListGroups = (): MenuProps["items"] => {
-    return todoListGroups.map((tg) => {
+    return todoListData.map((tg) => {
       // 下拉菜单配置
       const dropdownMenu = {
         items: [
@@ -375,7 +371,6 @@ export default function ListGroupManager({
   ];
 
   return {
-    contextHolder,
     menuItem,
     groupModal: (
       <Modal

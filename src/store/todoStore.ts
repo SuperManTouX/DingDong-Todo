@@ -1,10 +1,11 @@
 import { create } from "zustand";
 import { produce } from "immer";
 import type { TodoListData, Todo, Tag, TodoActionExtended } from "@/types";
-import type { TagReducerAction } from "@/types";
-import todoListGroup from "../data/todoListGroup.json";
+import type { TagReducerAction, ListGroupAction } from "@/types";
+import todoListData from "../data/TodoListData.json";
 import todoTag from "../data/todoTags.json";
 import binData from "../data/bin.json";
+import allTasks from "../data/AllTasks.json";
 import { v4 as uuidv4 } from "uuid";
 import dayjs from "dayjs";
 import { Priority, ShowType } from "@/constants";
@@ -12,11 +13,12 @@ import { Priority, ShowType } from "@/constants";
 // 完整的状态类型定义
 interface TodoState {
   // 核心数据 - 持久化存储
-  todoListGroups: TodoListData[];
+  todoListData: TodoListData[];
   todoTags: Tag[];
-  activeGroupId: string;
+  activeListId: string;
   selectTodoId: string | null;
   bin: Todo[]; // 回收站数据
+  tasks: Todo[]; // 新增：独立的任务数组
 
   // 计算属性 - 这些属性在持久化时会被忽略
   activeGroup: TodoListData;
@@ -24,8 +26,9 @@ interface TodoState {
 
   // Actions - 处理状态更新的方法
   dispatchTodo: (action: TodoActionExtended) => void;
+  dispatchList: (action: ListGroupAction) => void;
   dispatchTag: (action: TagReducerAction) => void;
-  setActiveGroupId: (id: string) => void;
+  setActiveListId: (id: string) => void;
   setSelectTodoId: (id: string | null) => void;
 
   // 回收站相关操作
@@ -45,11 +48,13 @@ export const useTodoStore = create<TodoState>()(
   // persist(
   (set, get) => ({
     // 初始化状态
-    todoListGroups: todoListGroup as TodoListData[],
+    todoListData: todoListData,
     todoTags: todoTag as Tag[],
-    activeGroupId: "a",
+    activeListId: "a",
     selectTodoId: null,
     bin: binData as Todo[], // 初始化回收站数据
+    // 从独立的AllTasks.json文件导入所有任务
+    tasks: allTasks as Todo[],
 
     // 计算属性 - 当前激活的任务组
     activeGroup: {
@@ -66,210 +71,282 @@ export const useTodoStore = create<TodoState>()(
     // 处理todo相关的action
     dispatchTodo: (action: TodoActionExtended) => {
       set(
-        produce((draftState) => {
-          const draft = draftState.todoListGroups;
-
+        produce((draftState: TodoState) => {
           switch (action.type) {
             case "completedAll": {
               const {
                 completeOrUncomplete,
                 showType = ShowType.all,
-                groupId,
+                listId,
               } = action;
-              const targetGroup = draft.find(
-                (group: TodoListData) => group.id === groupId,
+
+              // 直接操作独立的tasks数组
+              draftState.tasks = draftState.tasks.map((task: Todo) => {
+                // 仅处理指定清单的任务
+                if (task.listId !== listId) return task;
+
+                // 根据showType决定是否更新
+                let shouldUpdate = false;
+                switch (showType) {
+                  case ShowType.all:
+                    shouldUpdate = true;
+                    break;
+                  case ShowType.completed:
+                    shouldUpdate = task.completed;
+                    break;
+                  case ShowType.uncompleted:
+                    shouldUpdate = !task.completed;
+                    break;
+                  case ShowType.overdue:
+                    shouldUpdate =
+                      task.deadline &&
+                      new Date(task.deadline) < new Date() &&
+                      !task.completed;
+                    break;
+                }
+
+                if (shouldUpdate) {
+                  return { ...task, completed: completeOrUncomplete };
+                }
+                return task;
+              });
+
+              // 更新清单的更新时间
+              const targetList = draftState.todoListData.find(
+                (list) => list.id === listId,
               );
-
-              if (!targetGroup) return;
-
-              switch (showType) {
-                case ShowType.all:
-                  targetGroup.tasks.forEach((t: Todo) => {
-                    t.completed = completeOrUncomplete;
-                  });
-                  break;
-                case ShowType.completed:
-                  targetGroup.tasks.forEach((t: Todo) => {
-                    if (t.completed) {
-                      t.completed = completeOrUncomplete;
-                    }
-                  });
-                  break;
-                case ShowType.uncompleted:
-                  targetGroup.tasks.forEach((t: Todo) => {
-                    if (!t.completed) {
-                      t.completed = completeOrUncomplete;
-                    }
-                  });
-                  break;
-                case ShowType.overdue:
-                  targetGroup.tasks.forEach((t: Todo) => {
-                    const isOverdue =
-                      t.deadline &&
-                      new Date(t.deadline) < new Date() &&
-                      !t.completed;
-                    if (isOverdue) {
-                      t.completed = completeOrUncomplete;
-                    }
-                  });
-                  break;
+              if (targetList) {
+                targetList.updatedAt = dayjs().format();
               }
-              targetGroup.updatedAt = dayjs().format();
               break;
             }
 
             case "toggle": {
-              const { todoId, newCompleted, groupId } = action;
-              const targetGroup: TodoListData = draft.find(
-                (group: TodoListData) => group.id === groupId,
+              const { todoId, newCompleted } = action;
+              // 直接在tasks数组中查找并更新
+              const todoIndex = draftState.tasks.findIndex(
+                (t) => t.id === todoId,
               );
-              if (!targetGroup) return;
 
-              const todo = targetGroup.tasks.find((t) => t.id === todoId);
-              if (todo) {
-                todo.completed = newCompleted;
+              if (todoIndex !== -1) {
+                draftState.tasks[todoIndex].completed = newCompleted;
 
                 // 同步子任务状态
                 const updateChildTasks = (
                   parentId: string,
                   newCompleted: boolean,
                 ) => {
-                  const children = targetGroup.tasks.filter(
-                    (t) => t.parentId === parentId,
-                  );
-                  children.forEach((child) => {
-                    child.completed = newCompleted;
-                    updateChildTasks(child.id, newCompleted);
+                  draftState.tasks = draftState.tasks.map((task) => {
+                    if (task.parentId === parentId) {
+                      return { ...task, completed: newCompleted };
+                    }
+                    return task;
                   });
                 };
 
-                // 查找并更新所有子任务
-                const childTasks = targetGroup.tasks.filter(
-                  (t) => t.parentId === todo.id,
-                );
-                if (childTasks.length > 0) {
-                  updateChildTasks(todo.id, newCompleted);
-                }
+                // 更新所有子任务
+                updateChildTasks(todoId, newCompleted);
 
-                // 检查父任务状态
+                // 检查并更新父任务状态
+                const todo = draftState.tasks[todoIndex];
                 if (todo.parentId) {
-                  const parentTodo = targetGroup.tasks.find(
+                  const parentTodo = draftState.tasks.find(
                     (t) => t.id === todo.parentId,
                   );
                   if (parentTodo) {
-                    const allChildTasks = targetGroup.tasks.filter(
+                    const allChildTasks = draftState.tasks.filter(
                       (t) => t.parentId === parentTodo.id,
                     );
                     const allChildrenCompleted = allChildTasks.every(
                       (t) => t.completed,
                     );
-                    parentTodo.completed = allChildrenCompleted;
+
+                    const parentIndex = draftState.tasks.findIndex(
+                      (t) => t.id === parentTodo.id,
+                    );
+                    if (parentIndex !== -1) {
+                      draftState.tasks[parentIndex].completed =
+                        allChildrenCompleted;
+                    }
                   }
                 }
+
+                // 更新清单的更新时间
+                const targetList = draftState.todoListData.find(
+                  (list) => list.id === todo.listId,
+                );
+                if (targetList) {
+                  targetList.updatedAt = dayjs().format();
+                }
               }
-              targetGroup.updatedAt = dayjs().format();
-              break;
-            }
-
-            case "deleted": {
-              const { deleteId, groupId } = action;
-              const targetGroup: TodoListData = draft.find(
-                (group: TodoListData) => group.id === groupId,
-              );
-
-              if (!targetGroup) return;
-
-              targetGroup.tasks = targetGroup.tasks.filter(
-                (d) => d.id !== deleteId,
-              );
-              targetGroup.updatedAt = dayjs().format();
-              break;
-            }
-
-            case "deletedAll": {
-              const { groupId } = action;
-              const targetGroup: TodoListData = draft.find(
-                (group: TodoListData) => group.id === groupId,
-              );
-
-              if (!targetGroup) return;
-
-              targetGroup.tasks = targetGroup.tasks.filter((d) => !d.completed);
-              targetGroup.updatedAt = dayjs().format();
               break;
             }
 
             case "added": {
-              const { title, completed, parentId, depth, groupId } = action;
-              const targetGroup = draft.find(
-                (group: TodoListData) => group.id === groupId,
-              );
+              const { title, completed, parentId, depth, listId } = action;
 
-              if (!targetGroup) return;
-
-              targetGroup.tasks.push({
+              // 直接添加到独立的tasks数组
+              draftState.tasks.push({
                 id: uuidv4(),
                 title: title,
-                groupId: groupId,
+                listId: listId,
                 completed: completed,
                 priority: Priority.None,
                 parentId: parentId || null,
                 depth: depth || 0,
               });
-              targetGroup.updatedAt = dayjs().format();
+
+              // 更新清单的更新时间
+              const targetList = draftState.todoListData.find(
+                (list) => list.id === listId,
+              );
+              if (targetList) {
+                targetList.updatedAt = dayjs().format();
+              }
               break;
             }
 
             case "changed": {
               const { todo } = action;
-              const targetGroup: TodoListData = draft.find(
-                (group: TodoListData) => group.id === todo.groupId,
+              // 直接在tasks数组中查找并替换
+              const index = draftState.tasks.findIndex((d) => d.id === todo.id);
+              if (index !== -1) {
+                draftState.tasks[index] = todo;
+
+                // 更新清单的更新时间
+                const targetList = draftState.todoListData.find(
+                  (list) => list.id === todo.listId,
+                );
+                if (targetList) {
+                  targetList.updatedAt = dayjs().format();
+                }
+              }
+              break;
+            }
+
+            case "deleted": {
+              const { deleteId } = action;
+              // 先找到要删除的任务，以获取其listId
+              const todoToDelete = draftState.tasks.find(
+                (t) => t.id === deleteId,
               );
-              if (!targetGroup) return;
-              const i = targetGroup.tasks.findIndex((d) => d.id === todo.id);
-              targetGroup.tasks[i] = todo;
-              targetGroup.updatedAt = dayjs().format();
-              console.log(todo);
+              if (todoToDelete) {
+                // 从tasks数组中删除任务及其所有子任务
+                const deleteRecursively = (id: string) => {
+                  draftState.tasks = draftState.tasks.filter((task) => {
+                    if (task.id === id) return false;
+                    if (task.parentId === id) {
+                      // 递归删除子任务
+                      deleteRecursively(task.id);
+                      return false;
+                    }
+                    return true;
+                  });
+                };
+
+                deleteRecursively(deleteId);
+
+                // 更新清单的更新时间
+                const targetList = draftState.todoListData.find(
+                  (list) => list.id === todoToDelete.listId,
+                );
+                if (targetList) {
+                  targetList.updatedAt = dayjs().format();
+                }
+              }
+              break;
+            }
+
+            case "deletedAll": {
+              const { listId } = action;
+              // 过滤掉指定清单的已完成任务
+              draftState.tasks = draftState.tasks.filter((task) => {
+                if (task.listId === listId && task.completed) {
+                  return false;
+                }
+                return true;
+              });
+
+              // 更新清单的更新时间
+              const targetList = draftState.todoListData.find(
+                (list) => list.id === listId,
+              );
+              if (targetList) {
+                targetList.updatedAt = dayjs().format();
+              }
               break;
             }
 
             case "replaced": {
-              const { todoList, groupId } = action;
-              const targetGroup: TodoListData = draft.find(
-                (group: TodoListData) => group.id === groupId,
+              const { todoList, listId } = action;
+              // 保留其他清单的任务，替换指定清单的任务
+              draftState.tasks = draftState.tasks
+                .filter((task) => task.listId !== listId)
+                .concat(todoList);
+
+              // 更新清单的更新时间
+              const targetList = draftState.todoListData.find(
+                (list) => list.id === listId,
               );
-
-              if (!targetGroup) return;
-
-              targetGroup.tasks = todoList;
-              targetGroup.updatedAt = dayjs().format();
+              if (targetList) {
+                targetList.updatedAt = dayjs().format();
+              }
               break;
             }
+          }
+        }),
+      );
+    },
 
+    // 处理清单组相关的action
+    dispatchList: (action: ListGroupAction) => {
+      set(
+        produce((draftState: TodoState) => {
+          switch (action.type) {
             case "addListGroup": {
-              const { title, initialTasks = [], emoji, color } = action;
+              const { title, emoji, color } = action;
               const now = dayjs().format();
+              const listId = `group_${Date.now()}`;
 
-              draft.push({
-                id: `group_${Date.now()}`,
+              // 添加新清单
+              draftState.todoListData.push({
+                id: listId,
                 title,
                 emoji,
                 color,
                 createdAt: now,
                 updatedAt: now,
-                tasks: initialTasks,
               });
               break;
             }
 
             case "deleteListGroup": {
-              const { groupId } = action;
-              const index = draft.findIndex(
-                (group: TodoListData) => group.id === groupId,
+              const { listId } = action;
+              // 删除清单
+              const index = draftState.todoListData.findIndex(
+                (list: TodoListData) => list.id === listId,
               );
 
               if (index !== -1) {
-                draft.splice(index, 1);
+                draftState.todoListData.splice(index, 1);
+                // 同时删除该清单下的所有任务
+                draftState.tasks = draftState.tasks.filter(
+                  (task) => task.listId !== listId,
+                );
+              }
+              break;
+            }
+
+            case "updateListGroup": {
+              const { listId, title, emoji, color } = action;
+              const targetList = draftState.todoListData.find(
+                (list) => list.id === listId,
+              );
+              if (targetList) {
+                if (title !== undefined) targetList.title = title;
+                if (emoji !== undefined) targetList.emoji = emoji;
+                if (color !== undefined) targetList.color = color;
+                targetList.updatedAt = dayjs().format();
               }
               break;
             }
@@ -281,7 +358,7 @@ export const useTodoStore = create<TodoState>()(
     // 处理标签相关的action
     dispatchTag: (action: TagReducerAction) => {
       set(
-        produce((draftState) => {
+        produce((draftState: TodoState) => {
           const draft = draftState.todoTags;
 
           switch (action.type) {
@@ -340,6 +417,23 @@ export const useTodoStore = create<TodoState>()(
               if (indexToDelete !== -1) {
                 draft.splice(indexToDelete, 1);
               }
+
+              // 从所有任务中移除该标签
+              draftState.tasks.forEach((task: Todo) => {
+                if (task.tags && task.tags.length > 0) {
+                  // 过滤掉要删除的标签ID
+                  task.tags = task.tags.filter((id: string) => id !== tagId);
+                }
+              });
+
+              // 从回收站中的任务中也移除该标签
+              draftState.bin.forEach((task: Todo) => {
+                if (task.tags && task.tags.length > 0) {
+                  // 过滤掉要删除的标签ID
+                  task.tags = task.tags.filter((id: string) => id !== tagId);
+                }
+              });
+
               break;
             }
           }
@@ -348,8 +442,8 @@ export const useTodoStore = create<TodoState>()(
     },
 
     // 设置当前激活的任务组ID
-    setActiveGroupId: (id: string) => {
-      set({ activeGroupId: id });
+    setActiveListId: (id: string) => {
+      set({ activeListId: id });
     },
 
     // 设置当前选中的任务ID
@@ -360,11 +454,9 @@ export const useTodoStore = create<TodoState>()(
     // 辅助方法 - 用于查询和获取特定数据
     getTodoById: (id: string) => {
       const state = get();
-      // 首先在正常任务中查找
-      for (const group of state.todoListGroups) {
-        const todo = group.tasks.find((t) => t.id === id);
-        if (todo) return todo;
-      }
+      // 直接在独立的tasks数组中查找
+      const todo = state.tasks.find((t) => t.id === id);
+      if (todo) return todo;
       // 如果在正常任务中找不到，在回收站中查找
       return state.bin.find((t) => t.id === id) || null;
     },
@@ -372,10 +464,13 @@ export const useTodoStore = create<TodoState>()(
     // 根据任务ID获取所属的任务组
     getGroupByTodoId: (todoId: string) => {
       const state = get();
-      for (const group of state.todoListGroups) {
-        if (group.tasks.some((t) => t.id === todoId)) {
-          return group;
-        }
+      // 先找到任务
+      const todo = state.tasks.find((t) => t.id === todoId);
+      if (todo) {
+        // 再根据任务的listId找到所属清单
+        return (
+          state.todoListData.find((list) => list.id === todo.listId) || null
+        );
       }
       return null;
     },
@@ -383,20 +478,18 @@ export const useTodoStore = create<TodoState>()(
     // 将任务移动到回收站
     moveToBin: (todo: Todo) => {
       set(
-        produce((draftState) => {
-          // 从原任务组中移除任务
-          const groupIndex = draftState.todoListGroups.findIndex(
-            (group: TodoListData) => group.id === todo.groupId,
+        produce((draftState: TodoState) => {
+          // 从独立的tasks数组中移除任务
+          draftState.tasks = draftState.tasks.filter(
+            (task) => task.id !== todo.id,
           );
-          if (groupIndex !== -1) {
-            const taskIndex = draftState.todoListGroups[
-              groupIndex
-            ].tasks.findIndex((task: Todo) => task.id === todo.id);
-            if (taskIndex !== -1) {
-              draftState.todoListGroups[groupIndex].tasks.splice(taskIndex, 1);
-              draftState.todoListGroups[groupIndex].updatedAt =
-                dayjs().format();
-            }
+
+          // 更新清单的更新时间
+          const targetList = draftState.todoListData.find(
+            (list) => list.id === todo.listId,
+          );
+          if (targetList) {
+            targetList.updatedAt = dayjs().format();
           }
 
           // 将任务添加到回收站，并记录删除时间
@@ -412,7 +505,7 @@ export const useTodoStore = create<TodoState>()(
     // 从回收站恢复任务
     restoreFromBin: (todoId: string) => {
       set(
-        produce((draftState) => {
+        produce((draftState: TodoState) => {
           const binItemIndex = draftState.bin.findIndex(
             (item: Todo & { deletedAt: string }) => item.id === todoId,
           );
@@ -424,15 +517,16 @@ export const useTodoStore = create<TodoState>()(
           // 从回收站移除
           draftState.bin.splice(binItemIndex, 1);
 
-          // 恢复到原任务组
-          const groupIndex = draftState.todoListGroups.findIndex(
-            (group: TodoListData) => group.id === todoToRestore.groupId,
+          // 恢复到独立的tasks数组
+          const { deletedAt, ...restoredTodo } = todoToRestore;
+          draftState.tasks.push(restoredTodo);
+
+          // 更新清单的更新时间
+          const targetList = draftState.todoListData.find(
+            (list) => list.id === todoToRestore.listId,
           );
-          if (groupIndex !== -1) {
-            // 删除deletedAt属性
-            const { deletedAt, ...restoredTodo } = todoToRestore;
-            draftState.todoListGroups[groupIndex].tasks.push(restoredTodo);
-            draftState.todoListGroups[groupIndex].updatedAt = dayjs().format();
+          if (targetList) {
+            targetList.updatedAt = dayjs().format();
           }
         }),
       );
@@ -478,135 +572,157 @@ export const useTodoStore = create<TodoState>()(
   // {
   //   name: "todo-storage", // localStorage的键名
   //   partialize: (state) => ({
-  //     todoListGroups: state.todoListGroups,
+  //     todoListData: state.todoListData,
   //     todoTags: state.todoTags,
-  //     activeGroupId: state.activeGroupId,
+  //     activeListId: state.activeListId,
   //     bin: state.bin,
   //   }),
   // },
   // ),
 );
 
-// 辅助hooks - 获取当前激活的任务组
-// 这确保了即使在store外部也能正确计算activeGroup
-
-export const useActiveGroup = (): TodoListData => {
-  const filterData: TodoListData = {
+// 使用todostore的get方法的版本
+export const getActiveListData = (): TodoListData => {
+  const defaultData: TodoListData = {
     createdAt: "",
     id: "",
-    tasks: [],
     title: "",
     updatedAt: "",
   };
 
-  return useTodoStore((state) => {
-    // 安全检查 - 确保state和相关属性存在
-    if (!state || !state.todoListGroups || !state.activeGroupId) {
-      return filterData;
+  // 获取store实例
+  const store = useTodoStore.getState();
+  const { activeListId, todoTags, todoListData } = store;
+
+  // 安全检查 - 确保state和相关属性存在
+  if (!activeListId) {
+    return defaultData;
+  }
+
+  let title: string;
+  switch (activeListId) {
+    case "aa":
+      title = "今天";
+      break;
+    case "bb":
+      title = "最近七天";
+      break;
+    case "bin":
+      title = "回收站";
+      break;
+    case "cp":
+      title = "已完成";
+      break;
+    default:
+      title = todoTags?.find((t: Tag) => t.id === activeListId)?.name || "";
+  }
+
+  // 确保todoListData存在
+  if (!todoListData) {
+    return defaultData;
+  }
+
+  // 如果是普通清单，返回清单信息
+  if (
+    activeListId !== "aa" &&
+    activeListId !== "bb" &&
+    activeListId !== "bin" &&
+    activeListId !== "cp"
+  ) {
+    const list = todoListData.find((item) => item.id === activeListId);
+    if (list) {
+      return {
+        ...list,
+      };
     }
+  }
 
-    let ag =
-      state.todoListGroups.find(
-        (item: TodoListData) => item.id === state.activeGroupId,
-      ) || filterData;
+  // 对于特殊视图和标签，返回格式化的清单信息
+  return {
+    ...defaultData,
+    id: activeListId,
+    title: title,
+  };
+};
 
-    if (ag.tasks.length > 0) return ag;
+// 使用todostore的get方法的版本
+export const getActiveListTasks = (): Todo[] => {
+  // 获取store实例
+  const store = useTodoStore.getState();
+  const { activeListId, tasks, bin, todoTags } = store;
 
-    // 格式化清单名
-    const formatGroupName = (): string => {
-      switch (state.activeGroupId) {
-        case "aa":
-          return "今天";
-        case "bb":
-          return "最近七天";
-        case "bin":
-          return "回收站";
-        case "cp":
-          return "已完成";
-        default:
-          return (
-            state.todoTags?.find((t: Tag) => t.id === state.activeGroupId)
-              ?.name || ""
-          );
-      }
-    };
+  // 安全检查 - 确保state和相关属性存在
+  if (!activeListId || !tasks) {
+    return [];
+  }
 
-    // 给title重新命名
-    if (filterData.title === "") {
-      filterData.title = formatGroupName();
+  // 初始化任务数组
+  let resultTasks: Todo[] = [];
+  // 如果是普通清单，返回清单关联的任务
+  if (todoListData.some((l) => activeListId === l.id)) {
+    resultTasks = tasks.filter((task) => task.listId === activeListId);
+  } else {
+    // 根据不同的视图类型返回对应的任务
+    switch (activeListId) {
+      // 今天
+      case "aa":
+        resultTasks = tasks.filter(
+          (t) => t.deadline && dayjs(t.deadline).isSame(dayjs(), "day"),
+        );
+        break;
+
+      // 最近七天
+      case "bb":
+        resultTasks = tasks.filter(
+          (t) =>
+            t.deadline &&
+            dayjs(t.deadline).isAfter(dayjs().subtract(7, "day")) &&
+            dayjs(t.deadline).isBefore(dayjs().add(7, "day")),
+        );
+        break;
+
+      // 回收站
+      case "bin":
+        resultTasks = [...bin];
+        break;
+
+      // 已完成
+      case "cp":
+        resultTasks = tasks.filter((t) => t.completed);
+        break;
+
+      // 标签筛选
+      default:
+        resultTasks = tasks.filter((t) => {
+          if (!t.tags) return false;
+          // 直接匹配标签ID
+          if (t.tags.includes(activeListId)) return true;
+          // 检查子标签
+          const subTags = todoTags.filter((ot) => ot.parentId === activeListId);
+          return subTags.some((st) => t.tags?.includes(st.id));
+        });
+        break;
     }
+  }
 
-    // 将符合条件的todo推入filterData
-    state.todoListGroups.forEach((tg: TodoListData) => {
-      tg.tasks.forEach((t: Todo) => {
-        switch (state.activeGroupId) {
-          // 今天
-          case "aa":
-            if (t.deadline && dayjs(t.deadline).isSame(dayjs(), "day"))
-              filterData.tasks.push(t);
-            return;
+  // 去重
+  resultTasks = Array.from(
+    new Map(resultTasks.map((o: Todo) => [o.id, o])).values(),
+  );
 
-          // 最近七天
-          case "bb":
-            if (
-              t.deadline &&
-              dayjs(t.deadline).isAfter(dayjs().subtract(7, "day")) &&
-              dayjs(t.deadline).isBefore(dayjs().add(7, "day"))
-            )
-              filterData.tasks.push(t);
-            return;
-          //   回收站
-          case "bin":
-            if (filterData.tasks.length > 0) return;
-            state.bin.forEach((t) => {
-              filterData.tasks.push(t);
-            });
-            return;
-          //   已完成
-          case "cp":
-            if (t.completed) filterData.tasks.push(t);
-            return;
-
-          // 标签数组
-          default:
-            t.tags?.forEach((ttId: string) => {
-              if (state.activeGroupId === ttId) filterData.tasks.push(t);
-            });
-
-            const subTags = state.todoTags.filter(
-              (ot: Tag) => state.activeGroupId === ot.parentId,
-            );
-            subTags.forEach((tt: Tag) => {
-              t.tags?.forEach((ttId: string) => {
-                if (tt.id === ttId) filterData.tasks.push(t);
-              });
-            });
-        }
-      });
-    });
-
-    // 去重
-    filterData.tasks = Array.from(
-      new Map(filterData.tasks.map((o: Todo) => [o.id, o])).values(),
-    );
-
-    return filterData;
-  });
+  return resultTasks;
 };
 
 // 辅助hook - 获取当前选中的任务
 export const useSelectTodo = (): Todo | null => {
   return useTodoStore((state) => {
     // 安全检查 - 确保state和相关属性存在
-    if (!state || !state.selectTodoId || !state.todoListGroups) {
+    if (!state || !state.selectTodoId || !state.tasks) {
       return null;
     }
 
-    for (const group of state.todoListGroups) {
-      const todo = group.tasks.find((t: Todo) => t.id === state.selectTodoId);
-      if (todo) return todo;
-    }
-    return null;
+    // 直接在独立的tasks数组中查找
+    return state.tasks.find((t: Todo) => t.id === state.selectTodoId) || null;
   });
 };
 

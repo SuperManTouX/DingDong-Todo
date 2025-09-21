@@ -273,12 +273,12 @@ import ListGroupManager from "../components/ListGroupManager";
 import { Layout, type MenuProps } from "antd";
 import { useTodoStore, useActiveGroup, useSelectTodo } from "@/store/todoStore";
 import EditTodo from "@/Layout/EditTodo";
-import TODOList from "@/Layout/TODOList";
+import FilteredTodoList from "@/Layout/FilteredTodoList";
 import ThemeSwitcher from '../components/ThemeSwitcher';
 
 // 保留原有组件实现...
 export default function AppLayout() {
-  const { setActiveGroupId } = useTodoStore();
+  const { setActiveListId } = useTodoStore();
   const activeGroup = useActiveGroup();
   const selectTodo = useSelectTodo();
 
@@ -309,11 +309,11 @@ export default function AppLayout() {
           SiderNav
         </Sider>
         <Sider width="18%">
-          <SideMenu menuItem={menuItem} onActiveGroupChange={setActiveGroupId} />
+          <SideMenu menuItem={menuItem} onActiveGroupChange={setActiveListId} />
         </Sider>
         <Layout>
-          <TODOList
-            key={useTodoStore.getState().activeGroupId}
+          <FilteredTodoList
+            key={useTodoStore.getState().activeListId}
             groupName={activeGroup.title}
             todoList={
               activeGroup || {
@@ -324,7 +324,7 @@ export default function AppLayout() {
                 updatedAt: "",
               }
             }
-          ></TODOList>
+          ></FilteredTodoList>
         </Layout>
         <Layout>
           {selectTodo && (
@@ -348,7 +348,7 @@ export default function AppLayout() {
 
 更新现有的CSS文件，使用CSS变量替换硬编码的颜色值：
 
-例如，修改`src/styles/TODOList.css`：
+例如，修改`src/styles/FilteredTodoList.css`：
 
 ```css
 .todo-list-container {

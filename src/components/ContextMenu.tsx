@@ -10,11 +10,11 @@ import {
   type DatePickerProps,
   Dropdown,
   type MenuProps,
-  message,
   Modal,
   TreeSelect,
   Tag,
 } from "antd";
+import { message } from "@/utils/antdStatic";
 import type { RangePickerProps } from "antd/es/date-picker";
 import type { TreeSelectProps } from "antd/es/tree-select";
 import type { Tag as TagT } from "@/types";
@@ -23,8 +23,6 @@ import { MESSAGES } from "@/constants/messages";
 import { useTodoStore } from "@/store/todoStore";
 
 export default function ContextMenu({ todo, children }: ContextMenuProps) {
-  // 使用 Ant Design 官方的 message.useMessage() hook
-  const [messageApi, contextHolder] = message.useMessage();
   const { dispatchTodo, todoTags } = useTodoStore();
 
   // 编辑时间
@@ -39,19 +37,19 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
         deadline: dayjs(deadLine).format(),
       },
     });
-    messageApi.info(MESSAGES.INFO.DEADLINE_UPDATED);
+    message.info(MESSAGES.INFO.DEADLINE_UPDATED);
   };
 
   // 添加子任务
   function handleAddSubTask(parentId: string, parentDepth: number): void {
-    const { activeGroupId } = useTodoStore.getState();
+    const { activeListId } = useTodoStore.getState();
     dispatchTodo({
       type: "added",
       title: "",
       completed: false,
       parentId,
       depth: parentDepth + 1,
-      groupId: activeGroupId,
+      listId: activeListId,
     });
   }
 
@@ -110,14 +108,14 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
         tags: a.slice(),
       },
     });
-    messageApi.info(MESSAGES.INFO.TAGS_UPDATED);
+    message.info(MESSAGES.INFO.TAGS_UPDATED);
   };
 
   // 构建标签树形数据
   const moveToBin = useTodoStore((state) => state.moveToBin);
   const restoreFromBin = useTodoStore((state) => state.restoreFromBin);
   const deleteFromBin = useTodoStore((state) => state.deleteFromBin);
-  const activeGroupId = useTodoStore((state) => state.activeGroupId);
+  const activeListId = useTodoStore((state) => state.activeListId);
   const treeData = buildTreeData(todoTags);
   const normalItems: MenuProps["items"] = [
     {
@@ -162,7 +160,7 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
         if (handleAddSubTask) {
           handleAddSubTask(todo.id, todo.depth);
         } else {
-          messageApi.warning(MESSAGES.WARNING.SUBTASK_NOT_AVAILABLE);
+          message.warning(MESSAGES.WARNING.SUBTASK_NOT_AVAILABLE);
         }
       },
     },
@@ -172,7 +170,7 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
       label: "删除",
       onClick: () => {
         moveToBin(todo);
-        messageApi.success(MESSAGES.SUCCESS.TASK_DELETED);
+        message.success(MESSAGES.SUCCESS.TASK_DELETED);
       },
     },
   ];
@@ -183,7 +181,7 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
       label: <span>恢复</span>,
       onClick: () => {
         restoreFromBin(todo.id);
-        messageApi.success(MESSAGES.SUCCESS.TASK_RESTORED);
+        message.success(MESSAGES.SUCCESS.TASK_RESTORED);
       },
     },
     {
@@ -199,12 +197,12 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
           onOk() {
             return new Promise<void>((resolve) => {
               deleteFromBin(todo.id);
-              messageApi.success(MESSAGES.SUCCESS.TASK_PERMANENTLY_DELETED);
+              message.success(MESSAGES.SUCCESS.TASK_PERMANENTLY_DELETED);
               resolve();
             });
           },
           onCancel() {
-            messageApi.info(MESSAGES.INFO.DELETE_CANCELLED);
+            message.info(MESSAGES.INFO.DELETE_CANCELLED);
           },
         });
       },
@@ -212,18 +210,15 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
   ];
 
   return (
-    <>
-      <Dropdown
-        key={todo.id}
-        trigger={["contextMenu"]}
-        menu={{
-          items: activeGroupId === "bin" ? binItems : normalItems,
-          className: "ctx-menu-left",
-        }}
-      >
-        {children}
-      </Dropdown>
-      {contextHolder}
-    </>
+    <Dropdown
+      key={todo.id}
+      trigger={["contextMenu"]}
+      menu={{
+        items: activeListId === "bin" ? binItems : normalItems,
+        className: "ctx-menu-left",
+      }}
+    >
+      {children}
+    </Dropdown>
   );
 }
