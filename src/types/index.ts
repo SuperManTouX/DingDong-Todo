@@ -39,6 +39,8 @@ export interface ControllerProps {
   text: string;
   setText: (text: string) => void;
   onAdded: () => void;
+  groupMode?: 'normal' | 'time' | 'none';
+  onToggleGroupMode?: (mode: 'normal' | 'time' | 'none') => void;
 }
 
 export type Priority = (typeof Priority)[keyof typeof Priority];

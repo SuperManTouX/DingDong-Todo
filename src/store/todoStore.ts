@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { produce } from "immer";
 import type { TodoListData, Todo, Tag, TodoActionExtended } from "@/types";
 import type { TagReducerAction, ListGroupAction } from "@/types";
+import type { Group } from "@/types/group";
 import todoListData from "../data/TodoListData.json";
 import todoTag from "../data/todoTags.json";
 import binData from "../data/bin.json";
@@ -19,17 +20,28 @@ interface TodoState {
   selectTodoId: string | null;
   bin: Todo[]; // 回收站数据
   tasks: Todo[]; // 新增：独立的任务数组
+  groups: Group[]; // 新增：全局分组数组
 
   // 计算属性 - 这些属性在持久化时会被忽略
   activeGroup: TodoListData;
   selectTodo: Todo | null;
 
-  // Actions - 处理状态更新的方法
+  // 处理todo相关的action
   dispatchTodo: (action: TodoActionExtended) => void;
   dispatchList: (action: ListGroupAction) => void;
   dispatchTag: (action: TagReducerAction) => void;
   setActiveListId: (id: string) => void;
   setSelectTodoId: (id: string | null) => void;
+
+  // 分组相关操作
+  addGroup: (listId: string, groupName: string, groupItemIds: string[]) => void;
+  updateGroup: (
+    listId: string,
+    groupName: string,
+    groupItemIds: string[],
+  ) => void;
+  deleteGroup: (listId: string, groupName: string) => void;
+  getGroupsByListId: (listId: string) => Group[];
 
   // 回收站相关操作
   moveToBin: (todo: Todo) => void; // 将任务移动到回收站
@@ -55,6 +67,8 @@ export const useTodoStore = create<TodoState>()(
     bin: binData as Todo[], // 初始化回收站数据
     // 从独立的AllTasks.json文件导入所有任务
     tasks: allTasks as Todo[],
+    // 初始化分组数组为空
+    groups: [],
 
     // 计算属性 - 当前激活的任务组
     activeGroup: {
@@ -439,6 +453,76 @@ export const useTodoStore = create<TodoState>()(
           }
         }),
       );
+    },
+
+    // 分组相关操作方法
+    addGroup: (
+      listId: string,
+      groupName: string,
+      groupItemIds: string[] = [],
+    ) => {
+      set(
+        produce((draftState: TodoState) => {
+          // 检查是否已存在相同的分组名
+          const existingGroupIndex = draftState.groups.findIndex(
+            (group) => group.listId === listId && group.groupName === groupName,
+          );
+
+          if (existingGroupIndex !== -1) {
+            // 如果分组已存在，更新groupItemIds
+            // 合并并去重任务ID
+            const mergedIds = Array.from(
+              new Set([
+                ...draftState.groups[existingGroupIndex].groupItemIds,
+                ...groupItemIds,
+              ]),
+            );
+            draftState.groups[existingGroupIndex].groupItemIds = mergedIds;
+          } else {
+            // 添加新分组
+            draftState.groups.push({
+              listId,
+              groupName,
+              groupItemIds: Array.from(new Set(groupItemIds)), // 去重
+            });
+          }
+        }),
+      );
+    },
+
+    updateGroup: (
+      listId: string,
+      oldGroupName: string,
+      newGroupName: string,
+    ) => {
+      set(
+        produce((draftState: TodoState) => {
+          const groupIndex = draftState.groups.findIndex(
+            (group) =>
+              group.listId === listId && group.groupName === oldGroupName,
+          );
+
+          if (groupIndex !== -1) {
+            draftState.groups[groupIndex].groupName = newGroupName;
+          }
+        }),
+      );
+    },
+
+    deleteGroup: (listId: string, groupName: string) => {
+      set(
+        produce((draftState: TodoState) => {
+          draftState.groups = draftState.groups.filter(
+            (group) =>
+              !(group.listId === listId && group.groupName === groupName),
+          );
+        }),
+      );
+    },
+
+    getGroupsByListId: (listId: string) => {
+      const state = get();
+      return state.groups.filter((group) => group.listId === listId);
     },
 
     // 设置当前激活的任务组ID

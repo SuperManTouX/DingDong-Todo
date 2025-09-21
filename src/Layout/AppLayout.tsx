@@ -22,7 +22,6 @@ import { generateAntdThemeConfig } from "@/theme/themeConfig"; // 导入主题�
 export default function AppLayout() {
   const { setActiveListId } = useTodoStore();
   const activeListData = getActiveListData();
-  const activeListTasks = getActiveListTasks();
   const selectTodo = useSelectTodo();
   const { currentTheme } = useThemeStore(); // 获取当前主题
 
@@ -69,13 +68,6 @@ export default function AppLayout() {
           <FilteredTodoList
             key={useTodoStore.getState().activeListId}
             groupName={activeListData.title}
-            tasks={
-              activeListTasks || {
-                id: "",
-                title: "",
-                createdAt: "",
-              }
-            }
           ></FilteredTodoList>
         </Layout>
         <Layout>

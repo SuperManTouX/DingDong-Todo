@@ -19,6 +19,18 @@ export const PriorityName = Object.fromEntries(
 ) as Record<PriorityValue, PriorityKey>;
 export type ShowTypeValue = (typeof ShowType)[keyof typeof ShowType];
 
+// 特殊清单常量 ，标签以后也得加
+export const SpecialLists = {
+  aa: "aa",
+  bb: "bb",
+  bin: "bin",
+  cp: "cp",
+} as const;
+
+export type SpecialListKey = keyof typeof SpecialLists;
+export type SpecialListValue = (typeof SpecialLists)[keyof typeof SpecialLists];
+
+// 使用
 // 使用
 type PriorityValue = (typeof Priority)[keyof typeof Priority]; // 0 | 1 | 2
 type PriorityKey = keyof typeof Priority; // "Low" | "Medium" | "High"
