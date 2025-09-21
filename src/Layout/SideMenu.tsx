@@ -30,7 +30,7 @@ export default function SideMenu({
   return (
     <>
       <Menu
-        className="my-custom-menu h-100"
+        className="h-100"
         onClick={handleClick}
         style={{ width: "100%", height: "100%", overflowY: "auto" }}
         mode="inline"

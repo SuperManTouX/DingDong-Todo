@@ -1,12 +1,13 @@
 import { RightOutlined } from "@ant-design/icons";
 import { Priority } from "@/constants";
-import "../styles/TodoItem.css";
-import { Col, message, Row, Tag } from "antd";
+import { Col, Input, message, Row, Tag, theme } from "antd";
 import dayjs from "dayjs";
 import type { TodoItemProps } from "@/types";
 import { formatMessage, MESSAGES } from "@/constants/messages";
 import isoWeek from "dayjs/plugin/isoWeek";
 import { useTodoStore } from "@/store/todoStore";
+import TimeCountDownNode from "./TimeCountDownNode";
+
 dayjs.extend(isoWeek);
 export default function TodoItem({
   todo,
@@ -18,29 +19,57 @@ export default function TodoItem({
   // 使用 Ant Design 官方的 message.useMessage() hook
   const [messageApi, contextHolder] = message.useMessage();
   const { dispatchTodo, setSelectTodoId } = useTodoStore();
+  const { token } = theme.useToken(); // 获取主题令牌
 
-  let priClass;
-  switch (todo.priority) {
-    case Priority.Low:
-      priClass = "low-todo";
-      break;
-    case Priority.Medium:
-      priClass = "medium-todo";
-      break;
-    case Priority.High:
-      priClass = "high-todo";
-      break;
-    default:
-      priClass = "";
-  }
+  // 基于优先级获取对应的样式颜色
+  const getPriorityColor = () => {
+    switch (todo.priority) {
+      case Priority.Low:
+        return token.colorPrimary;
+      case Priority.Medium:
+        return token.colorWarning;
+      case Priority.High:
+        return token.colorError;
+      default:
+        return token.colorPrimary;
+    }
+  };
+
+  // 创建自定义复选框样式
+  const customCheckboxStyle: React.CSSProperties = {
+    appearance: "none",
+    WebkitAppearance: "none",
+    MozAppearance: "none",
+    width: "1rem",
+    height: "1rem",
+    margin: "0",
+    verticalAlign: "middle",
+    cursor: "pointer",
+    border: `1px solid ${getPriorityColor()}`,
+    borderRadius: "4px",
+    backgroundColor: token.colorBgBase,
+    position: "relative",
+    outline: "none",
+  };
+
+  const customCheckboxCheckedStyle: React.CSSProperties = {
+    ...customCheckboxStyle,
+    backgroundColor: getPriorityColor(),
+    borderColor: getPriorityColor(),
+  };
+
+  // 列表项悬停效果样式
+  const todoItemHoverStyle: React.CSSProperties = {
+    ":hover": {
+      backgroundColor: token.colorBgElevated,
+    },
+  };
 
   // 渲染编辑输入框
   function renderEditInput() {
     return (
-      <input
-        type="text"
+      <Input
         autoFocus
-        className="w-100"
         value={todo.title}
         onChange={(e) => {
           if (todo) {
@@ -48,7 +77,7 @@ export default function TodoItem({
               type: "changed",
               todo: {
                 ...todo,
-                title: e.currentTarget.value,
+                title: e.target.value,
               },
             });
           }
@@ -59,81 +88,12 @@ export default function TodoItem({
           outline: "none",
           width: "100%",
           padding: "0",
+          boxShadow: "none",
         }}
+        className="border-none bg-transparent"
       />
     );
   }
-
-  // 倒计时
-  const renderCountdown = () => {
-    if (!todo.deadline && !todo.datetimeLocal) return null;
-    const leftDay = dayjs(todo.deadline).diff(dayjs(), "day");
-    // 计算本周下周
-    const countWeek = () => {
-      if (dayjs(todo.deadline).isoWeek() - dayjs().isoWeek() === 0) {
-        return "本";
-      } else if (dayjs(todo.deadline).isoWeek() - dayjs().isoWeek() === 1) {
-        return "下";
-      } else {
-        return "";
-      }
-    };
-    // 计算周几
-    const deadDay = () => {
-      let d: string;
-      switch (dayjs(todo.deadline).day()) {
-        case 0:
-          d = "日";
-          break;
-        case 1:
-          d = "一";
-          break;
-        case 2:
-          d = "二";
-          break;
-        case 3:
-          d = "三";
-          break;
-        case 4:
-          d = "四";
-          break;
-        case 5:
-          d = "五";
-          break;
-        case 6:
-          d = "六";
-          break;
-      }
-      return d;
-    };
-    let text = "";
-    if (leftDay < 0) {
-      text = `${dayjs(todo.deadline).format("MM月DD日")}`;
-    } else {
-      if (leftDay > 1)
-        if (countWeek() !== "") {
-          // 本周下周之内
-          text = `${countWeek()}周${deadDay()}`;
-        } else {
-          //   大于下周
-          text = `${leftDay}天`;
-        }
-      if (leftDay == 0) {
-        text = "今天";
-      }
-      if (leftDay == 1) {
-        text = "明天";
-      }
-    }
-    return (
-      <span
-        className={`${leftDay < 0 ? "text-danger" : "text-primary"} d-inline-block text-end`}
-      >
-        {text}
-      </span>
-    );
-    // <span className="title-danger">已逾期{Math.abs(dayjs(todo.deadline).diff(dayjs(), 'day'))}天</span>
-  };
 
   // SubList函数已移除，子任务现在在TodoList中直接渲染
   // 子任务图标已移除，子任务现在在TodoList中直接渲染;
@@ -141,7 +101,7 @@ export default function TodoItem({
   return (
     <>
       <li
-        className={`cursor-pointer row d-flex justify-content-between highlight rounded pe-0 ps-0 pt-0 pb-0  ${other ? "opacity-25" : ""}`}
+        className={`cursor-pointer row d-flex justify-content-between highlight rounded pe-0 ps-0 pt-1 pb-1  ${other ? "opacity-25" : ""}`}
         onClick={() => {
           if (setSelectTodoId) {
             setSelectTodoId(todo.id);
@@ -170,27 +130,67 @@ export default function TodoItem({
           </Col>
           <Col
             span={23}
-            className="d-flex lh-base align-items-center h-100 border-bottom "
+            className="d-flex lh-base align-items-center h-100 border-bottom cursor-pointer"
+            style={todoItemHoverStyle}
           >
-            <input
-              type="checkbox"
-              className={`me-1 mt-2 mb-2 ${priClass}`}
-              checked={todo.completed}
-              onChange={(e) => {
-                dispatchTodo({
-                  type: "toggle",
-                  todoId: todo.id,
-                  groupId: todo.groupId,
-                  newCompleted: e.currentTarget.checked,
-                });
-                if (e.currentTarget.checked)
-                  messageApi.info(
-                    formatMessage(MESSAGES.INFO.TASK_COMPLETED, {
-                      taskTitle: todo.title,
-                    }),
-                  );
-              }}
-            />
+            <div style={{ position: "relative", display: "inline-block" }}>
+              <input
+                type="checkbox"
+                className={"me-2"}
+                style={
+                  todo.completed
+                    ? customCheckboxCheckedStyle
+                    : customCheckboxStyle
+                }
+                onMouseEnter={(e) => {
+                  if (!e.currentTarget.checked) {
+                    e.currentTarget.style.border = `2px solid ${getPriorityColor()}`;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!e.currentTarget.checked) {
+                    e.currentTarget.style.border = `1px solid ${getPriorityColor()}`;
+                  }
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.outline = `1px solid ${getPriorityColor()}`;
+                  e.currentTarget.style.outlineOffset = "1px";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.outline = "none";
+                }}
+                checked={todo.completed}
+                onChange={(e) => {
+                  dispatchTodo({
+                    type: "toggle",
+                    todoId: todo.id,
+                    groupId: todo.groupId,
+                    newCompleted: e.currentTarget.checked,
+                  });
+                  if (e.currentTarget.checked)
+                    messageApi.info(
+                      formatMessage(MESSAGES.INFO.TASK_COMPLETED, {
+                        taskTitle: todo.title,
+                      }),
+                    );
+                }}
+              />
+              {todo.completed && (
+                <div
+                  style={{
+                    position: "absolute",
+                    left: "4px",
+                    top: "6px",
+                    width: "5px",
+                    height: "10px",
+                    border: "solid white",
+                    borderWidth: "0 2px 2px 0",
+                    transform: "rotate(45deg)",
+                    pointerEvents: "none",
+                  }}
+                />
+              )}
+            </div>
             <Row justify={"space-between"} className="w-100 " align={"middle"}>
               <Col className={"w-100"}>{renderEditInput()}</Col>
 
@@ -198,7 +198,7 @@ export default function TodoItem({
                 style={{
                   position: "absolute",
                   right: 0,
-                  background: "#f5f5f5",
+                  background: "transparent",
                 }}
                 justify={"end"}
                 align={"middle"}
@@ -207,7 +207,10 @@ export default function TodoItem({
                 {/*{todo.tags?.map((tag, i) => (*/}
                 {/*  <Tag color="magenta">{tag}</Tag>*/}
                 {/*))}*/}
-                {renderCountdown()}
+                <TimeCountDownNode
+                  deadline={todo.deadline}
+                  datetimeLocal={todo.datetimeLocal}
+                />
               </Row>
             </Row>
           </Col>

@@ -1,4 +1,3 @@
-import { Content, Footer, Header } from "antd/es/layout/layout";
 import {
   Col,
   DatePicker,
@@ -10,6 +9,7 @@ import {
   Select,
   Tag,
   theme,
+  Layout,
 } from "antd";
 import type { TodoAction } from "@/types";
 import { Priority } from "@/constants";
@@ -17,6 +17,11 @@ import dayjs from "dayjs";
 import type { RangePickerProps } from "antd/es/date-picker";
 import { PlusOutlined } from "@ant-design/icons";
 import { useSelectTodo, useTodoStore } from "@/store/todoStore";
+import { useThemeStore } from "@/store/themeStore";
+import TimeCountDownNode from "@/components/TimeCountDownNode"; // 导入主题状态管理
+
+// 解构Layout组件
+const { Header, Content, Footer } = Layout;
 
 export default function EditTodo({
   onTodoChange,
@@ -25,6 +30,8 @@ export default function EditTodo({
 }) {
   const todoTags = useTodoStore((state) => state.todoTags);
   const selectTodo = useSelectTodo();
+  const { currentTheme } = useThemeStore(); // 获取当前主题
+
   if (!selectTodo) return;
   let priClass;
   switch (selectTodo?.priority) {
@@ -100,8 +107,15 @@ export default function EditTodo({
   };
 
   return (
-    <>
-      <Header className="bg-white">
+    <Layout className="h-100">
+      <Header
+        style={{
+          backgroundColor: currentTheme.bgColor,
+          color: currentTheme.textColor,
+          borderBottom: `1px solid ${token.colorBorder}`,
+          padding: "0 24px",
+        }}
+      >
         <Row className={"h-100"} justify="space-between" align="middle">
           <Row justify="start" align="middle">
             <input
@@ -120,10 +134,18 @@ export default function EditTodo({
               }}
             />
             <DatePicker
-              className={"bg-transparent border-0"}
               value={dayjs(selectTodo.deadline)}
               showTime
               onChange={onChange}
+              style={{
+                backgroundColor: "transparent",
+                border: "none",
+                outline: "none",
+              }}
+            />
+            <TimeCountDownNode
+              deadline={selectTodo.deadline}
+              datetimeLocal={selectTodo.datetimeLocal}
             />
           </Row>
           <Select
@@ -134,6 +156,7 @@ export default function EditTodo({
               border: "none",
               backgroundColor: "transparent",
               outline: "none",
+              color: currentTheme.textColor,
             }}
             onChange={(priority) => {
               onTodoChange({
@@ -153,9 +176,16 @@ export default function EditTodo({
           />
         </Row>
       </Header>
-      <Content className="minHeight-large pe-2 ps-2">
+      <Content
+        style={{
+          padding: "16px 24px",
+          backgroundColor: currentTheme.bgColor,
+          color: currentTheme.textColor,
+          minHeight: "calc(100% - 100px)",
+        }}
+      >
         <Row className={"h-100"} justify="start">
-          <Col className="p-4 w-100">
+          <Col className="w-100">
             {/*待办标题*/}
             <input
               type="text"
@@ -182,6 +212,7 @@ export default function EditTodo({
                 width: "100%",
                 padding: "0",
                 marginBottom: "16px",
+                color: currentTheme.textColor,
               }}
             />
             {/*长文本内容编辑框*/}
@@ -202,8 +233,10 @@ export default function EditTodo({
                 borderRadius: "6px",
                 minHeight: "120px",
                 resize: "vertical",
-                border: "none",
-                backgroundColor: "transparent",
+                border: `1px solid ${token.colorBorder}`,
+                backgroundColor: currentTheme.bgColor,
+                color: currentTheme.textColor,
+                padding: "8px 12px",
               }}
               autoSize={{ minRows: 20 }}
             />
@@ -218,7 +251,7 @@ export default function EditTodo({
               return (
                 <Tag
                   key={tagId}
-                  color={tagItem?.color || "magenta"}
+                  color={tagItem?.color || token.colorPrimary}
                   closeIcon
                   onClose={() => {
                     // 从tags数组中移除当前点击的标签
@@ -241,7 +274,13 @@ export default function EditTodo({
             <Dropdown
               menu={{
                 items: dropdownItems,
-                style: { maxHeight: "300px", overflowY: "auto" },
+                style: {
+                  maxHeight: "300px",
+                  overflowY: "auto",
+                  backgroundColor: currentTheme.bgColor,
+                  color: currentTheme.textColor,
+                  border: `1px solid ${token.colorBorder}`,
+                },
               }}
               trigger={["hover"]}
               placement="bottomLeft"
@@ -253,11 +292,18 @@ export default function EditTodo({
           </Col>
         </Row>
       </Content>
-      <Footer className={"bg-primary"}>
+      <Footer
+        style={{
+          backgroundColor: currentTheme.bgColor,
+          color: currentTheme.textColor,
+          borderTop: `1px solid ${token.colorBorder}`,
+          padding: "0 24px",
+        }}
+      >
         <Row justify={"start"} align={"middle"}>
           所属组，标签
         </Row>
       </Footer>
-    </>
+    </Layout>
   );
 }

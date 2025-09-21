@@ -1,6 +1,11 @@
 .minHeight-large{
     min-height: 17rem;
 }
+.theme-color {
+    color: var(--theme-textColor);
+    background-color: var(--theme-bgColor);
+    border: 1px solid var(--theme-bgColor);
+}
 
 .vertical-align{
     position: relative;

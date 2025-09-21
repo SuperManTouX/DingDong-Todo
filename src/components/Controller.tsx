@@ -2,9 +2,9 @@
 import type { ControllerProps } from "@/types";
 import { ShowType, ShowTypeLabels, type ShowTypeValue } from "@/constants";
 import { Dropdown } from "react-bootstrap";
-import { Col, message, Row } from "antd";
-import type { MessageInstance } from 'antd/es/message/interface';
-import { MESSAGES } from '@/constants/messages';
+import { Button, Col, Input, message, Row } from "antd";
+import type { MessageInstance } from "antd/es/message/interface";
+import { MESSAGES } from "@/constants/messages";
 export default function Controller({
   onSwitchShow,
   onCompleteAll,
@@ -35,27 +35,26 @@ export default function Controller({
                   completeOrUncomplete: e.target.checked,
                   showType: showType,
                 });
-                if (e.currentTarget.checked) messageApi.info(MESSAGES.INFO.ALL_COMPLETED);
+                if (e.currentTarget.checked)
+                  messageApi.info(MESSAGES.INFO.ALL_COMPLETED);
               }}
             />
-            <div className="input-group input-group-sm w-50">
-              {/*添加任务全部*/}
-              <input
-                type="text"
+            {/*添加任务全部*/}
+            <div className="w-50">
+              <Input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                className="form-control"
-                placeholder="Username"
-                aria-label="Username"
-                aria-describedby="basic-addon1"
+                placeholder="请输入任务内容"
+                style={{ width: "calc(100% - 80px)", marginRight: "8px" }}
               />
-              <button
-                type="button"
+              <Button
+                type="primary"
+                size="small"
                 onClick={onAdded}
-                className="btn btn-primary btn-sm"
+                style={{ width: "72px" }}
               >
                 添加
-              </button>
+              </Button>
             </div>
           </Row>
         </Col>
@@ -80,10 +79,10 @@ export default function Controller({
                 );
               })}
             </Dropdown.Menu>
-        </Dropdown>
-      </Col>
-    </Row>
-    {contextHolder}
-  </li>
-);
+          </Dropdown>
+        </Col>
+      </Row>
+      {contextHolder}
+    </li>
+  );
 }
