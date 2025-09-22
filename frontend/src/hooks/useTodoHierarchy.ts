@@ -1,8 +1,8 @@
-import { useState, useCallback } from 'react';
-import { useTodoStore } from '@/store/todoStore';
-import type { Todo } from '@/types';
-import { PointerSensor, KeyboardSensor, useSensor } from '@dnd-kit/core';
-import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import { useState, useCallback } from "react";
+import { useTodoStore } from "@/store/todoStore";
+import type { Todo } from "@/types";
+import { PointerSensor, KeyboardSensor, useSensor } from "@dnd-kit/core";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 
 // 定义hook返回类型
 interface UseTodoHierarchyReturn {
@@ -18,9 +18,9 @@ interface UseTodoHierarchyReturn {
 
 // 任务层次结构和拖拽相关的hook
 export default function useTodoHierarchy(
-  tasks: Todo[], 
-  renderTodos: () => Todo[], 
-  renderOtherTodos: () => Todo[]
+  tasks: Todo[],
+  renderTodos: () => Todo[],
+  renderOtherTodos: () => Todo[],
 ): UseTodoHierarchyReturn {
   const { dispatchTodo } = useTodoStore();
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({
@@ -86,7 +86,7 @@ export default function useTodoHierarchy(
 
           const collectSubTasks = (items: (Todo | Todo[])[]) => {
             items.forEach((item) => {
-              if ('id' in item) {
+              if ("id" in item) {
                 allSubTasks.push(item);
               } else {
                 collectSubTasks(item);
@@ -113,7 +113,7 @@ export default function useTodoHierarchy(
   const handleDragEnd = useCallback(
     (event: any) => {
       const { active, over } = event;
-
+      console.log(event);
       // 如果没有放置目标或放置在自身上，则不处理
       if (!over || active.id === over.id) {
         return;
@@ -180,20 +180,13 @@ export default function useTodoHierarchy(
       // 一次性替换整个列表
       const { activeListId } = useTodoStore.getState();
       dispatchTodo({
-        type: 'replaced',
+        type: "replaced",
         todoList: updatedTasks,
         listId: activeListId,
       });
     },
     [tasks, dispatchTodo],
   );
-
-  // 获取所有可排序的任务ID
-  const sortableTaskIds = getHierarchicalTasks()
-    .flatMap((item) =>
-      'id' in item ? [item.id] : item.map((subItem) => subItem.id),
-    )
-    .filter(Boolean);
 
   return {
     expandedTasks,
@@ -203,6 +196,5 @@ export default function useTodoHierarchy(
     getHierarchicalTasks,
     getHierarchicalTasksForGroup,
     handleDragEnd,
-    sortableTaskIds
   };
 }
