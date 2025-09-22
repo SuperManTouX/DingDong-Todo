@@ -91,7 +91,9 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
   } else {
     // 计算时间分组
     const timeGrouped: { [key: string]: Todo[] } = {};
-    const tasksWithDeadline = tasks.filter((task) => task.deadline);
+    const tasksWithDeadline = tasks.filter(
+      (task) => task.deadline && task.parentId === null,
+    );
 
     tasksWithDeadline.forEach((task) => {
       const date = dayjs(task.deadline).format("YYYY-MM-DD");

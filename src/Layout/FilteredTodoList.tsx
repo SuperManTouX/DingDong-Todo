@@ -6,7 +6,6 @@ import TaskItemRenderer from "../components/TaskItemRenderer";
 import { DndContext, closestCenter } from "@dnd-kit/core";
 import { SortableList } from "@/components/SortableComponents";
 import { Row, Space } from "antd";
-import TodoTask from "../components/TodoTask";
 
 import { Content, Footer, Header } from "antd/es/layout/layout";
 
@@ -20,6 +19,7 @@ export default function FilteredTodoList({ groupName }: { groupName: string }) {
   // 使用hooks获取各种功能
   const { groupMode, groupedTasks, timeGroupedTasks, ungroupedTasks } =
     useTodoGrouping(tasks);
+  console.log(timeGroupedTasks, ungroupedTasks);
   const {
     title,
     showType,
@@ -55,7 +55,7 @@ export default function FilteredTodoList({ groupName }: { groupName: string }) {
       </Header>
 
       {/*主内容区*/}
-      <Content className="minHeight-large pe-2 ps-2">
+      <Content className="overflow-y-scroll minHeight-large pe-2 ps-2">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -200,16 +200,34 @@ export default function FilteredTodoList({ groupName }: { groupName: string }) {
                 )}
 
                 {/*虚化显示其他任务（根据showType过滤掉的任务）*/}
-                <div style={{ opacity: `.3` }}>
-                  {renderOtherTodos().map((item) => (
+
+                {/* {renderOtherTodos().map((item) => (
                     <TodoTask
                       key={item.id}
                       todo={item}
                       isExpanded={expandedTasks[item.id]}
                       onToggleExpand={() => toggleTaskExpand(item.id)}
                     />
-                  ))}
-                </div>
+                  ))}*/}
+                {renderOtherTodos().length > 0 && (
+                  <FilterGroup title="已完成" tasks={renderOtherTodos()}>
+                    <div style={{ opacity: `.3` }}>
+                      {renderOtherTodos().map((item) => (
+                        <TaskItemRenderer
+                          key={
+                            typeof item === "object" && "id" in item
+                              ? item.id
+                              : `group-${Math.random()}`
+                          }
+                          item={item}
+                          expandedTasks={expandedTasks}
+                          hasSubTasks={hasSubTasks}
+                          toggleTaskExpand={toggleTaskExpand}
+                        />
+                      ))}
+                    </div>
+                  </FilterGroup>
+                )}
               </Space>
             </ul>
           </SortableList>
