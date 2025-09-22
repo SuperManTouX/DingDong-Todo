@@ -1,0 +1,22 @@
+[
+  {
+    "listId": "a",
+    "groupName": "学习相关",
+    "groupItemIds": ["t1", "t2", "t3", "t4"]
+  },
+  {
+    "listId": "b",
+    "groupName": "高优先级任务",
+    "groupItemIds": ["t5", "t6", "t7"]
+  },
+  {
+    "listId": "c",
+    "groupName": "今日完成",
+    "groupItemIds": ["t8", "t9"]
+  },
+  {
+    "listId": "d",
+    "groupName": "本月阅读",
+    "groupItemIds": ["t10", "t11", "t12"]
+  }
+]
