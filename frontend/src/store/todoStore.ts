@@ -36,11 +36,7 @@ interface TodoState {
 
   // 分组相关操作
   addGroup: (listId: string, groupName: string, groupItemIds: string[]) => void;
-  updateGroup: (
-    listId: string,
-    groupName: string,
-    groupItemIds: string[],
-  ) => void;
+  updateGroup: (nGroup: Group) => void;
   deleteGroup: (listId: string, groupName: string) => void;
   getGroupsByListId: (listId: string) => Group[];
 
@@ -460,7 +456,6 @@ export const useTodoStore = create<TodoState>()(
     addGroup: (
       listId: string,
       groupName: string,
-      groupItemIds: string[] = [],
     ) => {
       set(
         produce((draftState: TodoState) => {
@@ -469,53 +464,37 @@ export const useTodoStore = create<TodoState>()(
             (group) => group.listId === listId && group.groupName === groupName,
           );
 
-          if (existingGroupIndex !== -1) {
-            // 如果分组已存在，更新groupItemIds
-            // 合并并去重任务ID
-            const mergedIds = Array.from(
-              new Set([
-                ...draftState.groups[existingGroupIndex].groupItemIds,
-                ...groupItemIds,
-              ]),
-            );
-            draftState.groups[existingGroupIndex].groupItemIds = mergedIds;
-          } else {
+          if (existingGroupIndex === -1) {
+            // 生成唯一id（使用listId和描述性字符串组合）
+            const id = `${listId}_${groupName.toLowerCase().replace(/\s+/g, '_')}`;
             // 添加新分组
             draftState.groups.push({
+              id,
               listId,
               groupName,
-              groupItemIds: Array.from(new Set(groupItemIds)), // 去重
             });
           }
         }),
       );
     },
 
-    updateGroup: (
-      listId: string,
-      oldGroupName: string,
-      newGroupName: string,
-    ) => {
+    updateGroup: (nGroup: Group) => {
       set(
         produce((draftState: TodoState) => {
-          const groupIndex = draftState.groups.findIndex(
-            (group) =>
-              group.listId === listId && group.groupName === oldGroupName,
+          let n = draftState.groups.findIndex(
+            (group) => group.id === nGroup.id,
           );
-
-          if (groupIndex !== -1) {
-            draftState.groups[groupIndex].groupName = newGroupName;
-          }
+          console.log(draftState.groups[n]);
+          draftState.groups[n] = nGroup;
         }),
       );
     },
 
-    deleteGroup: (listId: string, groupName: string) => {
+    deleteGroup: (groupId: string) => {
       set(
         produce((draftState: TodoState) => {
           draftState.groups = draftState.groups.filter(
-            (group) =>
-              !(group.listId === listId && group.groupName === groupName),
+            (group) => group.id !== groupId
           );
         }),
       );

@@ -9,7 +9,8 @@
     "parentId": null,
     "depth": 0,
     "tags": ["1", "2", "3"],
-    "listId": "a"
+    "listId": "a",
+    "groupId": "a_study"
   },
   {
     "id": "t2",
@@ -21,7 +22,8 @@
     "parentId": "t1",
     "depth": 1,
     "tags": ["1", "2", "4"],
-    "listId": "a"
+    "listId": "a",
+    "groupId": "a_study"
   },
   {
     "id": "t3",
@@ -33,7 +35,8 @@
     "parentId": "t1",
     "depth": 1,
     "tags": ["1", "2", "5"],
-    "listId": "a"
+    "listId": "a",
+    "groupId": "a_study"
   },
   {
     "id": "t4",
@@ -45,7 +48,8 @@
     "parentId": "t1",
     "depth": 1,
     "tags": ["1", "2", "6"],
-    "listId": "a"
+    "listId": "a",
+    "groupId": "a_study"
   },
   {
     "id": "a1",
@@ -56,7 +60,8 @@
     "deadline": "2025-09-20",
     "parentId": null,
     "depth": 0,
-    "listId": "a"
+    "listId": "a",
+    "groupId": "a_related"
   },
   {
     "id": "a2",
@@ -68,7 +73,8 @@
     "parentId": null,
     "depth": 0,
     "tags": ["1", "7", "8"],
-    "listId": "a"
+    "listId": "a",
+    "groupId": "a_related"
   },
   {
     "id": "w1",
@@ -80,7 +86,8 @@
     "parentId": null,
     "depth": 0,
     "tags": ["10", "11", "12"],
-    "listId": "b"
+    "listId": "b",
+    "groupId": "b_high_priority"
   },
   {
     "id": "w2",
@@ -92,7 +99,8 @@
     "parentId": "w1",
     "depth": 1,
     "tags": ["10", "13", "14"],
-    "listId": "b"
+    "listId": "b",
+    "groupId": "b_high_priority"
   },
   {
     "id": "w3",
@@ -104,7 +112,8 @@
     "parentId": null,
     "depth": 0,
     "tags": ["10", "15", "16"],
-    "listId": "b"
+    "listId": "b",
+    "groupId": "b_high_priority"
   },
   {
     "id": "w4",
@@ -116,7 +125,8 @@
     "parentId": null,
     "depth": 0,
     "tags": ["10", "17", "18"],
-    "listId": "b"
+    "listId": "b",
+    "groupId": "b_high_priority"
   },
   {
     "id": "l1",
@@ -128,7 +138,8 @@
     "parentId": null,
     "depth": 0,
     "tags": ["19", "20", "21"],
-    "listId": "c"
+    "listId": "c",
+    "groupId": "c_today_completed"
   },
   {
     "id": "l2",
@@ -140,7 +151,8 @@
     "parentId": null,
     "depth": 0,
     "tags": ["19", "22", "23"],
-    "listId": "c"
+    "listId": "c",
+    "groupId": "c_today_completed"
   },
   {
     "id": "l3",
@@ -152,7 +164,8 @@
     "parentId": null,
     "depth": 0,
     "tags": ["19", "24", "25"],
-    "listId": "c"
+    "listId": "c",
+    "groupId": "c_today_completed"
   },
   {
     "id": "l4",
@@ -164,7 +177,8 @@
     "parentId": null,
     "depth": 0,
     "tags": ["19", "26", "27"],
-    "listId": "c"
+    "listId": "c",
+    "groupId": "c_today_completed"
   },
   {
     "id": "r1",
@@ -176,7 +190,8 @@
     "parentId": null,
     "depth": 0,
     "tags": ["28", "13", "30"],
-    "listId": "d"
+    "listId": "d",
+    "groupId": "d_month_reading"
   },
   {
     "id": "r2",
@@ -188,7 +203,8 @@
     "parentId": "r1",
     "depth": 1,
     "tags": ["28", "32", "33"],
-    "listId": "d"
+    "listId": "d",
+    "groupId": "d_month_reading"
   },
   {
     "id": "r3",
@@ -200,7 +216,8 @@
     "parentId": "r1",
     "depth": 1,
     "tags": ["28", "34", "35"],
-    "listId": "d"
+    "listId": "d",
+    "groupId": "d_month_reading"
   },
   {
     "id": "r4",
@@ -212,7 +229,8 @@
     "parentId": null,
     "depth": 0,
     "tags": ["28", "13", "31"],
-    "listId": "d"
+    "listId": "d",
+    "groupId": "d_month_reading"
   },
   {
     "id": "r5",
@@ -224,6 +242,7 @@
     "parentId": null,
     "depth": 0,
     "tags": ["28", "36", "37"],
-    "listId": "d"
+    "listId": "d",
+    "groupId": "d_month_reading"
   }
 ]

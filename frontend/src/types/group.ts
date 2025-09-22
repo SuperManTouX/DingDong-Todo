@@ -1,10 +1,11 @@
 import type { TodoListData, Todo } from "./index";
+import dayjs from "dayjs";
 
 // 定义全局Group数组的类型
 export interface Group {
   listId: TodoListData["id"];
+  id: string;
   groupName: string;
-  groupItemIds: Todo["id"][];
 }
 
 // 定义FilterGroup组件的属性类型

@@ -3,6 +3,7 @@ import { useTodoStore } from "@/store/todoStore";
 import type { Todo } from "@/types";
 import { PointerSensor, KeyboardSensor, useSensor } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { SpecialLists } from "@/constants";
 
 // 定义hook返回类型
 interface UseTodoHierarchyReturn {
@@ -12,8 +13,8 @@ interface UseTodoHierarchyReturn {
   hasSubTasks: (taskId: string) => boolean;
   getHierarchicalTasks: (type?: boolean) => (Todo | Todo[])[];
   getHierarchicalTasksForGroup: (tasks: Todo[]) => (Todo | Todo[])[];
+  handleDragOver: (event: any) => void;
   handleDragEnd: (event: any) => void;
-  sortableTaskIds: string[];
 }
 
 // 任务层次结构和拖拽相关的hook
@@ -22,10 +23,11 @@ export default function useTodoHierarchy(
   renderTodos: () => Todo[],
   renderOtherTodos: () => Todo[],
 ): UseTodoHierarchyReturn {
-  const { dispatchTodo } = useTodoStore();
+  const { dispatchTodo, activeListId, updateGroup } = useTodoStore();
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({
     // 默认可以在这里设置一些任务的展开状态
   });
+  const [tempTasks, setTempTasks] = useState<Todo[] | null>(null);
 
   // 设置@dnd-kit传感器
   const sensors = [
@@ -108,89 +110,104 @@ export default function useTodoHierarchy(
     // 从根任务开始构建层次结构
     return buildHierarchicalTasks(null);
   };
+  // 拖动时
+  const handleDragOver = (event: any) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    // 获取拖动和放置的任务
+    const draggedTask = tasks.find((item) => item.id === activeId);
+    const targetTask = tasks.find((item) => item.id === overId);
+
+    if (!draggedTask || !targetTask) return;
+
+    // 根据目标时间分组自动更新拖动任务的deadline以实现预览效果
+    // 参考Test.tsx的实现方式，直接更新TodoStore中的任务
+    // 如果是时间分组
+    if (activeListId in SpecialLists) {
+      dispatchTodo({
+        type: "changed",
+        todo: {
+          ...draggedTask,
+          // 根据目标时间分组更新deadline，确保任务在目标分组中可见
+          deadline: targetTask.deadline
+            ? targetTask.deadline
+            : draggedTask.deadline,
+        },
+      });
+    } else {
+      dispatchTodo({
+        type: "changed",
+        todo: {
+          ...draggedTask,
+          // 根据目标分组更新groupId，确保任务在目标分组中可见
+          groupId: targetTask.groupId
+            ? targetTask.groupId
+            : draggedTask.groupId,
+        },
+      });
+    }
+  };
 
   // 拖动排序方法 - 使用@dnd-kit处理拖拽排序和层级转换
   const handleDragEnd = useCallback(
     (event: any) => {
-      const { active, over } = event;
-      console.log(event);
-      // 如果没有放置目标或放置在自身上，则不处理
+      /*const { active, over } = event;
+
+      // 如果拖拽被取消或没有有效的放置目标，清除临时状态
       if (!over || active.id === over.id) {
+        setTempTasks(null);
         return;
       }
 
-      // 获取拖动和放置的任务
-      const draggedTask = tasks.find((item) => item.id === active.id);
-      const targetTask = tasks.find((item) => item.id === over.id);
+      // 获取拖动任务和放置目标任务
+      const activeId = active.id as string;
+      const overId = over.id as string;
 
-      if (!draggedTask || !targetTask) return;
+      const draggedTask = tasks.find((item) => item.id === activeId);
+      const targetTask = tasks.find((item) => item.id === overId);
 
-      // 深拷贝任务列表以进行修改
-      const updatedTasks: Todo[] = JSON.parse(JSON.stringify(tasks));
-      const draggedIndex = updatedTasks.findIndex(
-        (item) => item.id === active.id,
-      );
-      const targetIndex = updatedTasks.findIndex((item) => item.id === over.id);
-
-      // 处理层级转换
-      // 1. 如果拖动的是子任务（有parentId）到顶级任务位置（无parentId或parentId不同）
-      if (
-        draggedTask.parentId &&
-        (!targetTask.parentId || targetTask.parentId !== draggedTask.parentId)
-      ) {
-        // 将子任务转换为父任务
-        updatedTasks[draggedIndex].parentId = null;
-        updatedTasks[draggedIndex].depth = 0;
-
-        // 更新该任务的所有子任务的depth
-        const updateChildDepths = (taskId: string, newDepth: number) => {
-          updatedTasks.forEach((task) => {
-            if (task.parentId === taskId) {
-              task.depth = newDepth + 1;
-              updateChildDepths(task.id, task.depth);
-            }
-          });
-        };
-        updateChildDepths(updatedTasks[draggedIndex].id, 0);
-      }
-      // 2. 如果拖动的是父任务（无parentId或depth为0）到子任务位置
-      else if (
-        (!draggedTask.parentId || draggedTask.depth === 0) &&
-        targetTask.depth > 0
-      ) {
-        // 将父任务转换为子任务，成为目标任务的兄弟任务
-        updatedTasks[draggedIndex].parentId = targetTask.parentId;
-        updatedTasks[draggedIndex].depth = targetTask.depth;
-
-        // 更新该任务的所有子任务的depth
-        const updateChildDepths = (taskId: string, newDepth: number) => {
-          updatedTasks.forEach((task) => {
-            if (task.parentId === taskId) {
-              task.depth = newDepth + 1;
-              updateChildDepths(task.id, task.depth);
-            }
-          });
-        };
-        updateChildDepths(updatedTasks[draggedIndex].id, targetTask.depth);
+      if (!draggedTask || !targetTask) {
+        setTempTasks(null);
+        return;
       }
 
-      // 执行排序操作
-      const [removed] = updatedTasks.splice(draggedIndex, 1);
-      updatedTasks.splice(targetIndex, 0, removed);
-      // 一次性替换整个列表
-      const { activeListId } = useTodoStore.getState();
-      dispatchTodo({
-        type: "replaced",
-        todoList: updatedTasks,
-        listId: activeListId,
-      });
+      // 检查目标是否为FilterGroup
+      const isTargetFilterGroup = over.data?.current?.type === "FilterGroup";
+
+      // 使用handleDragOver中已经处理好的临时状态作为最终结果
+      if (tempTasks) {
+        if (isTargetFilterGroup && over.data?.current?.groupKey) {
+          // 如果是拖入FilterGroup，添加到目标分组的localTask
+          dispatchTodo({
+            type: "add_to_group",
+            todoList: tempTasks,
+            groupKey: over.data.current.groupKey,
+            listId: targetTask.listId,
+          });
+        } else {
+          // 一次性替换整个列表，使用目标任务的listId
+          dispatchTodo({
+            type: "replaced",
+            todoList: tempTasks,
+            listId: targetTask.listId,
+          });
+        }
+      }
+
+      // 清除临时状态
+      setTempTasks(null);*/
     },
-    [tasks, dispatchTodo],
+    [tasks, tempTasks, dispatchTodo],
   );
 
   return {
     expandedTasks,
     sensors,
+    handleDragOver,
     toggleTaskExpand,
     hasSubTasks,
     getHierarchicalTasks,
