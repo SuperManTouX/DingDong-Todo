@@ -1,5 +1,5 @@
-// NestedDndOneFile.tsx
-import React from "react";
+// TreeDnd.tsx
+import React, { useState } from "react";
 import {
   DndContext,
   type DragEndEvent,
@@ -17,84 +17,107 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
+import { createPortal } from "react-dom";
 import { CSS } from "@dnd-kit/utilities";
-import dayjs from "dayjs";
-import { v4 as uuid } from "uuid";
 
-interface Task {
+type TreeNode = {
   id: string;
-  text: string;
-  completed: boolean;
-  priority: number;
-  datetimeLocal: string;
-  deadline: string;
-  parentId: string | null;
-  depth: number;
-}
+  name: string;
+  children?: TreeNode[];
+};
 
-const INDENT = 24;
+/* ========= 初始两棵示例树 ========= */
+const makeTree = (prefix: string): TreeNode[] => [
+  {
+    id: `${prefix}1`,
+    name: `${prefix}-节点 1`,
+    children: [
+      { id: `${prefix}1-1`, name: `${prefix}-1-1` },
+      { id: `${prefix}1-2`, name: `${prefix}-1-2` },
+    ],
+  },
+  { id: `${prefix}2`, name: `${prefix}-节点 2` },
+];
 
-export default function NestedDndOneFile() {
-  const [tasks, setTasks] = React.useState<Task[]>(() => [
-    {
-      id: "1",
-      text: "学习 React",
-      completed: false,
-      priority: 2,
-      datetimeLocal: dayjs().format(),
-      deadline: dayjs("2025-09-15").format(),
-      parentId: null,
-      depth: 0,
-    },
-    {
-      id: uuid(),
-      text: "Sub 学习 React1",
-      completed: false,
-      priority: 2,
-      datetimeLocal: dayjs().format(),
-      deadline: dayjs("2025-09-18").format(),
-      parentId: "1",
-      depth: 1,
-    },
-    {
-      id: uuid(),
-      text: "Sub 学习 React2",
-      completed: false,
-      priority: 2,
-      datetimeLocal: dayjs().format(),
-      deadline: dayjs("2025-09-18").format(),
-      parentId: "1",
-      depth: 1,
-    },
-    {
-      id: uuid(),
-      text: "写一个 TODOListOriginal 组件",
-      completed: true,
-      priority: 1,
-      datetimeLocal: dayjs().format(),
-      deadline: dayjs("2025-09-10").format(),
-      parentId: null,
-      depth: 0,
-    },
-    {
-      id: uuid(),
-      text: "部署到 GitHub Pages",
-      completed: false,
-      priority: 0,
-      datetimeLocal: dayjs().format(),
-      deadline: dayjs("2025-09-10").format(),
-      parentId: null,
-      depth: 0,
-    },
-    {
-      id: uuid(),
-      text: "test",
-      completed: false,
-      priority: 0,
-      parentId: null,
-      depth: 0,
-    },
-  ]);
+/* ========= 工具：扁平化树，方便查找 ========= */
+const flatten = (nodes: TreeNode[]): Map<string, TreeNode> => {
+  const map = new Map<string, TreeNode>();
+  const dfs = (list: TreeNode[]) =>
+    list.forEach((n) => {
+      map.set(n.id, n);
+      if (n.children) dfs(n.children);
+    });
+  dfs(nodes);
+  return map;
+};
+
+/* ========= 单节点组件 ========= */
+const Node: React.FC<{
+  node: TreeNode;
+}> = ({ node }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: node.id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    paddingLeft: 12,
+    lineHeight: "32px",
+    border: "1px solid #ddd",
+    margin: "2px 0",
+    background: "#fff",
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      {node.name}
+      {node.children && node.children.length > 0 && (
+        <SortableContext
+          items={node.children.map((c) => c.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          {node.children.map((c) => (
+            <Node key={c.id} node={c} />
+          ))}
+        </SortableContext>
+      )}
+    </div>
+  );
+};
+
+/* ========= 整棵树组件 ========= */
+const Tree: React.FC<{
+  tree: TreeNode[];
+  setTree: (t: TreeNode[]) => void;
+  prefix: string;
+}> = ({ tree, setTree, prefix }) => {
+  return (
+    <div style={{ width: 300, border: "1px solid #aaa", padding: 8 }}>
+      <h4>{prefix} 树</h4>
+      <SortableContext
+        items={tree.map((n) => n.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        {tree.map((n) => (
+          <Node key={n.id} node={n} />
+        ))}
+      </SortableContext>
+    </div>
+  );
+};
+
+/* ========= 页面：两棵树 + 拖动逻辑 ========= */
+export default function TreeDnd() {
+  const [treeA, setTreeA] = useState<TreeNode[]>(makeTree("A"));
+  const [treeB, setTreeB] = useState<TreeNode[]>(makeTree("B"));
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -103,110 +126,93 @@ export default function NestedDndOneFile() {
     }),
   );
 
-  const [activeId, setActiveId] = React.useState<string | null>(null);
+  /* -------- 查找节点所在树及父链 -------- */
+  const findNodeAndParent = (
+    trees: [TreeNode[], React.Dispatch<React.SetStateAction<TreeNode[]>>][],
+    id: string,
+  ) => {
+    for (const [t, setter] of trees) {
+      const map = flatten(t);
+      if (map.has(id)) {
+        return { tree: t, setTree: setter, node: map.get(id)! };
+      }
+    }
+    return null;
+  };
 
-  const handleDragEnd = (e: DragEndEvent) => {
+  const onDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
     if (!over) return;
-
-    const activeTask = tasks.find((t) => t.id === active.id)!;
+    const activeId = active.id as string;
     const overId = over.id as string;
 
-    let newParentId: string | null = null;
-    let newDepth = 0;
+    const from = findNodeAndParent(
+      [
+        [treeA, setTreeA],
+        [treeB, setTreeB],
+      ],
+      activeId,
+    );
+    const to = findNodeAndParent(
+      [
+        [treeA, setTreeA],
+        [treeB, setTreeB],
+      ],
+      overId,
+    );
+    if (!from || !to) return;
 
-    if (overId === "root-list") {
-      newParentId = null;
-      newDepth = 0;
-    } else {
-      const overTask = tasks.find((t) => t.id === overId)!;
-      newParentId = overTask.id;
-      newDepth = overTask.depth + 1;
+    /* 同一棵树内排序 */
+    if (from.setTree === to.setTree) {
+      const sameRoot = from.tree;
+      const oldIds = sameRoot.map((n) => n.id);
+      if (!oldIds.includes(activeId) || !oldIds.includes(overId)) return;
+      const oldIndex = oldIds.indexOf(activeId);
+      const newIndex = oldIds.indexOf(overId);
+      from.setTree(arrayMove(sameRoot, oldIndex, newIndex));
+      return;
     }
 
-    const oldIndex = tasks.findIndex((t) => t.id === active.id);
-    const newIndex = tasks.findIndex((t) => t.id === overId);
-
-    const newFlat = arrayMove(tasks, oldIndex, newIndex).map((t) =>
-      t.id === active.id ? { ...t, parentId: newParentId, depth: newDepth } : t,
+    /* 跨树移动：简单插到目标树根部，你可以改成插到某节点前后 */
+    const [removed] = from.tree.splice(
+      from.tree.findIndex((n) => n.id === activeId),
+      1,
     );
-
-    setTasks(newFlat);
-    setActiveId(null);
+    to.tree.push(removed);
+    from.setTree([...from.tree]);
+    to.setTree([...to.tree]);
   };
 
-  const activeTask = tasks.find((t) => t.id === activeId);
-
   return (
-    <div
-      style={{ maxWidth: 480, margin: "32px auto", fontFamily: "sans-serif" }}
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={(e) => setActiveId(e.active.id as string)}
+      onDragEnd={onDragEnd}
+      onDragCancel={() => setActiveId(null)}
     >
-      <h3>父子可互拖的嵌套列表（dnd-kit 单文件版）</h3>
+      <div style={{ display: "flex", gap: 40 }}>
+        <Tree tree={treeA} setTree={setTreeA} prefix="A" />
+        <Tree tree={treeB} setTree={setTreeB} prefix="B" />
+      </div>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={({ active }) => setActiveId(active.id as string)}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext
-          items={tasks.map((t) => t.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          <div id="root-list">
-            {tasks.map((task) => (
-              <SortableTask key={task.id} task={task} />
-            ))}
-          </div>
-        </SortableContext>
-
+      {createPortal(
         <DragOverlay>
-          {activeTask ? <TaskItem task={activeTask} isDragOverlay /> : null}
-        </DragOverlay>
-      </DndContext>
-    </div>
-  );
-}
-
-/* ---------- 子组件 ---------- */
-function SortableTask({ task }: { task: Task }) {
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id: task.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
-  return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <TaskItem task={task} />
-    </div>
-  );
-}
-
-function TaskItem({
-  task,
-  isDragOverlay,
-}: {
-  task: Task;
-  isDragOverlay?: boolean;
-}) {
-  return (
-    <div
-      style={{
-        paddingLeft: task.depth * INDENT,
-        paddingBlock: 8,
-        border: "1px solid #ccc",
-        marginBottom: 4,
-        background: isDragOverlay ? "#f3f3f3" : "#fff",
-        display: "flex",
-        alignItems: "center",
-        borderRadius: 4,
-      }}
-    >
-      <span style={{ marginRight: 8, cursor: "grab" }}>::</span>
-      <span>{task.text}</span>
-    </div>
+          {activeId ? (
+            <div
+              style={{
+                padding: "8px 12px",
+                background: "#fff",
+                border: "1px solid #666",
+                borderRadius: 4,
+              }}
+            >
+              {activeId}
+            </div>
+          ) : null}
+        </DragOverlay>,
+        document.body,
+      )}
+    </DndContext>
   );
 }

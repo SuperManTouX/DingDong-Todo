@@ -7,6 +7,7 @@ import todoListData from "../data/TodoListData.json";
 import todoTag from "../data/todoTags.json";
 import binData from "../data/bin.json";
 import allTasks from "../data/AllTasks.json";
+import groupData from "../data/GroupData.json";
 import { v4 as uuidv4 } from "uuid";
 import dayjs from "dayjs";
 import { Priority, ShowType } from "@/constants";
@@ -68,7 +69,7 @@ export const useTodoStore = create<TodoState>()(
     // 从独立的AllTasks.json文件导入所有任务
     tasks: allTasks as Todo[],
     // 初始化分组数组为空
-    groups: [],
+    groups: groupData,
 
     // 计算属性 - 当前激活的任务组
     activeGroup: {

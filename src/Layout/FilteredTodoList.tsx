@@ -4,7 +4,7 @@ import Controller from "../components/Controller";
 import FilterGroup from "../components/FilterGroup";
 import TaskItemRenderer from "../components/TaskItemRenderer";
 import { DndContext, closestCenter } from "@dnd-kit/core";
-import { SortableList } from "@/components/SortableComponents";
+
 import { Row, Space } from "antd";
 
 import { Content, Footer, Header } from "antd/es/layout/layout";
@@ -19,7 +19,6 @@ export default function FilteredTodoList({ groupName }: { groupName: string }) {
   // 使用hooks获取各种功能
   const { groupMode, groupedTasks, timeGroupedTasks, ungroupedTasks } =
     useTodoGrouping(tasks);
-  console.log(timeGroupedTasks, ungroupedTasks);
   const {
     title,
     showType,
@@ -42,7 +41,6 @@ export default function FilteredTodoList({ groupName }: { groupName: string }) {
     getHierarchicalTasks,
     getHierarchicalTasksForGroup,
     handleDragEnd,
-    sortableTaskIds,
   } = useTodoHierarchy(tasks, renderTodos, renderOtherTodos);
 
   return (
@@ -57,13 +55,12 @@ export default function FilteredTodoList({ groupName }: { groupName: string }) {
       {/*主内容区*/}
       <Content className="overflow-y-scroll minHeight-large pe-2 ps-2">
         <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableList items={sortableTaskIds}>
-            <ul className="col p-2">
-              <Space className="w-100" direction="vertical" size="small">
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <ul className="col p-2">
+          <Space className="w-100" direction="vertical" size="small">
                 {/*顶部控制器组件*/}
                 <Controller
                   isAllDone={isAllDone}
@@ -225,13 +222,12 @@ export default function FilteredTodoList({ groupName }: { groupName: string }) {
                           toggleTaskExpand={toggleTaskExpand}
                         />
                       ))}
-                    </div>
-                  </FilterGroup>
-                )}
-              </Space>
-            </ul>
-          </SortableList>
-        </DndContext>
+                </div>
+              </FilterGroup>
+            )}
+          </Space>
+        </ul>
+    </DndContext>
       </Content>
 
       {/*底部操作栏*/}

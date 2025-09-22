@@ -62,7 +62,6 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
       grouped[group.groupName] = [];
       group.groupItemIds.forEach((id) => taskIdsInGroups.add(id));
     });
-
     // 将任务分配到对应的分组
     tasks.forEach((task) => {
       if (taskIdsInGroups.has(task.id)) {
@@ -112,8 +111,6 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
       }))
       .sort((a, b) => dayjs(a.date).diff(dayjs(b.date)));
   }
-  // }, [tasks, getGroupsByListId]);
-  console.log(ungroupedTasks);
 
   return {
     groupMode,
