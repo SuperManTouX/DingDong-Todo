@@ -39,8 +39,8 @@ export interface ControllerProps {
   text: string;
   setText: (text: string) => void;
   onAdded: () => void;
-  groupMode?: 'normal' | 'time' | 'none';
-  onToggleGroupMode?: (mode: 'normal' | 'time' | 'none') => void;
+  groupMode?: "normal" | "time" | "none";
+  onToggleGroupMode?: (mode: "normal" | "time" | "none") => void;
 }
 
 export type Priority = (typeof Priority)[keyof typeof Priority];
@@ -68,6 +68,7 @@ export interface Todo {
   depth: number; // 新增：表示嵌套深度
   tags?: string[]; // 新增：任务标签数组，存储标签ID
   listId: string; // 新增：指向所属清单ID
+  groupId?: string; // 新增：指向所属清单ID
 }
 
 interface TodoAddAction {

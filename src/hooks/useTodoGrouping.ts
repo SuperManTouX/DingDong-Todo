@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useTodoStore } from "@/store/todoStore";
 import type { Todo } from "@/types";
 import type { Group, TimeGroup } from "@/types/group";
@@ -20,13 +20,14 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
   const { activeListId } = useTodoStore.getState();
   let groupMode: "normal" | "time" =
     activeListId in SpecialLists ? "time" : "normal";
+  const unCompletedTasks = tasks.filter((task) => !task.completed);
   let groupedTasks: (Group & { tasks: Todo[] })[] = [];
   let timeGroupedTasks: TimeGroup[] = [];
   let ungroupedTasks: Todo[] = [];
 
   // 当任务或当前激活列表变化时，重新计算分组
   // useEffect(() => {
-  if (!tasks || tasks.length === 0) {
+  if (!unCompletedTasks || unCompletedTasks.length === 0) {
     groupedTasks = [];
     timeGroupedTasks = [];
     ungroupedTasks = [];
@@ -43,7 +44,7 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
   if (groupMode === "normal") {
     // // 如果是普通清单，没有分组，赋值到未分组
     if (groups.length === 0) {
-      ungroupedTasks = tasks;
+      ungroupedTasks = unCompletedTasks;
       // 提前返回
       return {
         groupMode,
@@ -56,21 +57,21 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
     // 分离已分组和未分组的任务
     const grouped: { [key: string]: Todo[] } = {};
     let ungrouped: Todo[] = [];
-    const taskIdsInGroups = new Set<string>();
+
     // 初始化分组
     groups.forEach((group) => {
       grouped[group.groupName] = [];
-      group.groupItemIds.forEach((id) => taskIdsInGroups.add(id));
     });
+
     // 将任务分配到对应的分组
-    tasks.forEach((task) => {
-      if (taskIdsInGroups.has(task.id)) {
+    unCompletedTasks.forEach((task) => {
+      if (task.groupId) {
         // 找到任务所属的分组
-        const taskGroup = groups.find((group) =>
-          group.groupItemIds.includes(task.id),
-        );
-        if (taskGroup) {
+        const taskGroup = groups.find((group) => group.id === task.groupId);
+        if (taskGroup && grouped[taskGroup.groupName]) {
           grouped[taskGroup.groupName].push(task);
+        } else {
+          ungrouped.push(task);
         }
       } else {
         ungrouped.push(task);
@@ -78,19 +79,24 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
     });
 
     // 转换为数组格式
-
-    groupedTasks = Object.keys(grouped).map((name) => ({
-      listId: activeListId,
-      groupName: name,
-      groupItemIds: grouped[name].map((task) => task.id),
-      tasks: grouped[name],
-    }));
+    groupedTasks = Object.keys(grouped).map((name) => {
+      // 查找原始分组对象以获取id
+      const originalGroup = groups.find((group) => group.groupName === name);
+      return {
+        id:
+          originalGroup?.id ||
+          `${activeListId}_${name.toLowerCase().replace(/\s+/g, "_")}`,
+        listId: activeListId,
+        groupName: name,
+        tasks: grouped[name],
+      };
+    });
 
     ungroupedTasks = ungrouped;
   } else {
     // 计算时间分组
     const timeGrouped: { [key: string]: Todo[] } = {};
-    const tasksWithDeadline = tasks.filter(
+    const tasksWithDeadline = unCompletedTasks.filter(
       (task) => task.deadline && task.parentId === null,
     );
 

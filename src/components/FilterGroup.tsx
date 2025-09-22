@@ -31,7 +31,7 @@ export default function FilterGroup({
   hasSubTasks?: (taskId: string) => boolean;
   isUngrouped?: boolean;
 }) {
-  const { addGroup, activeListId } = useTodoStore();
+  const { addGroup, deleteGroup, activeListId, getGroupsByListId } = useTodoStore();
 
   // 状态管理
   const [showInput, setShowInput] = useState(false);
@@ -99,6 +99,9 @@ export default function FilterGroup({
     }
   };
 
+  // 获取当前清单的所有分组
+  const groups = getGroupsByListId(activeListId);
+  
   // 组操作菜单选项
   const menuItems: MenuProps["items"] = [
     {
@@ -118,8 +121,12 @@ export default function FilterGroup({
       label: "删除此组",
       onClick: ({ domEvent }) => {
         domEvent.stopPropagation();
-        // 实际项目中需要实现删除组的逻辑
-        message.info(`删除组"${formatTitle()}"`);
+        // 查找要删除的组的id
+        const groupToDelete = groups.find(group => group.groupName === formatTitle());
+        if (groupToDelete?.id) {
+          deleteGroup(groupToDelete.id);
+          message.success(`成功删除组"${formatTitle()}"`);
+        }
       },
     },
   ];
