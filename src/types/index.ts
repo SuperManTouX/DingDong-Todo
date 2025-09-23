@@ -69,6 +69,7 @@ export interface Todo {
   tags?: string[]; // 新增：任务标签数组，存储标签ID
   listId: string; // 新增：指向所属清单ID
   groupId?: string; // 新增：指向所属清单ID
+  userId?: string; // 新增：指向创建任务的用户ID
 }
 
 interface TodoAddAction {

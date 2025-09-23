@@ -10,7 +10,8 @@
     "depth": 0,
     "tags": ["1", "2", "3"],
     "listId": "a",
-    "groupId": "a_study"
+    "groupId": "a_study",
+    "userId": "user-1"
   },
   {
     "id": "t2",
@@ -23,7 +24,8 @@
     "depth": 1,
     "tags": ["1", "2", "4"],
     "listId": "a",
-    "groupId": "a_study"
+    "groupId": "a_study",
+    "userId": "user-1"
   },
   {
     "id": "t3",
@@ -36,7 +38,8 @@
     "depth": 1,
     "tags": ["1", "2", "5"],
     "listId": "a",
-    "groupId": "a_study"
+    "groupId": "a_study",
+    "userId": "user-1"
   },
   {
     "id": "t4",
@@ -49,7 +52,8 @@
     "depth": 1,
     "tags": ["1", "2", "6"],
     "listId": "a",
-    "groupId": "a_study"
+    "groupId": "a_study",
+    "userId": "user-1"
   },
   {
     "id": "a1",
@@ -61,7 +65,8 @@
     "parentId": null,
     "depth": 0,
     "listId": "a",
-    "groupId": "a_related"
+    "groupId": "a_related",
+    "userId": "user-1"
   },
   {
     "id": "a2",
@@ -74,7 +79,8 @@
     "depth": 0,
     "tags": ["1", "7", "8"],
     "listId": "a",
-    "groupId": "a_related"
+    "groupId": "a_related",
+    "userId": "user-1"
   },
   {
     "id": "w1",
@@ -87,7 +93,8 @@
     "depth": 0,
     "tags": ["10", "11", "12"],
     "listId": "b",
-    "groupId": "b_high_priority"
+    "groupId": "b_high_priority",
+    "userId": "user-1"
   },
   {
     "id": "w2",
@@ -100,7 +107,8 @@
     "depth": 1,
     "tags": ["10", "13", "14"],
     "listId": "b",
-    "groupId": "b_high_priority"
+    "groupId": "b_high_priority",
+    "userId": "user-1"
   },
   {
     "id": "w3",
@@ -113,7 +121,8 @@
     "depth": 0,
     "tags": ["10", "15", "16"],
     "listId": "b",
-    "groupId": "b_high_priority"
+    "groupId": "b_high_priority",
+    "userId": "user-1"
   },
   {
     "id": "w4",
@@ -126,7 +135,8 @@
     "depth": 0,
     "tags": ["10", "17", "18"],
     "listId": "b",
-    "groupId": "b_high_priority"
+    "groupId": "b_high_priority",
+    "userId": "user-2"
   },
   {
     "id": "l1",
@@ -139,7 +149,8 @@
     "depth": 0,
     "tags": ["19", "20", "21"],
     "listId": "c",
-    "groupId": "c_today_completed"
+    "groupId": "c_today_completed",
+    "userId": "user-1"
   },
   {
     "id": "l2",
@@ -152,7 +163,8 @@
     "depth": 0,
     "tags": ["19", "22", "23"],
     "listId": "c",
-    "groupId": "c_today_completed"
+    "groupId": "c_today_completed",
+    "userId": "user-1"
   },
   {
     "id": "l3",
@@ -165,7 +177,8 @@
     "depth": 0,
     "tags": ["19", "24", "25"],
     "listId": "c",
-    "groupId": "c_today_completed"
+    "groupId": "c_today_completed",
+    "userId": "user-2"
   },
   {
     "id": "l4",
@@ -178,7 +191,8 @@
     "depth": 0,
     "tags": ["19", "26", "27"],
     "listId": "c",
-    "groupId": "c_today_completed"
+    "groupId": "c_today_completed",
+    "userId": "user-2"
   },
   {
     "id": "r1",
@@ -191,7 +205,8 @@
     "depth": 0,
     "tags": ["28", "13", "30"],
     "listId": "d",
-    "groupId": "d_month_reading"
+    "groupId": "d_month_reading",
+    "userId": "user-1"
   },
   {
     "id": "r2",
@@ -204,7 +219,8 @@
     "depth": 1,
     "tags": ["28", "32", "33"],
     "listId": "d",
-    "groupId": "d_month_reading"
+    "groupId": "d_month_reading",
+    "userId": "user-1"
   },
   {
     "id": "r3",
@@ -217,7 +233,8 @@
     "depth": 1,
     "tags": ["28", "34", "35"],
     "listId": "d",
-    "groupId": "d_month_reading"
+    "groupId": "d_month_reading",
+    "userId": "user-1"
   },
   {
     "id": "r4",
@@ -230,7 +247,8 @@
     "depth": 0,
     "tags": ["28", "13", "31"],
     "listId": "d",
-    "groupId": "d_month_reading"
+    "groupId": "d_month_reading",
+    "userId": "user-2"
   },
   {
     "id": "r5",
@@ -243,6 +261,7 @@
     "depth": 0,
     "tags": ["28", "36", "37"],
     "listId": "d",
-    "groupId": "d_month_reading"
+    "groupId": "d_month_reading",
+    "userId": "user-2"
   }
 ]

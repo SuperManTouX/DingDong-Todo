@@ -1,15 +1,12 @@
-import { createRoot } from "react-dom/client";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./styles/currentCSS.css";
 import "@ant-design/v5-patch-for-react-19";
 import { App, ConfigProvider } from "antd";
 import React, { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
 import { AntdStaticHolder } from "./utils/antdStatic";
-// import App from './TicTacToe.tsx'
-// import TaskApp from "./TaskApp";
-// import NestedList from "./Test";
-import AppLayout from "./Layout/AppLayout";
-import { initializeTheme, useThemeStore } from "./store/themeStore"; // 导入主题初始化函数和store
+import { initializeTheme, useThemeStore } from "./store/themeStore";
+import { AppRouter } from "./routes";
 
 // 初始化主题
 initializeTheme();
@@ -22,7 +19,7 @@ const AppWithTheme: React.FC = () => {
     <ConfigProvider theme={getAntdTheme()}>
       <App className={"w-100 h-100"}>
         <AntdStaticHolder />
-        <AppLayout />
+        <AppRouter />
       </App>
     </ConfigProvider>
   );
@@ -31,6 +28,5 @@ const AppWithTheme: React.FC = () => {
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AppWithTheme />
-    {/*<NestedList></NestedList>*/}
   </StrictMode>,
 );
