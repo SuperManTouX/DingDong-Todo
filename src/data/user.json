@@ -1,0 +1,16 @@
+[
+  {
+    "id": "user-1",
+    "username": "admin",
+    "email": "admin@example.com",
+    "password": "123456",
+    "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=admin"
+  },
+  {
+    "id": "user-2",
+    "username": "testuser",
+    "email": "test@example.com",
+    "password": "password123",
+    "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=testuser"
+  }
+]
