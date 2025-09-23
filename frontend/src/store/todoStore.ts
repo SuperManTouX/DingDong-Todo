@@ -11,6 +11,7 @@ import groupData from "../data/GroupData.json";
 import { v4 as uuidv4 } from "uuid";
 import dayjs from "dayjs";
 import { Priority, ShowType } from "@/constants";
+import { useAuthStore } from "@/store/authStore";
 
 // 完整的状态类型定义
 interface TodoState {
@@ -22,6 +23,7 @@ interface TodoState {
   bin: Todo[]; // 回收站数据
   tasks: Todo[]; // 新增：独立的任务数组
   groups: Group[]; // 新增：全局分组数组
+  userId: string | null; // 添加用户ID字段
 
   // 计算属性 - 这些属性在持久化时会被忽略
   activeGroup: TodoListData;
@@ -33,6 +35,7 @@ interface TodoState {
   dispatchTag: (action: TagReducerAction) => void;
   setActiveListId: (id: string) => void;
   setSelectTodoId: (id: string | null) => void;
+  setUserId: (id: string | null) => void;
 
   // 分组相关操作
   addGroup: (listId: string, groupName: string, groupItemIds: string[]) => void;
@@ -66,6 +69,7 @@ export const useTodoStore = create<TodoState>()(
     tasks: allTasks as Todo[],
     // 初始化分组数组为空
     groups: groupData,
+    userId: null,
 
     // 计算属性 - 当前激活的任务组
     activeGroup: {
@@ -195,6 +199,11 @@ export const useTodoStore = create<TodoState>()(
 
             case "added": {
               const { title, completed, parentId, depth, listId } = action;
+              const userId = get().userId; // 获取当前用户ID
+
+              if (!userId) {
+                throw new Error("用户未登录");
+              }
 
               // 直接添加到独立的tasks数组
               draftState.tasks.push({
@@ -205,6 +214,7 @@ export const useTodoStore = create<TodoState>()(
                 priority: Priority.None,
                 parentId: parentId || null,
                 depth: depth || 0,
+                userId: userId,
               });
 
               // 更新清单的更新时间
@@ -453,10 +463,7 @@ export const useTodoStore = create<TodoState>()(
     },
 
     // 分组相关操作方法
-    addGroup: (
-      listId: string,
-      groupName: string,
-    ) => {
+    addGroup: (listId: string, groupName: string) => {
       set(
         produce((draftState: TodoState) => {
           // 检查是否已存在相同的分组名
@@ -466,7 +473,7 @@ export const useTodoStore = create<TodoState>()(
 
           if (existingGroupIndex === -1) {
             // 生成唯一id（使用listId和描述性字符串组合）
-            const id = `${listId}_${groupName.toLowerCase().replace(/\s+/g, '_')}`;
+            const id = `${listId}_${groupName.toLowerCase().replace(/\s+/g, "_")}`;
             // 添加新分组
             draftState.groups.push({
               id,
@@ -494,7 +501,7 @@ export const useTodoStore = create<TodoState>()(
       set(
         produce((draftState: TodoState) => {
           draftState.groups = draftState.groups.filter(
-            (group) => group.id !== groupId
+            (group) => group.id !== groupId,
           );
         }),
       );
@@ -524,6 +531,8 @@ export const useTodoStore = create<TodoState>()(
       // 如果在正常任务中找不到，在回收站中查找
       return state.bin.find((t) => t.id === id) || null;
     },
+
+    setUserId: (id: string | null) => set({ userId: id }),
 
     // 根据任务ID获取所属的任务组
     getGroupByTodoId: (todoId: string) => {
@@ -713,18 +722,23 @@ export const getActiveListData = (): TodoListData => {
 export const getActiveListTasks = (): Todo[] => {
   // 获取store实例
   const store = useTodoStore.getState();
+  const { userId } = useAuthStore();
   const { activeListId, tasks, bin, todoTags } = store;
-
+  // console.log(activeListId, tasks, userId);
+  console.log(userId);
   // 安全检查 - 确保state和相关属性存在
-  if (!activeListId || !tasks) {
+  if (!activeListId || !tasks || !userId) {
     return [];
   }
-
+  let userTasks: Todo[] = allTasks.filter(
+    (task: Todo) => task.userId === userId,
+  );
   // 初始化任务数组
   let resultTasks: Todo[] = [];
+
   // 如果是普通清单，返回清单关联的任务
-  if (todoListData.some((l) => activeListId === l.id)) {
-    resultTasks = tasks.filter((task) => task.listId === activeListId);
+  if (todoListData.some((l: TodoListData) => activeListId === l.id)) {
+    resultTasks = userTasks.filter((task) => task.listId === activeListId);
   } else {
     // 根据不同的视图类型返回对应的任务
     switch (activeListId) {

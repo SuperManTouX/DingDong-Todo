@@ -15,7 +15,9 @@ import useTodoHierarchy from "../hooks/useTodoHierarchy";
 import { getActiveListTasks } from "@/store/todoStore";
 
 export default function FilteredTodoList({ groupName }: { groupName: string }) {
+  // 获取所有任务，然后根据用户ID过滤
   const tasks = getActiveListTasks();
+
   // 使用hooks获取各种功能
   const { groupMode, groupedTasks, timeGroupedTasks, ungroupedTasks } =
     useTodoGrouping(tasks);

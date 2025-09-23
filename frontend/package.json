@@ -25,6 +25,7 @@
     "react": "^19.1.1",
     "react-bootstrap": "^2.10.10",
     "react-dom": "^19.1.1",
+    "react-router-dom": "^7.9.1",
     "use-immer": "^0.11.0",
     "uuid": "^13.0.0",
     "zustand": "^5.0.8"

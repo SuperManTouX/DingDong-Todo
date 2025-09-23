@@ -2,26 +2,31 @@
   {
     "id": "a_study",
     "listId": "a",
-    "groupName": "学习相关"
+    "groupName": "学习相关",
+    "userId": "user-1"
   },
   {
     "id": "a_related",
     "listId": "a",
-    "groupName": "相关"
+    "groupName": "相关",
+    "userId": "user-1"
   },
   {
     "id": "b_high_priority",
     "listId": "b",
-    "groupName": "高优先级任务"
+    "groupName": "高优先级任务",
+    "userId": "user-1"
   },
   {
     "id": "c_today_completed",
     "listId": "c",
-    "groupName": "今日完成"
+    "groupName": "今日完成",
+    "userId": "user-2"
   },
   {
     "id": "d_month_reading",
     "listId": "d",
-    "groupName": "本月阅读"
+    "groupName": "本月阅读",
+    "userId": "user-2"
   }
 ]
