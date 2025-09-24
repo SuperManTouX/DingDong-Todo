@@ -11,6 +11,12 @@ export class TodoList {
   @Column()
   title: string;
 
+  @Column({ nullable: true })
+  emoji?: string;
+
+  @Column({ nullable: true })
+  color?: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

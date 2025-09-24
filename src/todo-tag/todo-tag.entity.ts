@@ -10,7 +10,7 @@ export class TodoTag {
   name: string;
 
   @Column({ nullable: true, name: 'parent_id' })
-  parentId: string;
+  parentId: string | null;
 
   @Column({ name: 'user_id' })
   userId: string;
