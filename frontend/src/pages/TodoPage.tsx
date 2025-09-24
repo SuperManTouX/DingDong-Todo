@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Layout, MenuProps } from "antd";
 import {
   useTodoStore,
@@ -21,9 +21,26 @@ import ListGroupManager from "@/components/ListGroupManager";
  * 显示主待办事项列表和编辑功能
  */
 const TodoPage: React.FC = () => {
+  const { setActiveListId, loadData } = useTodoStore();
+  // 检查数据是否为初始化状态，如果是则加载数据
+  useEffect(() => {
+    // 检查数据是否为初始化状态的条件
+    const isInitialState =
+      // 检查todoListData是否为空或只有fallback数据
+      (todoStoreState.todoListData.length === 0 ||
+        (todoStoreState.todoListData.length === 1 &&
+          todoStoreState.todoListData[0].id === "fallback_list")) &&
+      // 检查用户是否已登录
+      useAuthStore.getState().isAuthenticated;
+
+    if (isInitialState) {
+      console.log("检测到初始状态，加载数据...");
+      loadData();
+    }
+  }, [loadData]);
   const activeListData = getActiveListData();
   const selectTodo = useSelectTodo();
-  const { setActiveListId } = useTodoStore();
+  const todoStoreState = useTodoStore.getState();
 
   // 使用ListGroupManager组件管理清单组
   const listGroupManager = ListGroupManager({

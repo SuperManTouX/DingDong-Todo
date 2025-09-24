@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import usersData from "../data/user.json";
+import { login as apiLogin, register as apiRegister, logout as apiLogout, getUserInfo } from "../services/authService";
 
 interface User {
   id: string;
@@ -20,6 +20,7 @@ interface AuthState {
     password: string,
   ) => Promise<void>;
   logout: () => void;
+  loadUserInfo: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -30,37 +31,64 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
 
       login: async (username: string, password: string) => {
-        // 从user.json中查找用户
-        const foundUser = usersData.find(
-          (user) => user.username === username && user.password === password,
-        );
-        if (foundUser) {
-          // 移除密码字段后设置用户信息
-          const { password: _, ...userInfo } = foundUser;
-          set({ user: userInfo, userId: userInfo.id, isAuthenticated: true });
-          return Promise.resolve();
-        } else {
-          throw new Error("用户名或密码错误");
+        try {
+          const response = await apiLogin({ username, password });
+          set({ 
+            user: response.user, 
+            userId: response.user.id, 
+            isAuthenticated: true 
+          });console.log(response);
+          
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : "登录失败";
+          throw new Error(errorMessage);
         }
       },
 
       register: async (username: string, email: string, password: string) => {
-        // 在实际应用中，这里应该调用API进行注册
-        // 这里仅作为示例
-        if (username && email && password.length >= 6) {
-          // 模拟注册成功 - 在实际应用中应该通过API创建用户并获取用户信息（包括头像）
-          // 头像可以由服务端生成或允许用户上传
-        } else {
-          throw new Error("注册信息不完整或不符合要求");
+        try {
+          const response = await apiRegister({ username, email, password });
+          set({ 
+            user: response.user, 
+            userId: response.user.id, 
+            isAuthenticated: true 
+          });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : "注册失败";
+          throw new Error(errorMessage);
         }
       },
 
-      logout: () => {
-        set({ user: null, isAuthenticated: false });
+      logout: async () => {
+        try {
+          await apiLogout();
+        } finally {
+          set({ user: null, isAuthenticated: false, userId: "" });
+        }
       },
+
+      loadUserInfo: async () => {
+        try {
+          const userInfo = await getUserInfo();
+          set({ 
+            user: userInfo, 
+            userId: userInfo.id, 
+            isAuthenticated: true 
+          });
+        } catch (error) {
+          console.error('加载用户信息失败:', error);
+          set({ user: null, isAuthenticated: false, userId: "" });
+        }
+      }
     }),
     {
       name: "auth-storage",
+      partialize: (state) => ({
+        // 不保存敏感信息到本地存储
+        user: null,
+        userId: state.userId,
+        isAuthenticated: state.isAuthenticated
+      })
     },
   ),
 );

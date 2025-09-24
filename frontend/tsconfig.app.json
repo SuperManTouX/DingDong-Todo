@@ -30,5 +30,5 @@
 
   },
 
-  "include": ["src","src/types/index.d.ts"]
+  "include": ["src","src/types/index.d.ts", "src/testTodoLists.ts"]
 }
