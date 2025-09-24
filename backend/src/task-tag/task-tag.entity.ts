@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, JoinColumn, PrimaryColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, PrimaryColumn, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Task } from '../todo/todo.entity';
 import { TodoTag } from '../todo-tag/todo-tag.entity';
 
