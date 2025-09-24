@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            background-color: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        button {
+            background-color: #1890ff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #40a9ff;
+        }
+        pre {
+            background-color: #eee;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        #result {
+            margin-top: 20px;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>/todo-lists API测试</h1>
+        <p>点击下方按钮测试后端API是否正常工作：</p>
+        
+        <button onclick="testTodoLists()">测试 /todo-lists</button>
+        <button onclick="testAuthProfile()">测试 /auth/profile</button>
+        <button onclick="clearResult()">清空结果</button>
+        
+        <div id="result">
+            <h3>测试结果：</h3>
+            <pre id="output">等待测试...</pre>
+        </div>
+    </div>
+
+    <script>
+        function displayResult(message, isError = false) {
+            const output = document.getElementById('output');
+            output.textContent += (output.textContent === '等待测试...' ? '' : '\n\n') + message;
+            output.className = isError ? 'error' : 'success';
+        }
+
+        function clearResult() {
+            document.getElementById('output').textContent = '等待测试...';
+            document.getElementById('output').className = '';
+        }
+
+        async function testTodoLists() {
+            try {
+                displayResult('开始测试 /todo-lists 接口...');
+                
+                const startTime = new Date().getTime();
+                const response = await fetch('http://localhost:3000/todo-lists', {
+                    method: 'GET',
+                    credentials: 'include', // 包含cookies
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const endTime = new Date().getTime();
+                
+                displayResult(`请求耗时: ${endTime - startTime}ms`);
+                displayResult(`状态码: ${response.status}`);
+                displayResult(`状态文本: ${response.statusText}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayResult('响应数据:', false);
+                    displayResult(JSON.stringify(data, null, 2), false);
+                } else {
+                    const errorText = await response.text();
+                    displayResult(`请求失败: ${errorText}`, true);
+                }
+            } catch (error) {
+                displayResult(`发生错误: ${error.message}`, true);
+            }
+        }
+
+        async function testAuthProfile() {
+            try {
+                displayResult('开始测试 /auth/profile 接口...');
+                
+                const startTime = new Date().getTime();
+                const response = await fetch('http://localhost:3000/auth/profile', {
+                    method: 'GET',
+                    credentials: 'include', // 包含cookies
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const endTime = new Date().getTime();
+                
+                displayResult(`请求耗时: ${endTime - startTime}ms`);
+                displayResult(`状态码: ${response.status}`);
+                displayResult(`状态文本: ${response.statusText}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayResult('响应数据:', false);
+                    displayResult(JSON.stringify(data, null, 2), false);
+                } else {
+                    const errorText = await response.text();
+                    displayResult(`请求失败: ${errorText}`, true);
+                }
+            } catch (error) {
+                displayResult(`发生错误: ${error.message}`, true);
+            }
+        }
+    </script>
+</body>
+</html>

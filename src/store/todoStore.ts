@@ -3,15 +3,22 @@ import { produce } from "immer";
 import type { TodoListData, Todo, Tag, TodoActionExtended } from "@/types";
 import type { TagReducerAction, ListGroupAction } from "@/types";
 import type { Group } from "@/types/group";
-import todoListData from "../data/TodoListData.json";
-import todoTag from "../data/todoTags.json";
-import binData from "../data/bin.json";
-import allTasks from "../data/AllTasks.json";
-import groupData from "../data/GroupData.json";
 import { v4 as uuidv4 } from "uuid";
 import dayjs from "dayjs";
 import { Priority, ShowType } from "@/constants";
 import { useAuthStore } from "@/store/authStore";
+import {
+  getAllTodos,
+  createTodo,
+  updateTodo,
+  deleteTodo,
+  getAllTodoLists,
+  createTodoList,
+  getAllTags,
+  createTag,
+  getAllGroups,
+  createGroup,
+} from "../services/todoService";
 
 // 完整的状态类型定义
 interface TodoState {
@@ -21,9 +28,9 @@ interface TodoState {
   activeListId: string;
   selectTodoId: string | null;
   bin: Todo[]; // 回收站数据
-  tasks: Todo[]; // 新增：独立的任务数组
-  groups: Group[]; // 新增：全局分组数组
-  userId: string | null; // 添加用户ID字段
+  tasks: Todo[]; // 独立的任务数组
+  groups: Group[]; // 全局分组数组
+  userId: string | null; // 用户ID字段
 
   // 计算属性 - 这些属性在持久化时会被忽略
   activeGroup: TodoListData;
@@ -53,6 +60,11 @@ interface TodoState {
   // 辅助方法 - 用于查询和获取特定数据
   getTodoById: (id: string) => Todo | null;
   getGroupByTodoId: (todoId: string) => TodoListData | null;
+  getActiveListData: () => TodoListData;
+  getActiveListTasks: () => Todo[];
+
+  // API加载数据方法
+  loadData: () => Promise<void>;
 }
 
 export const useTodoStore = create<TodoState>()(
@@ -60,15 +72,13 @@ export const useTodoStore = create<TodoState>()(
   // persist(
   (set, get) => ({
     // 初始化状态
-    todoListData: todoListData,
-    todoTags: todoTag as Tag[],
-    activeListId: "a",
+    todoListData: [],
+    todoTags: [],
+    activeListId: "",
     selectTodoId: null,
-    bin: binData as Todo[], // 初始化回收站数据
-    // 从独立的AllTasks.json文件导入所有任务
-    tasks: allTasks as Todo[],
-    // 初始化分组数组为空
-    groups: groupData,
+    bin: [], // 初始化回收站数据
+    tasks: [],
+    groups: [],
     userId: null,
 
     // 计算属性 - 当前激活的任务组
@@ -106,471 +116,359 @@ export const useTodoStore = create<TodoState>()(
                   case ShowType.all:
                     shouldUpdate = true;
                     break;
-                  case ShowType.completed:
-                    shouldUpdate = task.completed;
-                    break;
                   case ShowType.uncompleted:
                     shouldUpdate = !task.completed;
                     break;
-                  case ShowType.overdue:
-                    shouldUpdate =
-                      task.deadline &&
-                      new Date(task.deadline) < new Date() &&
-                      !task.completed;
+                  case ShowType.completed:
+                    shouldUpdate = task.completed;
                     break;
+                  default:
+                    shouldUpdate = true;
                 }
 
                 if (shouldUpdate) {
-                  return { ...task, completed: completeOrUncomplete };
+                  return {
+                    ...task,
+                    completed: completeOrUncomplete,
+                  };
                 }
                 return task;
               });
-
-              // 更新清单的更新时间
-              const targetList = draftState.todoListData.find(
-                (list) => list.id === listId,
-              );
-              if (targetList) {
-                targetList.updatedAt = dayjs().format();
-              }
               break;
             }
-
-            case "toggle": {
-              const { todoId, newCompleted } = action;
-              // 直接在tasks数组中查找并更新
-              const todoIndex = draftState.tasks.findIndex(
-                (t) => t.id === todoId,
-              );
-
-              if (todoIndex !== -1) {
-                draftState.tasks[todoIndex].completed = newCompleted;
-
-                // 同步子任务状态
-                const updateChildTasks = (
-                  parentId: string,
-                  newCompleted: boolean,
-                ) => {
-                  draftState.tasks = draftState.tasks.map((task) => {
-                    if (task.parentId === parentId) {
-                      return { ...task, completed: newCompleted };
-                    }
-                    return task;
-                  });
-                };
-
-                // 更新所有子任务
-                updateChildTasks(todoId, newCompleted);
-
-                // 检查并更新父任务状态
-                const todo = draftState.tasks[todoIndex];
-                if (todo.parentId) {
-                  const parentTodo = draftState.tasks.find(
-                    (t) => t.id === todo.parentId,
-                  );
-                  if (parentTodo) {
-                    const allChildTasks = draftState.tasks.filter(
-                      (t) => t.parentId === parentTodo.id,
-                    );
-                    const allChildrenCompleted = allChildTasks.every(
-                      (t) => t.completed,
-                    );
-
-                    const parentIndex = draftState.tasks.findIndex(
-                      (t) => t.id === parentTodo.id,
-                    );
-                    if (parentIndex !== -1) {
-                      draftState.tasks[parentIndex].completed =
-                        allChildrenCompleted;
-                    }
-                  }
-                }
-
-                // 更新清单的更新时间
-                const targetList = draftState.todoListData.find(
-                  (list) => list.id === todo.listId,
-                );
-                if (targetList) {
-                  targetList.updatedAt = dayjs().format();
-                }
-              }
-              break;
-            }
-
             case "added": {
-              const { title, completed, parentId, depth, listId } = action;
-              const userId = get().userId; // 获取当前用户ID
-
-              if (!userId) {
-                throw new Error("用户未登录");
-              }
-
-              // 直接添加到独立的tasks数组
-              draftState.tasks.push({
+              // 为新任务生成唯一ID和时间戳
+              const newTask: Todo = {
                 id: uuidv4(),
-                title: title,
-                listId: listId,
-                completed: completed,
-                priority: Priority.None,
-                parentId: parentId || null,
-                depth: depth || 0,
-                userId: userId,
-              });
+                title: action.title,
+                completed: action.completed || false,
+                priority: action.priority || Priority.normal,
+                deadline: action.deadline || undefined,
+                parentId: action.parentId || null,
+                depth: action.depth || 0,
+                tags: action.tags || [],
+                listId: action.listId,
+                groupId: action.groupId || undefined,
+                userId: action.userId || get().userId,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              };
 
-              // 更新清单的更新时间
-              const targetList = draftState.todoListData.find(
-                (list) => list.id === listId,
-              );
-              if (targetList) {
-                targetList.updatedAt = dayjs().format();
+              // 添加到任务数组
+              draftState.tasks.push(newTask);
+
+              // 如果有父任务，更新父任务的子任务信息
+              if (newTask.parentId) {
+                const parentTaskIndex = draftState.tasks.findIndex(
+                  (task) => task.id === newTask.parentId,
+                );
+                if (parentTaskIndex !== -1) {
+                  draftState.tasks[parentTaskIndex].updatedAt =
+                    new Date().toISOString();
+                }
               }
               break;
             }
-
             case "changed": {
-              const { todo } = action;
-              // 直接在tasks数组中查找并替换
-              const index = draftState.tasks.findIndex((d) => d.id === todo.id);
-              if (index !== -1) {
-                draftState.tasks[index] = todo;
-
-                // 更新清单的更新时间
-                const targetList = draftState.todoListData.find(
-                  (list) => list.id === todo.listId,
-                );
-                if (targetList) {
-                  targetList.updatedAt = dayjs().format();
-                }
-              }
-              break;
-            }
-
-            case "deleted": {
-              const { deleteId } = action;
-              // 先找到要删除的任务，以获取其listId
-              const todoToDelete = draftState.tasks.find(
-                (t) => t.id === deleteId,
+              // 找到要更新的任务并更新
+              const todoIndex = draftState.tasks.findIndex(
+                (task) => task.id === action.todo.id,
               );
-              if (todoToDelete) {
-                // 从tasks数组中删除任务及其所有子任务
-                const deleteRecursively = (id: string) => {
-                  draftState.tasks = draftState.tasks.filter((task) => {
-                    if (task.id === id) return false;
-                    if (task.parentId === id) {
-                      // 递归删除子任务
-                      deleteRecursively(task.id);
-                      return false;
-                    }
-                    return true;
-                  });
+              if (todoIndex !== -1) {
+                draftState.tasks[todoIndex] = {
+                  ...draftState.tasks[todoIndex],
+                  ...action.todo,
+                  updatedAt: new Date().toISOString(),
                 };
-
-                deleteRecursively(deleteId);
-
-                // 更新清单的更新时间
-                const targetList = draftState.todoListData.find(
-                  (list) => list.id === todoToDelete.listId,
-                );
-                if (targetList) {
-                  targetList.updatedAt = dayjs().format();
-                }
               }
               break;
             }
-
-            case "deletedAll": {
-              const { listId } = action;
-              // 过滤掉指定清单的已完成任务
-              draftState.tasks = draftState.tasks.filter((task) => {
-                if (task.listId === listId && task.completed) {
-                  return false;
-                }
-                return true;
-              });
-
-              // 更新清单的更新时间
-              const targetList = draftState.todoListData.find(
-                (list) => list.id === listId,
+            case "deleted": {
+              // 从任务数组中移除
+              draftState.tasks = draftState.tasks.filter(
+                (task) => task.id !== action.todo.id,
               );
-              if (targetList) {
-                targetList.updatedAt = dayjs().format();
-              }
-              break;
-            }
-
-            case "replaced": {
-              const { todoList, listId } = action;
-              // 保留其他清单的任务，替换指定清单的任务
-              draftState.tasks = draftState.tasks
-                .filter((task) => task.listId !== listId)
-                .concat(todoList);
-
-              // 更新清单的更新时间
-              const targetList = draftState.todoListData.find(
-                (list) => list.id === listId,
+              // 同时移除子任务
+              draftState.tasks = draftState.tasks.filter(
+                (task) => task.parentId !== action.todo.id,
               );
-              if (targetList) {
-                targetList.updatedAt = dayjs().format();
-              }
               break;
             }
+            default:
+              break;
           }
         }),
       );
+
+      // 对于需要API调用的操作，在state更新后异步调用API
+      const handleApiCall = async () => {
+        const { userId } = useAuthStore.getState();
+        if (!userId) return;
+
+        try {
+          switch (action.type) {
+            case "added":
+              await createTodo({
+                title: action.title,
+                completed: action.completed || false,
+                priority: action.priority || Priority.normal,
+                deadline: action.deadline || undefined,
+                parentId: action.parentId || null,
+                depth: action.depth || 0,
+                tags: action.tags || [],
+                listId: action.listId,
+                groupId: action.groupId || undefined,
+                userId,
+              });
+              break;
+            case "changed":
+              if (action.todo.id) {
+                await updateTodo(action.todo.id, {
+                  ...action.todo,
+                  userId,
+                });
+              }
+              break;
+            case "deleted":
+              if (action.todo.id) {
+                await deleteTodo(action.todo.id);
+              }
+              break;
+          }
+        } catch (error) {
+          console.error(`API操作失败 (${action.type}):`, error);
+          // 这里可以添加错误通知给用户
+        }
+      };
+
+      handleApiCall();
     },
 
-    // 处理清单组相关的action
+    // 处理列表相关的action
     dispatchList: (action: ListGroupAction) => {
       set(
         produce((draftState: TodoState) => {
           switch (action.type) {
-            case "addListGroup": {
-              const { title, emoji, color } = action;
-              const now = dayjs().format();
-              const listId = `group_${Date.now()}`;
-
-              // 添加新清单
-              draftState.todoListData.push({
-                id: listId,
-                title,
-                emoji,
-                color,
-                createdAt: now,
-                updatedAt: now,
-              });
+            case "addedList": {
+              const newList: TodoListData = {
+                id: uuidv4(),
+                title: action.title,
+                userId: action.userId || get().userId,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              };
+              draftState.todoListData.push(newList);
               break;
             }
-
-            case "deleteListGroup": {
-              const { listId } = action;
-              // 删除清单
-              const index = draftState.todoListData.findIndex(
-                (list: TodoListData) => list.id === listId,
+            case "deletedList": {
+              draftState.todoListData = draftState.todoListData.filter(
+                (list) => list.id !== action.listId,
               );
-
-              if (index !== -1) {
-                draftState.todoListData.splice(index, 1);
-                // 同时删除该清单下的所有任务
-                draftState.tasks = draftState.tasks.filter(
-                  (task) => task.listId !== listId,
-                );
+              // 同时删除该列表下的所有任务
+              draftState.tasks = draftState.tasks.filter(
+                (task) => task.listId !== action.listId,
+              );
+              break;
+            }
+            case "changedList": {
+              const listIndex = draftState.todoListData.findIndex(
+                (list) => list.id === action.listId,
+              );
+              if (listIndex !== -1) {
+                draftState.todoListData[listIndex] = {
+                  ...draftState.todoListData[listIndex],
+                  ...action.updates,
+                  updatedAt: new Date().toISOString(),
+                };
               }
               break;
             }
-
-            case "updateListGroup": {
-              const { listId, title, emoji, color } = action;
-              const targetList = draftState.todoListData.find(
-                (list) => list.id === listId,
-              );
-              if (targetList) {
-                if (title !== undefined) targetList.title = title;
-                if (emoji !== undefined) targetList.emoji = emoji;
-                if (color !== undefined) targetList.color = color;
-                targetList.updatedAt = dayjs().format();
-              }
+            default:
               break;
-            }
           }
         }),
       );
+
+      // 对于需要API调用的操作，在state更新后异步调用API
+      const handleApiCall = async () => {
+        const { userId } = useAuthStore.getState();
+        if (!userId) return;
+
+        try {
+          switch (action.type) {
+            case "addedList":
+              await createTodoList({
+                title: action.title,
+                userId,
+              });
+              break;
+          }
+        } catch (error) {
+          console.error(`API操作失败 (${action.type}):`, error);
+        }
+      };
+
+      handleApiCall();
     },
 
     // 处理标签相关的action
     dispatchTag: (action: TagReducerAction) => {
       set(
         produce((draftState: TodoState) => {
-          const draft = draftState.todoTags;
-
           switch (action.type) {
-            case "initializeTags":
-              // 清空当前标签并添加新标签
-              draft.splice(
-                0,
-                draft.length,
-                ...(action.payload || [...todoTag]),
-              );
-              break;
-
-            case "addTag": {
-              const { payload } = action;
-              // 生成标签ID的辅助函数
-              const generateTagId = (existingTags: Tag[]): string => {
-                const maxId = existingTags.reduce((max, tag) => {
-                  const idNum = parseInt(tag.id);
-                  return isNaN(idNum) ? max : Math.max(max, idNum);
-                }, 0);
-                return (maxId + 1).toString();
-              };
-
+            case "addedTag": {
               const newTag: Tag = {
-                ...payload,
-                id: payload.id || generateTagId(draft),
+                id: uuidv4(),
+                name: action.name,
+                color: action.color || "#1890ff",
+                parentId: action.parentId || null,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
               };
-              draft.push(newTag);
+              draftState.todoTags.push(newTag);
               break;
             }
-
-            case "updateTag": {
-              const { id, updates } = action.payload;
-              const tagIndex = draft.findIndex((tag: Tag) => tag.id === id);
+            case "deletedTag": {
+              draftState.todoTags = draftState.todoTags.filter(
+                (tag) => tag.id !== action.tagId,
+              );
+              // 同时从所有任务中移除该标签
+              draftState.tasks = draftState.tasks.map((task) => ({
+                ...task,
+                tags:
+                  task.tags?.filter((tagId) => tagId !== action.tagId) || [],
+              }));
+              break;
+            }
+            case "changedTag": {
+              const tagIndex = draftState.todoTags.findIndex(
+                (tag) => tag.id === action.tagId,
+              );
               if (tagIndex !== -1) {
-                // 使用immer的方式直接更新
-                Object.assign(draft[tagIndex], updates);
+                draftState.todoTags[tagIndex] = {
+                  ...draftState.todoTags[tagIndex],
+                  ...action.updates,
+                  updatedAt: new Date().toISOString(),
+                };
               }
               break;
             }
-
-            case "deleteTag": {
-              const tagId = action.payload;
-              // 不允许删除有子标签的标签
-              const hasChildTags: boolean = draft.some(
-                (tag: Tag) => tag.parentId === tagId,
-              );
-              if (hasChildTags) {
-                console.warn("Cannot delete a tag with child tags");
-                return;
-              }
-              // 过滤掉要删除的标签
-              const indexToDelete = draft.findIndex(
-                (tag: Tag) => tag.id === tagId,
-              );
-              if (indexToDelete !== -1) {
-                draft.splice(indexToDelete, 1);
-              }
-
-              // 从所有任务中移除该标签
-              draftState.tasks.forEach((task: Todo) => {
-                if (task.tags && task.tags.length > 0) {
-                  // 过滤掉要删除的标签ID
-                  task.tags = task.tags.filter((id: string) => id !== tagId);
-                }
-              });
-
-              // 从回收站中的任务中也移除该标签
-              draftState.bin.forEach((task: Todo) => {
-                if (task.tags && task.tags.length > 0) {
-                  // 过滤掉要删除的标签ID
-                  task.tags = task.tags.filter((id: string) => id !== tagId);
-                }
-              });
-
+            default:
               break;
-            }
           }
         }),
       );
+
+      // 对于需要API调用的操作，在state更新后异步调用API
+      const handleApiCall = async () => {
+        try {
+          switch (action.type) {
+            case "addedTag":
+              await createTag({
+                name: action.name,
+                color: action.color || "#1890ff",
+                parentId: action.parentId || null,
+              });
+              break;
+          }
+        } catch (error) {
+          console.error(`API操作失败 (${action.type}):`, error);
+        }
+      };
+
+      handleApiCall();
     },
 
-    // 分组相关操作方法
-    addGroup: (listId: string, groupName: string) => {
+    // 设置激活的列表ID
+    setActiveListId: (id: string) => {
+      set({ activeListId: id });
+    },
+
+    // 设置选中的任务ID
+    setSelectTodoId: (id: string | null) => {
+      set({ selectTodoId: id });
+    },
+
+    // 设置用户ID
+    setUserId: (id: string | null) => {
+      set({ userId: id });
+    },
+
+    // 添加分组
+    addGroup: (listId: string, groupName: string, groupItemIds: string[]) => {
       set(
         produce((draftState: TodoState) => {
-          // 检查是否已存在相同的分组名
-          const existingGroupIndex = draftState.groups.findIndex(
-            (group) => group.listId === listId && group.groupName === groupName,
-          );
+          const newGroup: Group = {
+            id: `${listId}_${groupName.toLowerCase().replace(/\s+/g, "_")}`,
+            listId,
+            groupName,
+            userId: get().userId,
+          };
+          draftState.groups.push(newGroup);
 
-          if (existingGroupIndex === -1) {
-            // 生成唯一id（使用listId和描述性字符串组合）
-            const id = `${listId}_${groupName.toLowerCase().replace(/\s+/g, "_")}`;
-            // 添加新分组
-            draftState.groups.push({
-              id,
-              listId,
-              groupName,
+          // 更新任务的groupId
+          if (groupItemIds && groupItemIds.length > 0) {
+            draftState.tasks.forEach((task) => {
+              if (groupItemIds.includes(task.id)) {
+                task.groupId = newGroup.id;
+                task.updatedAt = new Date().toISOString();
+              }
             });
           }
         }),
       );
     },
 
+    // 更新分组
     updateGroup: (nGroup: Group) => {
       set(
         produce((draftState: TodoState) => {
-          let n = draftState.groups.findIndex(
+          const groupIndex = draftState.groups.findIndex(
             (group) => group.id === nGroup.id,
           );
-          console.log(draftState.groups[n]);
-          draftState.groups[n] = nGroup;
+          if (groupIndex !== -1) {
+            draftState.groups[groupIndex] = nGroup;
+          }
         }),
       );
     },
 
-    deleteGroup: (groupId: string) => {
+    // 删除分组
+    deleteGroup: (listId: string, groupName: string) => {
       set(
         produce((draftState: TodoState) => {
+          const groupId = `${listId}_${groupName.toLowerCase().replace(/\s+/g, "_")}`;
           draftState.groups = draftState.groups.filter(
             (group) => group.id !== groupId,
           );
+
+          // 清除该分组下所有任务的groupId
+          draftState.tasks.forEach((task) => {
+            if (task.groupId === groupId) {
+              task.groupId = undefined;
+              task.updatedAt = new Date().toISOString();
+            }
+          });
         }),
       );
     },
 
+    // 根据列表ID获取分组
     getGroupsByListId: (listId: string) => {
-      const state = get();
-      return state.groups.filter((group) => group.listId === listId);
-    },
-
-    // 设置当前激活的任务组ID
-    setActiveListId: (id: string) => {
-      set({ activeListId: id });
-    },
-
-    // 设置当前选中的任务ID
-    setSelectTodoId: (id: string | null) => {
-      set({ selectTodoId: id });
-    },
-
-    // 辅助方法 - 用于查询和获取特定数据
-    getTodoById: (id: string) => {
-      const state = get();
-      // 直接在独立的tasks数组中查找
-      const todo = state.tasks.find((t) => t.id === id);
-      if (todo) return todo;
-      // 如果在正常任务中找不到，在回收站中查找
-      return state.bin.find((t) => t.id === id) || null;
-    },
-
-    setUserId: (id: string | null) => set({ userId: id }),
-
-    // 根据任务ID获取所属的任务组
-    getGroupByTodoId: (todoId: string) => {
-      const state = get();
-      // 先找到任务
-      const todo = state.tasks.find((t) => t.id === todoId);
-      if (todo) {
-        // 再根据任务的listId找到所属清单
-        return (
-          state.todoListData.find((list) => list.id === todo.listId) || null
-        );
-      }
-      return null;
+      const { groups } = get();
+      return groups.filter((group) => group.listId === listId);
     },
 
     // 将任务移动到回收站
     moveToBin: (todo: Todo) => {
       set(
         produce((draftState: TodoState) => {
-          // 从独立的tasks数组中移除任务
+          // 从任务数组中移除
           draftState.tasks = draftState.tasks.filter(
             (task) => task.id !== todo.id,
           );
-
-          // 更新清单的更新时间
-          const targetList = draftState.todoListData.find(
-            (list) => list.id === todo.listId,
-          );
-          if (targetList) {
-            targetList.updatedAt = dayjs().format();
-          }
-
-          // 将任务添加到回收站，并记录删除时间
-          const deletedTodo = {
-            ...todo,
-            deletedAt: dayjs().format(),
-          };
-          draftState.bin.push(deletedTodo);
+          // 添加到回收站
+          draftState.bin.push(todo);
         }),
       );
     },
@@ -579,27 +477,16 @@ export const useTodoStore = create<TodoState>()(
     restoreFromBin: (todoId: string) => {
       set(
         produce((draftState: TodoState) => {
-          const binItemIndex = draftState.bin.findIndex(
-            (item: Todo & { deletedAt: string }) => item.id === todoId,
+          // 找到要恢复的任务
+          const todoIndex = draftState.bin.findIndex(
+            (todo) => todo.id === todoId,
           );
-
-          if (binItemIndex === -1) return;
-
-          const todoToRestore = draftState.bin[binItemIndex];
-
-          // 从回收站移除
-          draftState.bin.splice(binItemIndex, 1);
-
-          // 恢复到独立的tasks数组
-          const { deletedAt, ...restoredTodo } = todoToRestore;
-          draftState.tasks.push(restoredTodo);
-
-          // 更新清单的更新时间
-          const targetList = draftState.todoListData.find(
-            (list) => list.id === todoToRestore.listId,
-          );
-          if (targetList) {
-            targetList.updatedAt = dayjs().format();
+          if (todoIndex !== -1) {
+            const todo = draftState.bin[todoIndex];
+            // 从回收站移除
+            draftState.bin.splice(todoIndex, 1);
+            // 添加回任务数组
+            draftState.tasks.push(todo);
           }
         }),
       );
@@ -608,188 +495,211 @@ export const useTodoStore = create<TodoState>()(
     // 从回收站删除单个任务
     deleteFromBin: (todoId: string) => {
       set(
-        produce((draftState) => {
-          const indexToDelete = draftState.bin.findIndex(
-            (item: Todo & { deletedAt: string }) => item.id === todoId,
-          );
-          if (indexToDelete !== -1) {
-            draftState.bin.splice(indexToDelete, 1);
-          }
+        produce((draftState: TodoState) => {
+          draftState.bin = draftState.bin.filter((todo) => todo.id !== todoId);
         }),
       );
     },
 
     // 清空回收站
     emptyBin: () => {
-      set(
-        produce((draftState) => {
-          draftState.bin = [];
-        }),
-      );
+      set({ bin: [] });
     },
 
     // 获取回收站中的所有任务
     getBinTodos: () => {
-      const state = get();
-      // 按删除时间倒序排序（最近删除的在前）
-      return [...state.bin].sort(
-        (a: Todo & { deletedAt: string }, b: Todo & { deletedAt: string }) => {
-          const dateA = a.deletedAt ? new Date(a.deletedAt).getTime() : 0;
-          const dateB = b.deletedAt ? new Date(b.deletedAt).getTime() : 0;
-          return dateB - dateA;
-        },
+      return get().bin;
+    },
+
+    // 根据ID获取任务
+    getTodoById: (id: string) => {
+      const { tasks } = get();
+      return tasks.find((task) => task.id === id) || null;
+    },
+
+    // 根据任务ID获取所属分组
+    getGroupByTodoId: (todoId: string) => {
+      const { tasks, groups, todoListData } = get();
+      const task = tasks.find((t) => t.id === todoId);
+      if (!task || !task.groupId) return null;
+
+      const group = groups.find((g) => g.id === task.groupId);
+      if (!group) return null;
+
+      return todoListData.find((list) => list.id === group.listId) || null;
+    },
+
+    // 获取当前激活的列表数据
+    getActiveListData: () => {
+      const { todoListData, activeListId } = get();
+      // 返回激活的列表数据，或者默认数据
+      return (
+        todoListData.find((list) => list.id === activeListId) || {
+          id: "",
+          title: "我的待办事项",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          userId: "",
+        }
       );
     },
-  }),
-  // 需要本地化再解开
-  // {
-  //   name: "todo-storage", // localStorage的键名
-  //   partialize: (state) => ({
-  //     todoListData: state.todoListData,
-  //     todoTags: state.todoTags,
-  //     activeListId: state.activeListId,
-  //     bin: state.bin,
-  //   }),
-  // },
-  // ),
-);
 
-// 使用todostore的get方法的版本
-export const getActiveListData = (): TodoListData => {
-  const defaultData: TodoListData = {
-    createdAt: "",
-    id: "",
-    title: "",
-    updatedAt: "",
-  };
+    // 获取当前激活列表的任务
+    getActiveListTasks: () => {
+      const token = localStorage.getItem("token");
+      const { activeListId, tasks, bin, todoTags } = get();
 
-  // 获取store实例
-  const store = useTodoStore.getState();
-  const { activeListId, todoTags, todoListData } = store;
+      // 安全检查 - 确保state和相关属性存在
+      if (!activeListId || !tasks || !token) {
+        return [];
+      }
 
-  // 安全检查 - 确保state和相关属性存在
-  if (!activeListId) {
-    return defaultData;
-  }
+      let resultTasks: Todo[] = [];
+      // 如果是普通清单，返回清单关联的任务
+      if (get().todoListData.some((l: TodoListData) => activeListId === l.id)) {
+        resultTasks = tasks.filter((task) => task.listId === activeListId);
+      } else {
+        // 根据不同的视图类型返回对应的任务
+        switch (activeListId) {
+          // 今天
+          case "aa":
+            resultTasks = tasks.filter(
+              (t) => t.deadline && dayjs(t.deadline).isSame(dayjs(), "day"),
+            );
+            break;
 
-  let title: string;
-  switch (activeListId) {
-    case "aa":
-      title = "今天";
-      break;
-    case "bb":
-      title = "最近七天";
-      break;
-    case "bin":
-      title = "回收站";
-      break;
-    case "cp":
-      title = "已完成";
-      break;
-    default:
-      title = todoTags?.find((t: Tag) => t.id === activeListId)?.name || "";
-  }
+          // 最近七天
+          case "bb":
+            resultTasks = tasks.filter(
+              (t) =>
+                t.deadline &&
+                dayjs(t.deadline).isAfter(dayjs().subtract(7, "day")) &&
+                dayjs(t.deadline).isBefore(dayjs().add(7, "day")),
+            );
+            break;
 
-  // 确保todoListData存在
-  if (!todoListData) {
-    return defaultData;
-  }
+          // 回收站
+          case "bin":
+            resultTasks = [...bin];
+            break;
 
-  // 如果是普通清单，返回清单信息
-  if (
-    activeListId !== "aa" &&
-    activeListId !== "bb" &&
-    activeListId !== "bin" &&
-    activeListId !== "cp"
-  ) {
-    const list = todoListData.find((item) => item.id === activeListId);
-    if (list) {
-      return {
-        ...list,
-      };
-    }
-  }
+          // 已完成
+          case "cp":
+            resultTasks = tasks.filter((t) => t.completed);
+            break;
 
-  // 对于特殊视图和标签，返回格式化的清单信息
-  return {
-    ...defaultData,
-    id: activeListId,
-    title: title,
-  };
-};
+          // 标签筛选
+          default:
+            resultTasks = tasks.filter((t) => {
+              if (!t.tags) return false;
+              // 直接匹配标签ID
+              if (t.tags.includes(activeListId)) return true;
+              // 检查子标签
+              const subTags = todoTags.filter(
+                (ot) => ot.parentId === activeListId,
+              );
+              return subTags.some((st) => t.tags?.includes(st.id));
+            });
+            break;
+        }
+      }
 
-// 使用todostore的get方法的版本
-export const getActiveListTasks = (): Todo[] => {
-  // 获取store实例
-  const store = useTodoStore.getState();
-  const { userId } = useAuthStore();
-  const { activeListId, tasks, bin, todoTags } = store;
-  // console.log(activeListId, tasks, userId);
-  console.log(userId);
-  // 安全检查 - 确保state和相关属性存在
-  if (!activeListId || !tasks || !userId) {
-    return [];
-  }
-  let userTasks: Todo[] = allTasks.filter(
-    (task: Todo) => task.userId === userId,
-  );
-  // 初始化任务数组
-  let resultTasks: Todo[] = [];
+      // 去重
+      resultTasks = Array.from(
+        new Map(resultTasks.map((o: Todo) => [o.id, o])).values(),
+      );
 
-  // 如果是普通清单，返回清单关联的任务
-  if (todoListData.some((l: TodoListData) => activeListId === l.id)) {
-    resultTasks = userTasks.filter((task) => task.listId === activeListId);
-  } else {
-    // 根据不同的视图类型返回对应的任务
-    switch (activeListId) {
-      // 今天
-      case "aa":
-        resultTasks = tasks.filter(
-          (t) => t.deadline && dayjs(t.deadline).isSame(dayjs(), "day"),
-        );
-        break;
+      return resultTasks;
+    },
 
-      // 最近七天
-      case "bb":
-        resultTasks = tasks.filter(
-          (t) =>
-            t.deadline &&
-            dayjs(t.deadline).isAfter(dayjs().subtract(7, "day")) &&
-            dayjs(t.deadline).isBefore(dayjs().add(7, "day")),
-        );
-        break;
+    // API加载数据方法
+    loadData: async () => {
+      try {
+        // 在非组件环境中，使用getState()获取authStore的状态
+        const authState = useAuthStore.getState();
+        const userId = authState.userId;
 
-      // 回收站
-      case "bin":
-        resultTasks = [...bin];
-        break;
+        if (!userId) {
+          throw new Error("用户未登录");
+        }
 
-      // 已完成
-      case "cp":
-        resultTasks = tasks.filter((t) => t.completed);
-        break;
+        console.log("正在加载数据...");
 
-      // 标签筛选
-      default:
-        resultTasks = tasks.filter((t) => {
-          if (!t.tags) return false;
-          // 直接匹配标签ID
-          if (t.tags.includes(activeListId)) return true;
-          // 检查子标签
-          const subTags = todoTags.filter((ot) => ot.parentId === activeListId);
-          return subTags.some((st) => t.tags?.includes(st.id));
+        // 并行加载所有数据
+        const [todoLists, todos, tags, groups] = await Promise.all([
+          getAllTodoLists(),
+          getAllTodos(),
+          getAllTags(),
+          getAllGroups(),
+        ]);
+
+        console.log("数据加载成功:", {
+          todoLists: todoLists.length,
+          todos: todos.length,
+          tags: tags.length,
+          groups: groups.length,
         });
-        break;
-    }
-  }
 
-  // 去重
-  resultTasks = Array.from(
-    new Map(resultTasks.map((o: Todo) => [o.id, o])).values(),
-  );
-
-  return resultTasks;
-};
+        set({
+          todoListData: todoLists,
+          tasks: todos,
+          todoTags: tags,
+          groups: groups,
+          // 设置第一个列表为激活状态
+          activeListId: todoLists.length > 0 ? todoLists[0].id : "",
+        });
+      } catch (error) {
+        console.error("加载待办数据失败:", error);
+        // 在API调用失败时，可以加载一些模拟数据作为fallback
+        set({
+          todoListData: [
+            {
+              id: "fallback_list",
+              title: "我的待办事项",
+              userId: "fallback_user",
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+          ],
+          tasks: [
+            {
+              id: "fallback_task_1",
+              title: "学习 React",
+              completed: false,
+              priority: 2,
+              deadline: "2025-09-22",
+              parentId: null,
+              depth: 0,
+              tags: [],
+              listId: "fallback_list",
+              userId: "fallback_user",
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+            {
+              id: "fallback_task_2",
+              title: "完成项目文档",
+              completed: false,
+              priority: 1,
+              deadline: "2025-09-18",
+              parentId: null,
+              depth: 0,
+              tags: [],
+              listId: "fallback_list",
+              userId: "fallback_user",
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+          ],
+          todoTags: [],
+          groups: [],
+          activeListId: "fallback_list",
+        });
+      }
+    },
+  }),
+  // );
+);
 
 // 辅助hook - 获取当前选中的任务
 export const useSelectTodo = (): Todo | null => {
@@ -808,4 +718,14 @@ export const useSelectTodo = (): Todo | null => {
 export const useBinTodos = (): Todo[] => {
   const getBinTodos = useTodoStore((state) => state.getBinTodos);
   return getBinTodos();
+};
+
+// 辅助hook - 获取当前激活的列表数据
+export const getActiveListData = (): TodoListData => {
+  return useTodoStore.getState().getActiveListData();
+};
+
+// 辅助函数 - 获取当前激活列表的任务
+export const getActiveListTasks = (): Todo[] => {
+  return useTodoStore.getState().getActiveListTasks();
 };

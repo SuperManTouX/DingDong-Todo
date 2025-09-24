@@ -22,6 +22,7 @@ const LoginPage: React.FC = () => {
       setLoading(true);
       await login(values.username, values.password);
       message.success("登录成功");
+
       navigate("/");
     } catch (error) {
       message.error("登录失败：" + (error as Error).message);
