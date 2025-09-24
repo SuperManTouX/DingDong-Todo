@@ -1,19 +1,15 @@
 import React, { useEffect } from "react";
-import { Layout, MenuProps } from "antd";
+import { Layout, type MenuProps } from "antd";
 import {
   useTodoStore,
   getActiveListData,
   useSelectTodo,
-  getActiveListTasks,
 } from "@/store/todoStore";
 import FilteredTodoList from "@/Layout/FilteredTodoList";
 import EditTodo from "@/Layout/EditTodo";
-import { Outlet } from "react-router-dom";
 import Sider from "antd/es/layout/Sider";
 import SideMenu from "@/Layout/SideMenu";
-import { useThemeStore } from "@/store/themeStore";
 import { useAuthStore } from "@/store/authStore";
-import { generateAntdThemeConfig } from "@/theme/themeConfig";
 import ListGroupManager from "@/components/ListGroupManager";
 
 /**

@@ -31,7 +31,8 @@ export default function FilterGroup({
   hasSubTasks?: (taskId: string) => boolean;
   isUngrouped?: boolean;
 }) {
-  const { addGroup, deleteGroup, activeListId, getGroupsByListId } = useTodoStore();
+  const { addGroup, deleteGroup, activeListId, getGroupsByListId } =
+    useTodoStore();
 
   // 状态管理
   const [showInput, setShowInput] = useState(false);
@@ -101,7 +102,7 @@ export default function FilterGroup({
 
   // 获取当前清单的所有分组
   const groups = getGroupsByListId(activeListId);
-  
+
   // 组操作菜单选项
   const menuItems: MenuProps["items"] = [
     {
@@ -122,7 +123,9 @@ export default function FilterGroup({
       onClick: ({ domEvent }) => {
         domEvent.stopPropagation();
         // 查找要删除的组的id
-        const groupToDelete = groups.find(group => group.groupName === formatTitle());
+        const groupToDelete = groups.find(
+          (group) => group.groupName === formatTitle(),
+        );
         if (groupToDelete?.id) {
           deleteGroup(groupToDelete.id);
           message.success(`成功删除组"${formatTitle()}"`);
@@ -135,7 +138,7 @@ export default function FilterGroup({
     <Collapse
       items={[
         {
-          key: formatTitle(),
+          key: "1",
           label: (
             <div
               style={{
@@ -175,7 +178,7 @@ export default function FilterGroup({
             </div>
           ),
           children: (
-            <div className="filter-group-content">
+            <div className="filter-group-content" style={{ minHeight: "2rem" }}>
               {children ? (
                 <SortableList items={getSortableTaskIds()}>
                   {children}

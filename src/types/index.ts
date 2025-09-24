@@ -10,7 +10,7 @@ export interface TodoListGroupAction {
 
 // 新增列表组管理相关的Action类型
 export interface AddTodoListGroupAction {
-  type: "addListGroup";
+  type: "addedList";
   title: string;
   // 可选的emoji图标
   emoji?: string;
@@ -19,7 +19,7 @@ export interface AddTodoListGroupAction {
 }
 
 export interface UpdateTodoListGroupAction {
-  type: "updateListGroup";
+  type: "updatedList";
   listId: string;
   title?: string;
   emoji?: string;
@@ -27,7 +27,7 @@ export interface UpdateTodoListGroupAction {
 }
 
 export interface DeleteTodoListGroupAction {
-  type: "deleteListGroup";
+  type: "deleteList";
   listId: string;
 }
 
@@ -50,6 +50,7 @@ export interface TodoListData {
   title: string;
   emoji?: string; // 清单的emoji图标
   color?: string; // 清单的颜色
+  userId: string;
   createdAt: string;
   updatedAt: string;
 }

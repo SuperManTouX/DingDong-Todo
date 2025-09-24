@@ -1,7 +1,5 @@
 import api from './api';
 
-import api from "./api";
-
 interface LoginParams {
   username: string;
   password: string;
@@ -71,6 +69,8 @@ export const getUserInfo = async (): Promise<UserInfo> => {
 // 用户登出
 export const logout = async (): Promise<void> => {
   try {
+    // 调用后端logout接口
+    await api.post('/auth/logout');
     // 清除本地存储的token
     localStorage.removeItem('token');
     // 可以在这里添加其他清理操作，如清除用户信息等

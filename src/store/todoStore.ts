@@ -14,11 +14,19 @@ import {
   deleteTodo,
   getAllTodoLists,
   createTodoList,
+  updateTodoList,
+  deleteTodoList,
   getAllTags,
   createTag,
   getAllGroups,
   createGroup,
+  getBinItems,
+  moveTaskToBin,
+  restoreFromBin,
+  deleteFromBin,
+  emptyBin,
 } from "../services/todoService";
+import { collectTaskWithSubtasks } from '@/utils/taskRecursionUtils';
 
 // 完整的状态类型定义
 interface TodoState {
@@ -85,7 +93,7 @@ export const useTodoStore = create<TodoState>()(
     activeGroup: {
       id: "",
       title: "",
-      tasks: [],
+      userId: "",
       createdAt: "",
       updatedAt: "",
     },
@@ -141,6 +149,7 @@ export const useTodoStore = create<TodoState>()(
               const newTask: Todo = {
                 id: uuidv4(),
                 title: action.title,
+                text: action.text || undefined,
                 completed: action.completed || false,
                 priority: action.priority || Priority.normal,
                 deadline: action.deadline || undefined,
@@ -245,70 +254,82 @@ export const useTodoStore = create<TodoState>()(
     },
 
     // 处理列表相关的action
-    dispatchList: (action: ListGroupAction) => {
-      set(
-        produce((draftState: TodoState) => {
-          switch (action.type) {
-            case "addedList": {
-              const newList: TodoListData = {
-                id: uuidv4(),
-                title: action.title,
-                userId: action.userId || get().userId,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              };
-              draftState.todoListData.push(newList);
-              break;
-            }
-            case "deletedList": {
-              draftState.todoListData = draftState.todoListData.filter(
-                (list) => list.id !== action.listId,
-              );
-              // 同时删除该列表下的所有任务
-              draftState.tasks = draftState.tasks.filter(
-                (task) => task.listId !== action.listId,
-              );
-              break;
-            }
-            case "changedList": {
-              const listIndex = draftState.todoListData.findIndex(
-                (list) => list.id === action.listId,
-              );
-              if (listIndex !== -1) {
-                draftState.todoListData[listIndex] = {
-                  ...draftState.todoListData[listIndex],
-                  ...action.updates,
-                  updatedAt: new Date().toISOString(),
-                };
-              }
-              break;
-            }
-            default:
-              break;
-          }
-        }),
-      );
+    dispatchList: async (action: ListGroupAction) => {
+      const authState = useAuthStore.getState();
+      const { userId } = authState;
+      if (!userId) return;
 
-      // 对于需要API调用的操作，在state更新后异步调用API
-      const handleApiCall = async () => {
-        const { userId } = useAuthStore.getState();
-        if (!userId) return;
+      try {
+        // 先调用API
+        switch (action.type) {
+          case "addedList": {
+            const listData = {
+              title: action.title,
+              emoji: action.emoji,
+              color: action.color,
+              userId,
+            };
 
-        try {
-          switch (action.type) {
-            case "addedList":
-              await createTodoList({
-                title: action.title,
-                userId,
-              });
-              break;
+            // 等待API调用成功
+            const createdList = await createTodoList(listData);
+
+            // API调用成功后再更新本地状态
+            set(
+              produce((draftState: TodoState) => {
+                draftState.todoListData.push(createdList);
+              }),
+            );
+            break;
           }
-        } catch (error) {
-          console.error(`API操作失败 (${action.type}):`, error);
+          case "updatedList": {
+            const updateData = {
+              title: action.title,
+              emoji: action.emoji,
+              color: action.color,
+            };
+
+            // 等待API调用成功
+            const updatedList = await updateTodoList(action.listId, updateData);
+
+            // API调用成功后再更新本地状态
+            set(
+              produce((draftState: TodoState) => {
+                const listIndex = draftState.todoListData.findIndex(
+                  (list) => list.id === action.listId,
+                );
+                if (listIndex !== -1) {
+                  draftState.todoListData[listIndex] = updatedList;
+                }
+              }),
+            );
+            break;
+          }
+          case "deletedList": {
+            // 等待API调用成功
+            await deleteTodoList(action.listId);
+
+            // API调用成功后再更新本地状态
+            set(
+              produce((draftState: TodoState) => {
+                draftState.todoListData = draftState.todoListData.filter(
+                  (list) => list.id !== action.listId,
+                );
+                // 同时删除该列表下的所有任务
+                draftState.tasks = draftState.tasks.filter(
+                  (task) => task.listId !== action.listId,
+                );
+              }),
+            );
+            break;
+          }
+          default:
+            break;
         }
-      };
-
-      handleApiCall();
+      } catch (error) {
+        console.error(`API操作失败 (${action.type}):`, error);
+        // 可以在这里添加用户友好的错误提示
+        throw error; // 重新抛出错误以便调用者可以处理
+      }
     },
 
     // 处理标签相关的action
@@ -460,50 +481,81 @@ export const useTodoStore = create<TodoState>()(
     },
 
     // 将任务移动到回收站
-    moveToBin: (todo: Todo) => {
-      set(
-        produce((draftState: TodoState) => {
-          // 从任务数组中移除
-          draftState.tasks = draftState.tasks.filter(
-            (task) => task.id !== todo.id,
-          );
-          // 添加到回收站
-          draftState.bin.push(todo);
-        }),
-      );
+    moveToBin: async (todo: Todo) => {
+      try {
+        // 调用API将任务移至回收站
+        const response = await moveTaskToBin(todo.id);
+
+        set(
+          produce((draftState: TodoState) => {
+            // 使用通用工具函数收集所有需要移动的任务
+            const tasksToMove = collectTaskWithSubtasks(draftState.tasks, todo.id);
+            
+            // 批量移除任务
+            tasksToMove.forEach(task => {
+              draftState.tasks = draftState.tasks.filter(t => t.id !== task.id);
+            });
+            
+            // 批量添加到回收站
+            draftState.bin.push(...tasksToMove);
+          }),
+        );
+
+        return response;
+      } catch (error) {
+        console.error("移动任务到回收站失败:", error);
+        throw error;
+      }
     },
 
     // 从回收站恢复任务
-    restoreFromBin: (todoId: string) => {
-      set(
-        produce((draftState: TodoState) => {
-          // 找到要恢复的任务
-          const todoIndex = draftState.bin.findIndex(
-            (todo) => todo.id === todoId,
-          );
-          if (todoIndex !== -1) {
-            const todo = draftState.bin[todoIndex];
-            // 从回收站移除
-            draftState.bin.splice(todoIndex, 1);
-            // 添加回任务数组
-            draftState.tasks.push(todo);
-          }
-        }),
-      );
+    restoreFromBin: async (todoId: string) => {
+      try {
+        const response = await restoreFromBin(todoId);
+
+        // 重新加载数据以确保状态同步
+        await get().loadData();
+
+        return response;
+      } catch (error) {
+        console.error("恢复任务失败:", error);
+        throw error;
+      }
     },
 
     // 从回收站删除单个任务
-    deleteFromBin: (todoId: string) => {
-      set(
-        produce((draftState: TodoState) => {
-          draftState.bin = draftState.bin.filter((todo) => todo.id !== todoId);
-        }),
-      );
+    deleteFromBin: async (todoId: string) => {
+      try {
+        const response = await deleteFromBin(todoId);
+
+        set(
+          produce((draftState: TodoState) => {
+            // 从内存中的bin数组移除
+            draftState.bin = draftState.bin.filter(
+              (todo) => todo.id !== todoId,
+            );
+          }),
+        );
+
+        return response;
+      } catch (error) {
+        console.error("永久删除任务失败:", error);
+        throw error;
+      }
     },
 
     // 清空回收站
-    emptyBin: () => {
-      set({ bin: [] });
+    emptyBin: async () => {
+      try {
+        const response = await emptyBin();
+
+        set({ bin: [] });
+
+        return response;
+      } catch (error) {
+        console.error("清空回收站失败:", error);
+        throw error;
+      }
     },
 
     // 获取回收站中的所有任务
@@ -532,6 +584,40 @@ export const useTodoStore = create<TodoState>()(
     // 获取当前激活的列表数据
     getActiveListData: () => {
       const { todoListData, activeListId } = get();
+      switch (activeListId) {
+        case "aa":
+          return {
+            id: "",
+            title: "今天",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            userId: "",
+          };
+        case "bb":
+          return {
+            id: "",
+            title: "最近七天",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            userId: "",
+          };
+        case "bin":
+          return {
+            id: "",
+            title: "回收站",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            userId: "",
+          };
+        case "cp":
+          return {
+            id: "",
+            title: "已完成",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            userId: "",
+          };
+      }
       // 返回激活的列表数据，或者默认数据
       return (
         todoListData.find((list) => list.id === activeListId) || {
@@ -626,11 +712,12 @@ export const useTodoStore = create<TodoState>()(
         console.log("正在加载数据...");
 
         // 并行加载所有数据
-        const [todoLists, todos, tags, groups] = await Promise.all([
+        const [todoLists, todos, tags, groups, bin] = await Promise.all([
           getAllTodoLists(),
           getAllTodos(),
           getAllTags(),
           getAllGroups(),
+          getBinItems(),
         ]);
 
         console.log("数据加载成功:", {
@@ -638,6 +725,7 @@ export const useTodoStore = create<TodoState>()(
           todos: todos.length,
           tags: tags.length,
           groups: groups.length,
+          bin: bin.length,
         });
 
         set({
@@ -645,6 +733,7 @@ export const useTodoStore = create<TodoState>()(
           tasks: todos,
           todoTags: tags,
           groups: groups,
+          bin: bin,
           // 设置第一个列表为激活状态
           activeListId: todoLists.length > 0 ? todoLists[0].id : "",
         });
