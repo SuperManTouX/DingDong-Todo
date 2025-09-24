@@ -4,12 +4,11 @@ import type { MenuProps } from "antd";
 import type { DropdownProps } from "antd";
 import { useAuthStore } from "@/store/authStore";
 import { useTodoStore } from "@/store/todoStore";
-import {
-  CheckSquareOutlined,
-  CheckSquareTwoTone,
-  ClockCircleFilled,
-} from "@ant-design/icons";
+
 import { useNavigate } from "react-router-dom";
+import { message } from "@/utils/antdStatic";
+import { MESSAGES } from "@/constants/messages";
+import { CheckSquareOutlined, ClockCircleFilled } from "@ant-design/icons";
 
 /**
  * 侧边栏导航组件
@@ -54,8 +53,14 @@ const SidebarNav: React.FC = () => {
 
   // 处理用户注销
   const handleLogout = async () => {
-    await logout();
-    setUserId(null); // 清除todoStore中的用户ID
+    try {
+      await logout();
+      message.success(MESSAGES.SUCCESS.USER_LOGGED_OUT);
+    } catch (error) {
+      message.error(MESSAGES.WARNING.LOGOUT_FAILED);
+    } finally {
+      setUserId(null); // 清除todoStore中的用户ID
+    }
   };
 
   // 下拉菜单配置

@@ -1,17 +1,18 @@
 // src/constants/messages.ts
 export const MESSAGES = {
   // 成功消息
-  SUCCESS: {
-    LIST_ADDED: "清单添加成功",
-    LIST_UPDATED: "清单更新成功",
-    LIST_DELETED: "清单已删除",
-    TAG_DELETED: "标签已删除",
-    TAG_ADDED: "标签添加成功",
-    TAG_UPDATED: "标签更新成功",
-    TASK_DELETED: "删除成功",
-    TASK_RESTORED: "恢复完成",
-    TASK_PERMANENTLY_DELETED: "删除完成",
-  },
+SUCCESS: {
+  LIST_ADDED: "清单添加成功",
+  LIST_UPDATED: "清单更新成功",
+  LIST_DELETED: "清单已删除",
+  TAG_DELETED: "标签已删除",
+  TAG_ADDED: "标签添加成功",
+  TAG_UPDATED: "标签更新成功",
+  TASK_DELETED: "删除成功",
+  TASK_RESTORED: "恢复完成",
+  TASK_PERMANENTLY_DELETED: "删除完成",
+  USER_LOGGED_OUT: "用户已成功注销",
+},
 
   // 信息消息
   INFO: {
@@ -28,11 +29,17 @@ export const MESSAGES = {
   },
 
   // 警告消息
-  WARNING: {
-    EMPTY_LIST_NAME: "清单名称不能为空",
-    EMPTY_TAG_NAME: "标签名称不能为空",
-    SUBTASK_NOT_AVAILABLE: "添加子任务功能不可用",
-  },
+WARNING: {
+  EMPTY_LIST_NAME: "清单名称不能为空",
+  EMPTY_TAG_NAME: "标签名称不能为空",
+  SUBTASK_NOT_AVAILABLE: "添加子任务功能不可用",
+  LOGOUT_FAILED: "注销失败，请重试",
+},
+
+  // 错误消息
+  ERROR: {
+    OPERATION_FAILED: "操作失败，请重试"
+  }
 };
 
 // 消息格式化工具函数

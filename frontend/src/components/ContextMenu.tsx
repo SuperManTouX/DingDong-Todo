@@ -168,20 +168,27 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
       key: "delete",
       icon: <DeleteOutlined />,
       label: "删除",
-      onClick: () => {
-        moveToBin(todo);
-        message.success(MESSAGES.SUCCESS.TASK_DELETED);
+      onClick: async () => {
+        try {
+          await moveToBin(todo);
+          message.success(MESSAGES.SUCCESS.TASK_DELETED);
+        } catch (error) {
+          message.error("删除任务失败，请重试");
+        }
       },
-    },
-  ];
+    }];
   const binItems: MenuProps["items"] = [
     {
       key: "recover",
       icon: <RedoOutlined />,
       label: <span>恢复</span>,
-      onClick: () => {
-        restoreFromBin(todo.id);
-        message.success(MESSAGES.SUCCESS.TASK_RESTORED);
+      onClick: async () => {
+        try {
+          await restoreFromBin(todo.id);
+          message.success(MESSAGES.SUCCESS.TASK_RESTORED);
+        } catch (error) {
+          message.error("恢复任务失败，请重试");
+        }
       },
     },
     {
@@ -196,9 +203,15 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
           cancelText: "取消",
           onOk() {
             return new Promise<void>((resolve) => {
-              deleteFromBin(todo.id);
-              message.success(MESSAGES.SUCCESS.TASK_PERMANENTLY_DELETED);
-              resolve();
+              deleteFromBin(todo.id)
+                .then(() => {
+                  message.success(MESSAGES.SUCCESS.TASK_PERMANENTLY_DELETED);
+                  resolve();
+                })
+                .catch(() => {
+                  message.error("彻底删除任务失败，请重试");
+                  resolve();
+                });
             });
           },
           onCancel() {

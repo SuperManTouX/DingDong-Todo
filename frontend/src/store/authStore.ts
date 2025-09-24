@@ -18,7 +18,7 @@ interface AuthState {
     username: string,
     email: string,
     password: string,
-  ) => Promise<void>;
+  ) => Promise<{ id: string; username: string; email: string }>;
   logout: () => void;
   loadUserInfo: () => Promise<void>;
 }
@@ -53,6 +53,7 @@ export const useAuthStore = create<AuthState>()(
             userId: response.user.id, 
             isAuthenticated: true 
           });
+          return response.user;
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : "注册失败";
           throw new Error(errorMessage);

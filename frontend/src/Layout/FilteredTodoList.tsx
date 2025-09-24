@@ -17,10 +17,9 @@ import { getActiveListTasks } from "@/store/todoStore";
 export default function FilteredTodoList({ groupName }: { groupName: string }) {
   // 获取所有任务，然后根据用户ID过滤
   const tasks = getActiveListTasks();
-  console.log(tasks);
   // 使用hooks获取各种功能
-  const { groupMode, groupedTasks, timeGroupedTasks, ungroupedTasks } =
-    useTodoGrouping(tasks);
+  const { groupMode, displayGroups, allTasks } = useTodoGrouping(tasks);
+  console.log(displayGroups);
   const {
     title,
     showType,
@@ -94,120 +93,31 @@ export default function FilteredTodoList({ groupName }: { groupName: string }) {
                   />
                 ))}
 
-              {groupMode === "normal" && (
-                // 普通分组模式
-                <>
-                  {/* 渲染已分组的任务 */}
-                  {groupedTasks.map((group) => (
-                    <FilterGroup
-                      key={group.groupName}
-                      title={group.groupName}
-                      tasks={group.tasks}
-                    >
-                      {getHierarchicalTasksForGroup(group.tasks).map((item) => (
-                        <TaskItemRenderer
-                          key={
-                            typeof item === "object" && "id" in item
-                              ? item.id
-                              : `group-${Math.random()}`
-                          }
-                          item={item}
-                          expandedTasks={expandedTasks}
-                          hasSubTasks={hasSubTasks}
-                          toggleTaskExpand={toggleTaskExpand}
-                        />
-                      ))}
-                    </FilterGroup>
-                  ))}
-
-                  {/* 渲染未分组的任务 */}
-                  {ungroupedTasks.length > 0 && (
-                    <FilterGroup title="未分组" tasks={ungroupedTasks}>
-                      {getHierarchicalTasksForGroup(ungroupedTasks).map(
-                        (item) => (
-                          <TaskItemRenderer
-                            key={
-                              typeof item === "object" && "id" in item
-                                ? item.id
-                                : `group-${Math.random()}`
-                            }
-                            item={item}
-                            expandedTasks={expandedTasks}
-                            hasSubTasks={hasSubTasks}
-                            toggleTaskExpand={toggleTaskExpand}
-                          />
-                        ),
-                      )}
-                    </FilterGroup>
-                  )}
-                </>
-              )}
-
-              {groupMode === "time" && (
-                // 时间分组模式
-                <>
-                  {/* 渲染按时间分组的任务 */}
-                  {timeGroupedTasks.map((timeGroup) => (
-                    <FilterGroup
-                      key={timeGroup.date}
-                      title={timeGroup.date}
-                      tasks={timeGroup.tasks}
-                    >
-                      {getHierarchicalTasksForGroup(timeGroup.tasks).map(
-                        (item) => (
-                          <TaskItemRenderer
-                            key={
-                              typeof item === "object" && "id" in item
-                                ? item.id
-                                : `group-${Math.random()}`
-                            }
-                            item={item}
-                            expandedTasks={expandedTasks}
-                            hasSubTasks={hasSubTasks}
-                            toggleTaskExpand={toggleTaskExpand}
-                          />
-                        ),
-                      )}
-                    </FilterGroup>
-                  ))}
-
-                  {/* 渲染未设置截止日期的任务 */}
-                  {ungroupedTasks.filter((task) => !task.deadline).length >
-                    0 && (
-                    <FilterGroup
-                      title="未设置截止日期"
-                      tasks={ungroupedTasks.filter((task) => !task.deadline)}
-                    >
-                      {getHierarchicalTasksForGroup(
-                        ungroupedTasks.filter((task) => !task.deadline),
-                      ).map((item) => (
-                        <TaskItemRenderer
-                          key={
-                            typeof item === "object" && "id" in item
-                              ? item.id
-                              : `group-${Math.random()}`
-                          }
-                          item={item}
-                          expandedTasks={expandedTasks}
-                          hasSubTasks={hasSubTasks}
-                          toggleTaskExpand={toggleTaskExpand}
-                        />
-                      ))}
-                    </FilterGroup>
-                  )}
-                </>
-              )}
+              {groupMode !== "none" &&
+                displayGroups.map((group) => (
+                  <FilterGroup
+                    key={group.title}
+                    title={group.title}
+                    tasks={group.tasks}
+                    isUngrouped={group.type === "ungrouped"}
+                  >
+                    {getHierarchicalTasksForGroup(group.tasks).map((item) => (
+                      <TaskItemRenderer
+                        key={
+                          typeof item === "object" && "id" in item
+                            ? item.id
+                            : `group-${Math.random()}`
+                        }
+                        item={item}
+                        expandedTasks={expandedTasks}
+                        hasSubTasks={hasSubTasks}
+                        toggleTaskExpand={toggleTaskExpand}
+                      />
+                    ))}
+                  </FilterGroup>
+                ))}
 
               {/*虚化显示其他任务（根据showType过滤掉的任务）*/}
-
-              {/* {renderOtherTodos().map((item) => (
-                    <TodoTask
-                      key={item.id}
-                      todo={item}
-                      isExpanded={expandedTasks[item.id]}
-                      onToggleExpand={() => toggleTaskExpand(item.id)}
-                    />
-                  ))}*/}
               {renderOtherTodos().length > 0 && (
                 <FilterGroup title="已完成" tasks={renderOtherTodos()}>
                   <div style={{ opacity: `.3` }}>

@@ -73,27 +73,32 @@ export default function ListGroupManager({
   // 处理确认按钮 - 统一处理添加和编辑
   const handleOk = () => {
     if (groupName.trim()) {
-      if (mode === "add") {
-        // 添加新清单
-        dispatchList({
-          type: "addListGroup",
-          title: groupName.trim(),
-          emoji: selectedEmoji,
-          color: selectedColor,
-        });
-        message.success(MESSAGES.SUCCESS.LIST_ADDED);
-      } else if (mode === "edit") {
-        // 编辑现有清单
-        dispatchList({
-          type: "updateListGroup",
-          listId: listId,
-          title: groupName.trim(),
-          emoji: selectedEmoji,
-          color: selectedColor,
-        });
-        message.success(MESSAGES.SUCCESS.LIST_UPDATED);
+      try {
+        if (mode === "add") {
+          // 添加新清单
+          dispatchList({
+            type: "addedList",
+            title: groupName.trim(),
+            emoji: selectedEmoji,
+            color: selectedColor,
+          });
+          message.success(MESSAGES.SUCCESS.LIST_ADDED);
+        } else if (mode === "edit") {
+          // 编辑现有清单
+          dispatchList({
+            type: "updatedList",
+            listId: listId,
+            title: groupName.trim(),
+            emoji: selectedEmoji,
+            color: selectedColor,
+          });
+          message.success(MESSAGES.SUCCESS.LIST_UPDATED);
+        }
+        setIsModalOpen(false);
+      } catch (error) {
+        message.error(MESSAGES.ERROR.OPERATION_FAILED);
+        console.error("操作失败:", error);
       }
-      setIsModalOpen(false);
     } else {
       message.warning(MESSAGES.WARNING.EMPTY_LIST_NAME);
     }
@@ -110,19 +115,24 @@ export default function ListGroupManager({
       okText: "确认删除",
       okType: "danger",
       cancelText: "取消",
-      onOk() {
-        dispatchList({
-          type: "deleteListGroup",
-          listId: listId,
-        });
-        message.success(MESSAGES.SUCCESS.LIST_DELETED);
+      async onOk() {
+        try {
+          await dispatchList({
+            type: "deletedList",
+            listId: listId,
+          });
+          message.success(MESSAGES.SUCCESS.LIST_DELETED);
 
-        // 如果删除的是当前激活的清单，切换到第一个清单
-        if (todoListData.length > 0) {
-          const remainingGroups = todoListData.filter((g) => g.id !== listId);
-          if (remainingGroups.length > 0) {
-            onActiveGroupChange(remainingGroups[0].id);
+          // 如果删除的是当前激活的清单，切换到第一个清单
+          if (todoListData.length > 0) {
+            const remainingGroups = todoListData.filter((g) => g.id !== listId);
+            if (remainingGroups.length > 0) {
+              onActiveGroupChange(remainingGroups[0].id);
+            }
           }
+        } catch (error) {
+          message.error(MESSAGES.ERROR.OPERATION_FAILED);
+          console.error("删除清单失败:", error);
         }
       },
     });
