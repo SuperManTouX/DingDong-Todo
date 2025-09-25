@@ -1,13 +1,10 @@
 // @ts-ignore
 import type { ControllerProps } from "@/types";
-import { ShowType, ShowTypeLabels, type ShowTypeValue } from "@/constants";
-import { Dropdown } from "react-bootstrap";
 import { Button, Col, Input, Row } from "antd";
 import { message } from "@/utils/antdStatic";
 import { MESSAGES } from "@/constants/messages";
 
 export default function Controller({
-  onSwitchShow,
   onCompleteAll,
   isAllDone,
   showType,
@@ -56,29 +53,6 @@ export default function Controller({
               </Button>
             </div>
           </Row>
-        </Col>
-
-        <Col span={4}>
-          <Dropdown
-            className="d-inline-block ms-2"
-            onSelect={(eventKey) => {
-              onSwitchShow(Number(eventKey) as ShowTypeValue);
-            }}
-          >
-            <Dropdown.Toggle variant="primary" id="dropdown-basic">
-              {ShowTypeLabels[showType]}
-            </Dropdown.Toggle>
-
-            <Dropdown.Menu>
-              {Object.values(ShowType).map((value) => {
-                return (
-                  <Dropdown.Item key={value} eventKey={value}>
-                    {ShowTypeLabels[Number(value)]}
-                  </Dropdown.Item>
-                );
-              })}
-            </Dropdown.Menu>
-          </Dropdown>
         </Col>
       </Row>
     </li>

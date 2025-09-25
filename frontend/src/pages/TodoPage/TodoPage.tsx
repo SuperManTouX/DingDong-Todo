@@ -5,12 +5,12 @@ import {
   getActiveListData,
   useSelectTodo,
 } from "@/store/todoStore";
-import FilteredTodoList from "@/Layout/FilteredTodoList";
-import EditTodo from "@/Layout/EditTodo";
+import FilteredTodoList from "@/pages/TodoPage/FilteredTodoList";
+import EditTodo from "@/pages/TodoPage/EditTodo";
 import Sider from "antd/es/layout/Sider";
-import SideMenu from "@/Layout/SideMenu";
+import SideMenu from "@/pages/TodoPage/SideMenu";
 import { useAuthStore } from "@/store/authStore";
-import ListGroupManager from "@/components/ListGroupManager";
+import ListGroupManager from "@/pages/TodoPage/ListGroupManager";
 
 /**
  * 待办事项页面组件
@@ -47,7 +47,7 @@ const TodoPage: React.FC = () => {
   const menuItem: MenuProps["items"] = listGroupManager.menuItem;
   return (
     <>
-      <Sider width="15%">
+      <Sider width="250">
         <SideMenu menuItem={menuItem} onActiveGroupChange={setActiveListId} />
       </Sider>
       <Layout>

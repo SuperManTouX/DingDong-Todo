@@ -5,7 +5,7 @@ import type { TagReducerAction, ListGroupAction } from "@/types";
 import type { Group } from "@/types/group";
 import { v4 as uuidv4 } from "uuid";
 import dayjs from "dayjs";
-import { Priority, ShowType } from "@/constants";
+import { Priority } from "@/constants";
 import { useAuthStore } from "@/store/authStore";
 import {
   getAllTodos,
@@ -18,15 +18,19 @@ import {
   deleteTodoList,
   getAllTags,
   createTag,
+  updateTag,
+  deleteTag,
   getAllGroups,
   createGroup,
+  updateGroup as updateGroupApi,
+  deleteGroup as deleteGroupApi,
   getBinItems,
   moveTaskToBin,
   restoreFromBin,
   deleteFromBin,
   emptyBin,
 } from "../services/todoService";
-import { collectTaskWithSubtasks } from '@/utils/taskRecursionUtils';
+import { collectTaskWithSubtasks } from "@/utils/taskRecursionUtils";
 
 // 完整的状态类型定义
 interface TodoState {
@@ -107,40 +111,13 @@ export const useTodoStore = create<TodoState>()(
         produce((draftState: TodoState) => {
           switch (action.type) {
             case "completedAll": {
-              const {
-                completeOrUncomplete,
-                showType = ShowType.all,
-                listId,
-              } = action;
+              const { completeOrUncomplete, listId } = action;
 
               // 直接操作独立的tasks数组
-              draftState.tasks = draftState.tasks.map((task: Todo) => {
+              draftState.tasks.forEach((task: Todo) => {
                 // 仅处理指定清单的任务
                 if (task.listId !== listId) return task;
-
-                // 根据showType决定是否更新
-                let shouldUpdate = false;
-                switch (showType) {
-                  case ShowType.all:
-                    shouldUpdate = true;
-                    break;
-                  case ShowType.uncompleted:
-                    shouldUpdate = !task.completed;
-                    break;
-                  case ShowType.completed:
-                    shouldUpdate = task.completed;
-                    break;
-                  default:
-                    shouldUpdate = true;
-                }
-
-                if (shouldUpdate) {
-                  return {
-                    ...task,
-                    completed: completeOrUncomplete,
-                  };
-                }
-                return task;
+                task.completed = completeOrUncomplete;
               });
               break;
             }
@@ -337,43 +314,49 @@ export const useTodoStore = create<TodoState>()(
       set(
         produce((draftState: TodoState) => {
           switch (action.type) {
-            case "addedTag": {
+            case "addTag":
+              // 使用action.payload中的数据
               const newTag: Tag = {
                 id: uuidv4(),
-                name: action.name,
-                color: action.color || "#1890ff",
-                parentId: action.parentId || null,
+                name: action.payload.name,
+                color: action.payload.color || "#1890ff",
+                parentId: action.payload.parentId || null,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
               };
               draftState.todoTags.push(newTag);
               break;
-            }
-            case "deletedTag": {
+            case "updateTag":
+              // 使用action.payload中的数据
+              const tagIndex = draftState.todoTags.findIndex(
+                (tag) => tag.id === action.payload.id,
+              );
+              if (tagIndex !== -1) {
+                draftState.todoTags[tagIndex] = {
+                  ...draftState.todoTags[tagIndex],
+                  ...action.payload.updates,
+                  updatedAt: new Date().toISOString(),
+                };
+              }
+              break;
+            case "deleteTag":
+              // 使用action.payload作为tagId
               draftState.todoTags = draftState.todoTags.filter(
-                (tag) => tag.id !== action.tagId,
+                (tag) => tag.id !== action.payload,
               );
               // 同时从所有任务中移除该标签
               draftState.tasks = draftState.tasks.map((task) => ({
                 ...task,
                 tags:
-                  task.tags?.filter((tagId) => tagId !== action.tagId) || [],
+                  task.tags?.filter((tagId) => tagId !== action.payload) || [],
               }));
               break;
-            }
-            case "changedTag": {
-              const tagIndex = draftState.todoTags.findIndex(
-                (tag) => tag.id === action.tagId,
-              );
-              if (tagIndex !== -1) {
-                draftState.todoTags[tagIndex] = {
-                  ...draftState.todoTags[tagIndex],
-                  ...action.updates,
-                  updatedAt: new Date().toISOString(),
-                };
+            case "initializeTags":
+              // 初始化标签列表
+              if (action.payload) {
+                draftState.todoTags = action.payload;
               }
               break;
-            }
             default:
               break;
           }
@@ -384,16 +367,23 @@ export const useTodoStore = create<TodoState>()(
       const handleApiCall = async () => {
         try {
           switch (action.type) {
-            case "addedTag":
+            case "addTag":
               await createTag({
-                name: action.name,
-                color: action.color || "#1890ff",
-                parentId: action.parentId || null,
+                name: action.payload.name,
+                color: action.payload.color,
+                parentId: action.payload.parentId || null,
               });
+              break;
+            case "updateTag":
+              await updateTag(action.payload.id, action.payload.updates);
+              break;
+            case "deleteTag":
+              await deleteTag(action.payload);
               break;
           }
         } catch (error) {
-          console.error(`API操作失败 (${action.type}):`, error);
+          console.error(`标签API操作失败 (${action.type}):`, error);
+          // 这里可以添加错误通知给用户
         }
       };
 
@@ -416,62 +406,99 @@ export const useTodoStore = create<TodoState>()(
     },
 
     // 添加分组
-    addGroup: (listId: string, groupName: string, groupItemIds: string[]) => {
-      set(
-        produce((draftState: TodoState) => {
-          const newGroup: Group = {
-            id: `${listId}_${groupName.toLowerCase().replace(/\s+/g, "_")}`,
-            listId,
-            groupName,
-            userId: get().userId,
-          };
-          draftState.groups.push(newGroup);
+    addGroup: async (
+      listId: string,
+      groupName: string,
+      groupItemIds: string[],
+    ) => {
+      try {
+        // 准备新分组数据
+        const groupData = {
+          listId,
+          groupName,
+          userId: get().userId,
+        };
 
-          // 更新任务的groupId
-          if (groupItemIds && groupItemIds.length > 0) {
-            draftState.tasks.forEach((task) => {
-              if (groupItemIds.includes(task.id)) {
-                task.groupId = newGroup.id;
-                task.updatedAt = new Date().toISOString();
-              }
-            });
-          }
-        }),
-      );
+        // 调用后端API创建分组
+        const newGroup = await createGroup(groupData);
+
+        // 更新本地状态
+        set(
+          produce((draftState: TodoState) => {
+            draftState.groups.push(newGroup);
+
+            // 更新任务的groupId
+            if (groupItemIds && groupItemIds.length > 0) {
+              draftState.tasks.forEach((task) => {
+                if (groupItemIds.includes(task.id)) {
+                  task.groupId = newGroup.id;
+                  task.updatedAt = new Date().toISOString();
+                }
+              });
+            }
+          }),
+        );
+      } catch (error) {
+        console.error("添加分组失败:", error);
+        throw error;
+      }
     },
 
     // 更新分组
-    updateGroup: (nGroup: Group) => {
-      set(
-        produce((draftState: TodoState) => {
-          const groupIndex = draftState.groups.findIndex(
-            (group) => group.id === nGroup.id,
-          );
-          if (groupIndex !== -1) {
-            draftState.groups[groupIndex] = nGroup;
-          }
-        }),
-      );
+    updateGroup: async (nGroup: Group) => {
+      try {
+        // 调用后端API更新分组
+        await updateGroupApi(nGroup.id, nGroup);
+        // 更新本地状态
+        set(
+          produce((draftState: TodoState) => {
+            const groupIndex = draftState.groups.findIndex(
+              (group) => group.id === nGroup.id,
+            );
+            if (groupIndex !== -1) {
+              draftState.groups[groupIndex] = nGroup;
+            }
+          }),
+        );
+      } catch (error) {
+        console.error("更新分组失败:", error);
+        throw error;
+      }
     },
 
     // 删除分组
-    deleteGroup: (listId: string, groupName: string) => {
-      set(
-        produce((draftState: TodoState) => {
-          const groupId = `${listId}_${groupName.toLowerCase().replace(/\s+/g, "_")}`;
-          draftState.groups = draftState.groups.filter(
-            (group) => group.id !== groupId,
-          );
+    deleteGroup: async (groupId: string) => {
+      try {
+        // 查找要删除的分组
+        const groupToDelete = get().groups.find(
+          (group) => group.id === groupId,
+        );
+        if (!groupToDelete) return;
 
-          // 清除该分组下所有任务的groupId
-          draftState.tasks.forEach((task) => {
-            if (task.groupId === groupId) {
-              task.groupId = undefined;
-              task.updatedAt = new Date().toISOString();
-            }
-          });
-        }),
-      );
+        // 调用后端API删除分组
+        await deleteGroupApi(groupToDelete.id);
+
+        // 更新本地状态
+        set(
+          produce((draftState: TodoState) => {
+            // 从分组数组中删除
+            draftState.groups = draftState.groups.filter(
+              (group) => group.id !== groupId,
+            );
+
+            // 清除相关任务的groupId
+            draftState.tasks.forEach((task) => {
+              if (task.groupId === groupId) {
+                task.groupId = undefined;
+                task.updatedAt = new Date().toISOString();
+              }
+            });
+          }),
+        );
+      } catch (error) {
+        console.error("删除分组失败:", error);
+        throw error;
+      }
     },
 
     // 根据列表ID获取分组
@@ -489,13 +516,18 @@ export const useTodoStore = create<TodoState>()(
         set(
           produce((draftState: TodoState) => {
             // 使用通用工具函数收集所有需要移动的任务
-            const tasksToMove = collectTaskWithSubtasks(draftState.tasks, todo.id);
-            
+            const tasksToMove = collectTaskWithSubtasks(
+              draftState.tasks,
+              todo.id,
+            );
+
             // 批量移除任务
-            tasksToMove.forEach(task => {
-              draftState.tasks = draftState.tasks.filter(t => t.id !== task.id);
+            tasksToMove.forEach((task) => {
+              draftState.tasks = draftState.tasks.filter(
+                (t) => t.id !== task.id,
+              );
             });
-            
+
             // 批量添加到回收站
             draftState.bin.push(...tasksToMove);
           }),
@@ -727,7 +759,7 @@ export const useTodoStore = create<TodoState>()(
           groups: groups.length,
           bin: bin.length,
         });
-
+        console.log(tags);
         set({
           todoListData: todoLists,
           tasks: todos,

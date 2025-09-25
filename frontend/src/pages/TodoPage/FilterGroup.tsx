@@ -1,15 +1,14 @@
 import React from "react";
-import { Collapse, Dropdown, Input, type MenuProps } from "antd";
-import { EllipsisOutlined } from "@ant-design/icons";
+import { Collapse, Dropdown, Input, Modal, type MenuProps } from "antd";
+import { EllipsisOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 import { useState } from "react";
 import TodoTask from "./TodoTask";
-import ContextMenu from "./ContextMenu";
-import type { Todo } from "@/types";
-import type { FilterGroupProps } from "@/types/group";
+import ContextMenu from "../../components/ContextMenu";
+import type { FilterGroupProps, Group } from "@/types/group";
 import dayjs from "dayjs";
 import { message } from "@/utils/antdStatic";
 import { useTodoStore } from "@/store/todoStore";
-import { SortableList } from "./SortableComponents";
+import { SortableList } from "../../components/SortableComponents";
 
 /**
  * FilterGroup组件 - 支持三种模式：分组模式、时间分组模式、未分组模式
@@ -24,7 +23,6 @@ export default function FilterGroup({
   expandedTasks = {},
   toggleTaskExpand = () => {},
   hasSubTasks = () => false,
-  isUngrouped = false,
 }: FilterGroupProps & {
   expandedTasks?: Record<string, boolean>;
   toggleTaskExpand?: (taskId: string) => void;
@@ -45,11 +43,19 @@ export default function FilterGroup({
   // 分组模式：title为string
   const isGroupMode = typeof title === "string";
 
+  // 获取当前清单的所有分组
+  const groups = getGroupsByListId(activeListId);
   // 获取当前分组内可排序的任务ID
   const getSortableTaskIds = (): string[] => {
     // 从任务数组中提取ID
     return tasks.map((task) => task.id);
   };
+
+  // 获取当前分组的信息
+  const groupToUse =
+    isGroupMode && typeof title === "string"
+      ? groups.find((group) => group.groupName === title)
+      : ({} as Group);
 
   // 根据模式格式化标题
   const formatTitle = (): string => {
@@ -100,9 +106,6 @@ export default function FilterGroup({
     }
   };
 
-  // 获取当前清单的所有分组
-  const groups = getGroupsByListId(activeListId);
-
   // 组操作菜单选项
   const menuItems: MenuProps["items"] = [
     {
@@ -127,8 +130,18 @@ export default function FilterGroup({
           (group) => group.groupName === formatTitle(),
         );
         if (groupToDelete?.id) {
-          deleteGroup(groupToDelete.id);
-          message.success(`成功删除组"${formatTitle()}"`);
+          // 显示确认对话框
+          Modal.confirm({
+            title: "确认删除",
+            icon: <ExclamationCircleOutlined />,
+            content: `确定要删除组"${formatTitle()}"吗？删除后，该组内的任务将变为未分组状态。`,
+            okText: "确定",
+            cancelText: "取消",
+            onOk: () => {
+              deleteGroup(groupToDelete.id);
+              message.success(`成功删除组"${formatTitle()}"`);
+            },
+          });
         }
       },
     },
@@ -180,11 +193,21 @@ export default function FilterGroup({
           children: (
             <div className="filter-group-content" style={{ minHeight: "2rem" }}>
               {children ? (
-                <SortableList items={getSortableTaskIds()}>
+                <SortableList
+                  items={getSortableTaskIds()}
+                  // @ts-ignore
+                  groupId={groupToUse?.id}
+                  type="FilterGroup"
+                >
                   {children}
                 </SortableList>
               ) : (
-                <SortableList items={getSortableTaskIds()}>
+                <SortableList
+                  items={getSortableTaskIds()}
+                  // @ts-ignore
+                  groupId={groupToUse?.id}
+                  type="FilterGroup"
+                >
                   <div className="task-list">
                     {tasks.map((task) => (
                       <ContextMenu key={task.id} todo={task}>

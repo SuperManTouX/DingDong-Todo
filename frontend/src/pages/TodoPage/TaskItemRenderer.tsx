@@ -1,8 +1,8 @@
-import React from 'react';
-import TodoTask from './TodoTask';
-import ContextMenu from './ContextMenu';
-import { SortableItem } from '@/components/SortableComponents';
-import type { Todo } from '@/types';
+import React from "react";
+import TodoTask from "./TodoTask";
+import ContextMenu from "../../components/ContextMenu";
+import { SortableItem } from "@/components/SortableComponents";
+import type { Todo } from "@/types";
 
 // 定义组件属性类型
 interface TaskItemRendererProps {
@@ -20,14 +20,14 @@ const TaskItemRenderer: React.FC<TaskItemRendererProps> = ({
   item,
   expandedTasks,
   hasSubTasks,
-  toggleTaskExpand
+  toggleTaskExpand,
 }) => {
   // 如果是根任务
-  if ('id' in item) {
+  if ("id" in item) {
     return (
       <SortableItem key={item.id} id={item.id}>
         <ContextMenu key={item.id} todo={item}>
-          <div style={{ cursor: 'context-menu' }}>
+          <div style={{ cursor: "context-menu" }}>
             <TodoTask
               todo={item}
               hasSubTasks={hasSubTasks(item.id)}
@@ -50,14 +50,12 @@ const TaskItemRenderer: React.FC<TaskItemRendererProps> = ({
           className="sub-task-container"
         >
           <ContextMenu key={subTodo.id} todo={subTodo}>
-            <div style={{ cursor: 'context-menu' }}>
+            <div style={{ cursor: "context-menu" }}>
               <TodoTask
                 todo={subTodo}
                 hasSubTasks={hasSubTasks(subTodo.id)}
                 isExpanded={expandedTasks[subTodo.id]}
-                onToggleExpand={() =>
-                  toggleTaskExpand(subTodo.id)
-                }
+                onToggleExpand={() => toggleTaskExpand(subTodo.id)}
               />
             </div>
           </ContextMenu>

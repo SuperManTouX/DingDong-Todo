@@ -39,7 +39,7 @@ export default function AppLayout() {
           {/* 使用侧边栏导航组件 */}
           <SidebarNav />
         </Sider>
-        <Layout className={"overflow-y-auto"}>
+        <Layout className={"overflow-y-auto d-flex flex-row"}>
           {/* 使用Outlet组件显示子路由内容 */}
           <Outlet />
         </Layout>

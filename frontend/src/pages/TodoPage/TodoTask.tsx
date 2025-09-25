@@ -161,10 +161,8 @@ export default function TodoTask({
                 checked={todo.completed}
                 onChange={(e) => {
                   dispatchTodo({
-                    type: "toggle",
-                    todoId: todo.id,
-                    listId: todo.listId,
-                    newCompleted: e.currentTarget.checked,
+                    type: "changed",
+                    todo: { ...todo, completed: e.currentTarget.checked },
                   });
                   if (e.currentTarget.checked)
                     message.info(
@@ -202,7 +200,11 @@ export default function TodoTask({
                 justify={"end"}
                 align={"middle"}
               >
-                {todo.tags && <Tag color="magenta">+{todo.tags.length}</Tag>}
+                {/*判断是否有Tag数组并且是否长度大于0*/}
+                {/*// @ts-ignore*/}
+                {todo.tags?.length > 0 && (
+                  <Tag color="magenta">+{todo.tags?.length}</Tag>
+                )}
                 {/*{todo.tags?.map((tag, i) => (*/}
                 {/*  <Tag color="magenta">{tag}</Tag>*/}
                 {/*))}*/}
