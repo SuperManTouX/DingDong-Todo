@@ -32,7 +32,11 @@ export default function SideMenu({
       <Menu
         className="h-100"
         onClick={handleClick}
-        style={{ width: "100%", height: "100%", overflowY: "auto" }}
+        style={{
+          width: "100%",
+          height: "100%",
+          overflowY: "auto",
+        }}
         mode="inline"
         selectedKeys={selectedKeys}
         openKeys={openKeys}

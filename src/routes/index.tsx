@@ -1,13 +1,13 @@
-import React from 'react';
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import React from "react";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import AppLayout from "../Layout/AppLayout";
 import LoginPage from "../pages/LoginPage";
 import RegisterPage from "../pages/RegisterPage";
 import PrivateRoute from "./PrivateRoute";
 import StatsPage from "../pages/StatsPage";
 import SettingsPage from "../pages/SettingsPage";
-import TodoPage from "../pages/TodoPage";
-import { ZhuanZhuPage } from "@/pages/ZhuanZhuPage";
+import TodoPage from "../pages/TodoPage/TodoPage";
+import { FocusPage } from "@/pages/FocusPage";
 
 const router = createBrowserRouter([
   {
@@ -36,7 +36,7 @@ const router = createBrowserRouter([
       },
       {
         path: "zhuanZhu",
-        element: <ZhuanZhuPage />,
+        element: <FocusPage />,
       },
       {
         path: "stats",

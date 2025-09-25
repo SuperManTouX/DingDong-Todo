@@ -120,19 +120,47 @@ export const getAllTags = async (): Promise<Tag[]> => {
 
 // 创建标签
 export const createTag = async (
-  tag: Omit<Tag, "id" | "createdAt" | "updatedAt">,
+    tagData: Omit<Tag, "id" | "createdAt" | "updatedAt">,
+  ): Promise<Tag> => {
+    try {
+      const response = await api.post("/todo-tags", {
+        name: tagData.name,
+        color: tagData.color,
+        parentId: tagData.parentId,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("创建标签失败:", error);
+      throw error;
+    }
+  };
+
+// 更新标签
+export const updateTag = async (
+  id: string,
+  updates: Partial<Tag>,
 ): Promise<Tag> => {
   try {
-    const response = await api.post("/todo-tags", tag);
+    const response = await api.put(`/todo-tags/${id}`, updates);
     return response;
   } catch (error) {
-    console.error("创建标签失败:", error);
+    console.error(`更新标签 ${id} 失败:`, error);
+    throw error;
+  }
+};
+
+// 删除标签
+export const deleteTag = async (id: string): Promise<void> => {
+  try {
+    await api.delete(`/todo-tags/${id}`);
+  } catch (error) {
+    console.error(`删除标签 ${id} 失败:`, error);
     throw error;
   }
 };
 
 // 获取所有任务组
-export const getAllGroups = async (): Promise<Group[]> => {
+export const getAllGroups = async (): Promise<void> => {
   try {
     const response = await api.get("/task-groups");
     return response;
@@ -153,6 +181,30 @@ export const createGroup = async (group: Omit<Group, "id">): Promise<Group> => {
   }
 };
 
+// 更新任务组
+export const updateGroup = async (
+  id: string,
+  groupData: Partial<Group>,
+): Promise<Group> => {
+  try {
+    const response = await api.put(`/task-groups/${id}`, groupData);
+    return response;
+  } catch (error) {
+    console.error("更新任务组失败:", error);
+    throw error;
+  }
+};
+
+// 删除任务组
+export const deleteGroup = async (id: string): Promise<void> => {
+  try {
+    await api.delete(`/task-groups/${id}`);
+  } catch (error) {
+    console.error("删除任务组失败:", error);
+    throw error;
+  }
+};
+
 // 获取回收站内容
 export const getBinItems = async (): Promise<Todo[]> => {
   try {
@@ -165,7 +217,9 @@ export const getBinItems = async (): Promise<Todo[]> => {
 };
 
 // 将任务移至回收站
-export const moveTaskToBin = async (id: string): Promise<{ message: string; binId: string }> => {
+export const moveTaskToBin = async (
+  id: string,
+): Promise<{ message: string; binId: string }> => {
   try {
     const response = await api.delete(`/todos/${id}`);
     return response;
@@ -176,7 +230,9 @@ export const moveTaskToBin = async (id: string): Promise<{ message: string; binI
 };
 
 // 从回收站恢复任务
-export const restoreFromBin = async (id: string): Promise<{ message: string; taskId: string }> => {
+export const restoreFromBin = async (
+  id: string,
+): Promise<{ message: string; taskId: string }> => {
   try {
     const response = await api.post(`/bin/restore/${id}`);
     return response;
@@ -187,7 +243,9 @@ export const restoreFromBin = async (id: string): Promise<{ message: string; tas
 };
 
 // 从回收站永久删除任务
-export const deleteFromBin = async (id: string): Promise<{ message: string }> => {
+export const deleteFromBin = async (
+  id: string,
+): Promise<{ message: string }> => {
   try {
     const response = await api.delete(`/bin/${id}`);
     return response;

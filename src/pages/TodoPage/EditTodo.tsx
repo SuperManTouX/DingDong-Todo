@@ -19,7 +19,7 @@ import { PlusOutlined } from "@ant-design/icons";
 import { useMemo } from "react";
 import { useSelectTodo, useTodoStore } from "@/store/todoStore";
 import { useThemeStore } from "@/store/themeStore";
-import TimeCountDownNode from "@/components/TimeCountDownNode"; // 导入主题状态管理
+import TimeCountDownNode from "@/pages/TodoPage/TimeCountDownNode"; // 导入主题状态管理
 
 // 解构Layout组件
 const { Header, Content, Footer } = Layout;
@@ -339,7 +339,7 @@ export default function EditTodo({
                   (list) => list.id === newListId,
                 );
                 message.success(
-                  `已成功移动至清单：${newList?.name || "未知清单"}`,
+                  `已成功移动至清单：${newList?.title || "未知清单"}`,
                 );
               }
             }}

@@ -38,13 +38,19 @@ export const SortableItem = ({
  */
 export const SortableList = ({
   items,
+  groupId,
   children,
 }: {
   items: string[];
   children: React.ReactNode;
+  groupId: string;
 }) => {
   return (
-    <SortableContext items={items} strategy={verticalListSortingStrategy}>
+    <SortableContext
+      id={groupId}
+      items={items}
+      strategy={verticalListSortingStrategy}
+    >
       {children}
     </SortableContext>
   );

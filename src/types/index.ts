@@ -1,6 +1,5 @@
 import type { Priority } from "@/constants";
 
-import { ShowType, type ShowTypeValue } from "@/constants";
 import type { MenuProps } from "antd";
 
 // 扩展TodoAction类型，添加listId字段
@@ -33,9 +32,7 @@ export interface DeleteTodoListGroupAction {
 
 export interface ControllerProps {
   isAllDone: boolean;
-  onSwitchShow: (showType: ShowTypeValue) => void;
   onCompleteAll: (action: TodoCompleteAllAction) => void;
-  showType: ShowTypeValue;
   text: string;
   setText: (text: string) => void;
   onAdded: () => void;
@@ -54,8 +51,6 @@ export interface TodoListData {
   createdAt: string;
   updatedAt: string;
 }
-
-export type ShowType = (typeof ShowType)[keyof typeof ShowType];
 
 export interface Todo {
   id: string;
@@ -106,7 +101,6 @@ interface TodoReplaceAction {
 export interface TodoCompleteAllAction {
   type: "completedAll";
   completeOrUncomplete: boolean;
-  showType?: ShowTypeValue;
 }
 
 interface TodoDeleteAllCompleteAction {

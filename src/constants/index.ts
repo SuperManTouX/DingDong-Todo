@@ -5,19 +5,10 @@ export const Priority = {
   High: 3,
 } as const;
 
-export const ShowType = {
-  all: 0,
-  completed: 1,
-  uncompleted: 2,
-  overdue: 3,
-} as const;
-export const ShowTypeLabels = ["全部", "已完成", "未完成", "已逾期"] as const;
-
 // 自动生成反向表
 export const PriorityName = Object.fromEntries(
   Object.entries(Priority).map(([k, v]) => [v, k]),
 ) as Record<PriorityValue, PriorityKey>;
-export type ShowTypeValue = (typeof ShowType)[keyof typeof ShowType];
 
 // 特殊清单常量 ，标签以后也得加
 export const SpecialLists = {

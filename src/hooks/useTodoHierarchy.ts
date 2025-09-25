@@ -67,15 +67,15 @@ export default function useTodoHierarchy(
     if (tasks.length === 0) return [];
 
     // 获取所有任务ID集合，用于快速检查父任务是否存在
-    const taskIds = new Set(tasks.map(task => task.id));
-    
+    const taskIds = new Set(tasks.map((task) => task.id));
+
     // 记录已经添加到结果中的任务ID，避免重复添加
     const addedTaskIds = new Set<string>();
 
     // 收集所有子任务（包括嵌套的子任务）的通用函数
     const collectSubTasks = (items: (Todo | Todo[])[]): Todo[] => {
       const allSubTasks: Todo[] = [];
-      
+
       const recursivelyCollect = (subItems: (Todo | Todo[])[]) => {
         subItems.forEach((item) => {
           if ("id" in item) {
@@ -86,7 +86,7 @@ export default function useTodoHierarchy(
           }
         });
       };
-      
+
       recursivelyCollect(items);
       return allSubTasks;
     };
@@ -94,7 +94,7 @@ export default function useTodoHierarchy(
     // 递归构建层次化任务结构
     const buildHierarchicalTasks = (
       parentId: string | null,
-      isRootLevel: boolean = false
+      isRootLevel: boolean = false,
     ): (Todo | Todo[])[] => {
       const result: (Todo | Todo[])[] = [];
 
@@ -124,26 +124,27 @@ export default function useTodoHierarchy(
 
     // 从根任务开始构建层次结构
     const hierarchicalTasks = buildHierarchicalTasks(null, true);
-    
+
     // 找出那些找不到父组件的子任务（父任务ID不在当前任务列表中）
-    const orphanedTasks = tasks.filter(task => 
-      task.parentId !== null && 
-      !taskIds.has(task.parentId) && 
-      !addedTaskIds.has(task.id)
+    const orphanedTasks = tasks.filter(
+      (task) =>
+        task.parentId !== null &&
+        !taskIds.has(task.parentId) &&
+        !addedTaskIds.has(task.id),
     );
-    
+
     // 将找不到父组件的子任务添加到顶层
     if (orphanedTasks.length > 0) {
-      orphanedTasks.forEach(orphanedTask => {
+      orphanedTasks.forEach((orphanedTask) => {
         hierarchicalTasks.push(orphanedTask);
-        
+
         // 如果找不到父组件的子任务有自己的子任务，并且处于展开状态，也一并添加
         if (expandedTasks[orphanedTask.id]) {
           const subTasks = buildHierarchicalTasks(orphanedTask.id);
           if (subTasks.length > 0) {
             // 收集所有子任务（复用通用函数）
             const allSubTasks = collectSubTasks(subTasks);
-            
+
             if (allSubTasks.length > 0) {
               hierarchicalTasks.push(allSubTasks);
             }
@@ -151,32 +152,29 @@ export default function useTodoHierarchy(
         }
       });
     }
-    
+
     return hierarchicalTasks;
   };
   // 拖动时
   const handleDragOver = (event: any) => {
-    const { active, over } = event;
+    const { active, over, collisions } = event;
     if (!over || active.id === over.id) return;
-
+    const collisionS = collisions as Todo[];
     const activeId = active.id as string;
     const overId = over.id as string;
-
+    const overContainerId = over.data.current.sortable.containerId as string;
     // 获取拖动和放置的任务
     const draggedTask = tasks.find((item) => item.id === activeId);
     const targetTask = tasks.find((item) => item.id === overId);
+    if (!draggedTask || !overContainerId) return;
 
-    if (!draggedTask || !targetTask) return;
-
-    // 根据目标时间分组自动更新拖动任务的deadline以实现预览效果
-    // 参考Test.tsx的实现方式，直接更新TodoStore中的任务
-    // 如果是时间分组
     if (activeListId in SpecialLists) {
       dispatchTodo({
         type: "changed",
         todo: {
           ...draggedTask,
-          // 根据目标时间分组更新deadline，确保任务在目标分组中可见
+          // 如果有参考任务，则使用其deadline
+          // 根据目标分组更新groupId，确保任务在目标分组中可见
           deadline: targetTask.deadline
             ? targetTask.deadline
             : draggedTask.deadline,
@@ -187,10 +185,8 @@ export default function useTodoHierarchy(
         type: "changed",
         todo: {
           ...draggedTask,
-          // 根据目标分组更新groupId，确保任务在目标分组中可见
-          groupId: targetTask.groupId
-            ? targetTask.groupId
-            : draggedTask.groupId,
+          // 使用确定的目标分组ID
+          groupId: overContainerId,
         },
       });
     }

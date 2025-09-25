@@ -1,31 +1,27 @@
 import "@/styles/FilteredTodoList.css";
-import React from "react";
-import Controller from "../components/Controller";
-import FilterGroup from "../components/FilterGroup";
-import TaskItemRenderer from "../components/TaskItemRenderer";
+import Controller from "./Controller";
+import FilterGroup from "./FilterGroup";
+import TaskItemRenderer from "./TaskItemRenderer";
 import { DndContext, closestCenter } from "@dnd-kit/core";
 
 import { Row, Space } from "antd";
 
 import { Content, Footer, Header } from "antd/es/layout/layout";
 
-import useTodoGrouping from "../hooks/useTodoGrouping";
-import useTodoOperations from "../hooks/useTodoOperations";
-import useTodoHierarchy from "../hooks/useTodoHierarchy";
+import useTodoGrouping from "../../hooks/useTodoGrouping";
+import useTodoOperations from "../../hooks/useTodoOperations";
+import useTodoHierarchy from "../../hooks/useTodoHierarchy";
 import { getActiveListTasks } from "@/store/todoStore";
 
 export default function FilteredTodoList({ groupName }: { groupName: string }) {
   // 获取所有任务，然后根据用户ID过滤
   const tasks = getActiveListTasks();
   // 使用hooks获取各种功能
-  const { groupMode, displayGroups, allTasks } = useTodoGrouping(tasks);
-  console.log(displayGroups);
+  const { groupMode, displayGroups } = useTodoGrouping(tasks);
   const {
     title,
-    showType,
     setTitle,
     handleAdded,
-    handleSwitchShow,
     handleCompleteAll,
     handleDeleteAllCompleted,
     calculateUncompletedCount,
@@ -67,9 +63,7 @@ export default function FilteredTodoList({ groupName }: { groupName: string }) {
               {/*顶部控制器组件*/}
               <Controller
                 isAllDone={isAllDone}
-                onSwitchShow={handleSwitchShow}
                 onCompleteAll={handleCompleteAll}
-                showType={showType}
                 text={title}
                 setText={setTitle}
                 onAdded={handleAdded}
