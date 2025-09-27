@@ -1,0 +1,12 @@
+DingDongList经验总结
+
+
+1. @dnd\kit分容器拖动效果（dragOver）
+
+2. 合并组件
+
+3. 递归创建节点树
+
+4. 用对象存储不同名字的数组，再用Object.keys(obj)遍历对象创建新数组
+
+5. 

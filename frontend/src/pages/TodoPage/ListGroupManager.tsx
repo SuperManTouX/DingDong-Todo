@@ -323,18 +323,18 @@ export default function ListGroupManager({
   // 菜单项配置
   const menuItem: MenuProps["items"] = [
     {
-      key: "aa",
+      key: "today",
       icon: <AppstoreOutlined />,
       label: "今天",
     },
     {
-      key: "bb",
+      key: "nearlyWeek",
       icon: <AppstoreOutlined />,
       label: "最近七天",
     },
     { type: "divider" },
     {
-      key: "grp2",
+      key: "lists",
       label: (
         <Row justify={"space-between"} className="text-secondary fs-6">
           清单
@@ -350,7 +350,7 @@ export default function ListGroupManager({
       children: renderTodoListGroups(),
     },
     {
-      key: "grp3",
+      key: "tags",
       icon: <TagOutlined />,
       label: (
         <Row justify={"space-between"} className="text-secondary fs-6">

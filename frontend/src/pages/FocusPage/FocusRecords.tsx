@@ -38,6 +38,18 @@ export const FocusRecords: React.FC<FocusRecordsProps> = ({
     }
   };
 
+  const handleDeleteRecord = async (recordId: string) => {
+    try {
+      // 调用回调函数通知父组件更新记录
+      if (onRecordUpdated) {
+        onRecordUpdated();
+      }
+    } catch (error) {
+      console.error("删除专注记录失败:", error);
+      message.error("删除专注记录失败，请稍后重试");
+    }
+  };
+
   const handleCancelModal = () => {
     setSelectedRecord(null);
     setIsModalOpen(false);
@@ -101,6 +113,7 @@ export const FocusRecords: React.FC<FocusRecordsProps> = ({
         mode="edit"
         record={selectedRecord}
         onSuccess={handleUpdateRecord}
+        onDelete={handleDeleteRecord}
         onCancel={handleCancelModal}
       />
     </>
