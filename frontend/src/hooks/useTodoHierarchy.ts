@@ -159,7 +159,6 @@ export default function useTodoHierarchy(
   const handleDragOver = (event: any) => {
     const { active, over, collisions } = event;
     if (!over || active.id === over.id) return;
-    const collisionS = collisions as Todo[];
     const activeId = active.id as string;
     const overId = over.id as string;
     const overContainerId = over.data.current.sortable.containerId as string;
