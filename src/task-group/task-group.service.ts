@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TaskGroup } from './task-group.entity';
 import { TodoListService } from '../todo-list/todo-list.service';
+import { TaskService } from '../todo/todo.service';
 
 @Injectable()
 export class TaskGroupService {
@@ -10,6 +11,8 @@ export class TaskGroupService {
     @InjectRepository(TaskGroup) 
     private taskGroupRepository: Repository<TaskGroup>,
     private todoListService: TodoListService,
+    @Inject(forwardRef(() => TaskService))
+    private taskService: TaskService,
   ) {}
 
   /**
@@ -67,7 +70,13 @@ export class TaskGroupService {
    * 删除分组
    */
   async delete(id: string, userId: string): Promise<boolean> {
-    await this.findOne(id, userId); // 验证分组存在且用户有权限
+    // 验证分组存在且用户有权限
+    const group = await this.findOne(id, userId);
+    
+    // 清空相关任务的groupId
+    await this.taskService.clearTasksGroupId(id, userId);
+    
+    // 删除分组
     const result = await this.taskGroupRepository.delete(id);
     return result.affected !== null && result.affected !== undefined && result.affected > 0;
   }

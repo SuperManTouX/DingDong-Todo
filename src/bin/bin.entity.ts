@@ -33,7 +33,7 @@ export class Bin {
   listId: string;
 
   @Column({ nullable: true, name: 'group_id', type: 'varchar', length: 255 })
-  groupId?: string;
+  groupId?: string | null | undefined;
 
   @Column({ name: 'user_id' })
   userId: string;

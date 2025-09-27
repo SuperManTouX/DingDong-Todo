@@ -78,7 +78,7 @@
 ]
 ```
 
-### 2. 获取当前用户的单个任务
+### 3. 获取当前用户的单个任务
 
 **请求**
 - 方法: `GET`
@@ -108,7 +108,7 @@
 }
 ```
 
-### 3. 创建新任务
+### 4. 创建新任务
 
 **请求**
 - 方法: `POST`
@@ -136,7 +136,7 @@
 - 状态码: `201 Created`
 - 响应体: 创建的任务对象（包含生成的ID和标签信息）
 
-### 4. 更新任务
+### 5. 更新任务
 
 **请求**
 - 方法: `PUT`
@@ -165,7 +165,7 @@
 - 状态码: `200 OK` (成功) / `404 Not Found` (任务不存在或无权限)
 - 响应体: 更新后的任务对象
 
-### 5. 删除任务
+### 6. 删除任务
 
 **请求**
 - 方法: `DELETE`
@@ -187,7 +187,7 @@
 
 **说明**：任务删除后不会直接从系统中删除，而是移动到回收站，用户可以在回收站中查看、恢复或永久删除这些任务。
 
-### 6. 创建演示任务（带标签）
+### 7. 创建演示任务（带标签）
 
 **请求**
 - 方法: `POST`
@@ -605,6 +605,184 @@
 }
 ```
 
+## 专注记录管理接口 (Focus Records)
+
+### 1. 获取当前用户的所有专注记录
+
+**请求**
+- 方法: `GET`
+- 路径: `/focus-records`
+- 权限: 需要认证（JWT）
+- 请求参数: 
+  - `taskId` (可选): 按任务ID筛选
+  - `startDate` (可选): 开始日期范围筛选
+  - `endDate` (可选): 结束日期范围筛选
+  - `completed` (可选): 按完成状态筛选
+
+**响应**
+- 状态码: `200 OK`
+- 响应体: 专注记录数组
+
+```json
+[
+  {
+    "id": "string", // 专注记录唯一ID
+    "user_id": "string", // 用户ID
+    "task_id": "string", // 关联的任务ID
+    "start_time": "string", // 开始时间
+    "end_time": "string|null", // 结束时间（null表示进行中）
+    "notes": "string|null", // 备注
+    "completed": boolean, // 是否完成
+    "mode": "string", // 模式：'pomodoro'或'normal'
+    "created_at": "string", // 创建时间
+    "updated_at": "string" // 更新时间
+  }
+]
+```
+
+### 2. 获取当前用户的单个专注记录
+
+**请求**
+- 方法: `GET`
+- 路径: `/focus-records/:id`
+- 权限: 需要认证（JWT）
+- URL参数: 
+  - `id`: 专注记录ID
+
+**响应**
+- 状态码: `200 OK` (成功) / `404 Not Found` (记录不存在或无权限)
+- 响应体: 单个专注记录对象（同列表接口响应中的单个记录结构）
+
+### 3. 创建新的专注记录
+
+**请求**
+- 方法: `POST`
+- 路径: `/focus-records`
+- 权限: 需要认证（JWT）
+- 请求体: 
+
+```json
+{
+  "task_id": "string", // 必需，关联的任务ID
+  "start_time": "string", // 必需，开始时间
+  "end_time": "string", // 必需，结束时间
+  "mode": "string" // 可选，模式：'pomodoro'(默认)或'normal'
+}
+```
+
+**响应**
+- 状态码: `201 Created` (成功) / `400 Bad Request` (参数错误) / `404 Not Found` (任务不存在)
+- 响应体: 创建的专注记录对象
+
+### 4. 更新专注记录
+
+**请求**
+- 方法: `PUT`
+- 路径: `/focus-records/:id`
+- 权限: 需要认证（JWT）
+- URL参数: 
+  - `id`: 专注记录ID
+- 请求体: 
+
+```json
+{
+  "end_time": "string", // 可选，结束时间
+  "notes": "string", // 可选，备注
+  "completed": boolean, // 可选，完成状态
+  "mode": "string" // 可选，模式
+}
+```
+
+**响应**
+- 状态码: `200 OK` (成功) / `404 Not Found` (记录不存在或无权限)
+- 响应体: 更新后的专注记录对象
+
+### 5. 结束当前专注记录
+
+**请求**
+- 方法: `POST`
+- 路径: `/focus-records/:id/complete`
+- 权限: 需要认证（JWT）
+- URL参数: 
+  - `id`: 专注记录ID
+- 请求体: 
+
+```json
+{
+  "notes": "string" // 可选，结束时添加的备注
+}
+```
+
+**响应**
+- 状态码: `200 OK` (成功) / `404 Not Found` (记录不存在或无权限) / `400 Bad Request` (记录已完成)
+- 响应体: 
+
+```json
+{
+  "message": "专注记录已完成",
+  "record": { /* 更新后的专注记录对象 */ }
+}
+```
+
+### 6. 删除专注记录
+
+**请求**
+- 方法: `DELETE`
+- 路径: `/focus-records/:id`
+- 权限: 需要认证（JWT）
+- URL参数: 
+  - `id`: 专注记录ID
+
+**响应**
+- 状态码: `200 OK` (成功) / `404 Not Found` (记录不存在或无权限)
+- 响应体: 
+
+```json
+{
+  "message": "专注记录已删除"
+}
+```
+
+### 7. 获取用户专注统计
+
+**请求**
+- 方法: `GET`
+- 路径: `/focus-records/stats`
+- 权限: 需要认证（JWT）
+- 请求参数: 
+  - `period` (可选): 统计周期，可选值：'today', 'week', 'month', 'year'
+  - `taskId` (可选): 按任务ID筛选统计
+
+**响应**
+- 状态码: `200 OK`
+- 响应体: 
+
+```json
+{
+  "totalFocusTime": number, // 总专注时间（分钟）
+  "completedSessions": number, // 已完成的专注会话数
+  "ongoingSessions": number, // 进行中的专注会话数
+  "breakdownByMode": {
+    "pomodoro": {
+      "count": number,
+      "totalMinutes": number
+    },
+    "normal": {
+      "count": number,
+      "totalMinutes": number
+    }
+  },
+  "dailyStats": [
+    {
+      "date": "string",
+      "minutes": number,
+      "sessions": number
+    }
+    // ... 按日期排序的每日统计
+  ]
+}
+```
+
 ## 认证接口 (Auth)
 
 ### 1. 用户登录（返回token）
@@ -770,6 +948,7 @@ interface User {
   todoLists: TodoList[]; // 所属清单列表
   tags: TodoTag[]; // 所属标签列表
   tasks: Task[]; // 所属任务列表
+  focusRecords: FocusRecord[]; // 所属专注记录列表
 }
 ```
 
@@ -795,6 +974,7 @@ interface Task {
   group?: TaskGroup; // 所属分组
   user: User; // 所属用户
   taskTags: TaskTag[]; // 任务标签关联
+  focusRecords: FocusRecord[]; // 关联的专注记录
 }
 ```
 
@@ -848,12 +1028,39 @@ interface TodoTag {
 }
 ```
 
+### FocusRecord (专注记录) 实体结构
+
+```typescript
+interface FocusRecord {
+  id: string; // 主键
+  user_id: string; // 用户ID
+  task_id: string; // 任务ID
+  start_time: Date; // 开始时间
+  end_time?: Date; // 结束时间
+  notes?: string; // 备注
+  completed: boolean; // 是否完成
+  mode: string; // 模式：'pomodoro'或'normal'
+  created_at: Date; // 创建时间
+  updated_at: Date; // 更新时间
+  // 关联关系
+  user: User; // 所属用户
+  task: Task; // 关联的任务
+}
+```
+
 ## 标签处理说明
 
 - 标签信息存储在内存映射中，通过`taskTagsMap`进行管理
 - 创建任务时可以通过`tags`字段传入标签ID数组
 - 查询任务时会自动从内存映射中获取并附加标签信息
 - 获取task_tag对应关系接口返回当前用户所有任务的标签映射关系
+
+## 专注记录功能说明
+
+- 专注记录用于跟踪用户在特定任务上的专注时间
+- 支持两种模式：番茄钟(pomodoro)和普通模式(normal)
+- 可以开始、完成和查询专注记录
+- 提供专注统计功能，帮助用户了解自己的专注习惯
 
 ## 开发注意事项
 
@@ -880,4 +1087,4 @@ interface TodoTag {
 
 ---
 
-document generation time: 2024-01-10 15:00:00
+document generation time: 2024-05-21 15:00:00

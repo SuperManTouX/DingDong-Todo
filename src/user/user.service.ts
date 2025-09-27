@@ -92,4 +92,19 @@ export class UserService {
     Object.assign(user, updateData, { updatedAt: new Date() });
     return this.userRepository.save(user);
   }
+
+  /**
+   * 更新用户头像
+   */
+  async updateAvatar(userId: string, avatarUrl: string): Promise<User> {
+    const user = await this.findById(userId);
+    if (!user) {
+      throw new NotFoundException('用户不存在');
+    }
+
+    user.avatar = avatarUrl;
+    user.updatedAt = new Date();
+    
+    return this.userRepository.save(user);
+  }
 }

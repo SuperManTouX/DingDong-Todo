@@ -37,7 +37,7 @@ export class Task {
   listId: string;
 
   @Column({ nullable: true, name: 'group_id' })
-  groupId: string;
+  groupId: string | null | undefined;
 
   @Column({ name: 'user_id' })
   userId: string;

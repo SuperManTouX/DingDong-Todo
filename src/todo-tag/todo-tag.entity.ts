@@ -15,6 +15,9 @@ export class TodoTag {
   @Column({ name: 'user_id' })
   userId: string;
 
+  @Column({ nullable: true, default: '#1890ff' })
+  color: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
