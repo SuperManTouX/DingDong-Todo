@@ -23,13 +23,54 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
   const { getGroupsByListId } = useTodoStore();
 
   const { activeListId } = useTodoStore.getState();
-  const groupMode: "normal" | "time" =
-    activeListId in SpecialLists ? "time" : "normal";
-  const unCompletedTasks = tasks.filter((task) => !task.completed);
+
+  // 根据activeListId确定分组模式和过滤逻辑
+  let groupMode: "normal" | "time" = "normal";
+  let filteredTasks = [...tasks];
+  let isCompletedMode = false;
+
+  // 特殊activeListId处理
+  if (activeListId === "today") {
+    // 只显示今天的任务
+    groupMode = "time";
+    const today = dayjs().format("YYYY-MM-DD");
+    filteredTasks = tasks.filter(
+      (task) =>
+        task.deadline && dayjs(task.deadline).format("YYYY-MM-DD") === today,
+    );
+  } else if (activeListId === "nearlyWeek") {
+    // 只显示最近七天的任务
+    groupMode = "time";
+    const today = dayjs();
+    const sevenDaysFromNow = dayjs().add(7, "day");
+    filteredTasks = tasks.filter((task) => {
+      if (!task.deadline) return false;
+      const taskDate = dayjs(task.deadline);
+      return (
+        taskDate.isValid() &&
+        (taskDate.isSame(today, "day") ||
+          (taskDate.isAfter(today) &&
+            taskDate.isBefore(sevenDaysFromNow, "day")))
+      );
+    });
+  } else if (activeListId === "cp") {
+    // 只显示已完成的任务
+    groupMode = "time"; // 已完成任务也使用时间分组模式
+    filteredTasks = [];
+    isCompletedMode = true;
+  } else if (activeListId in SpecialLists) {
+    // 其他特殊列表保持原有的时间分组模式
+    groupMode = "time";
+  }
+
+  // 在已完成模式下，显示所有已完成任务；否则只显示未完成任务
+  const displayTasks = isCompletedMode
+    ? filteredTasks
+    : filteredTasks.filter((task) => !task.completed);
   const displayGroups: DisplayGroup[] = [];
 
   // 当任务或当前激活列表变化时，重新计算分组
-  if (!unCompletedTasks || unCompletedTasks.length === 0) {
+  if (!displayTasks || displayTasks.length === 0) {
     return {
       groupMode,
       displayGroups,
@@ -39,14 +80,13 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
 
   // 获取当前清单的所有分组
   const groups = getGroupsByListId(activeListId);
-
   if (groupMode === "normal") {
     // 普通清单模式
     if (groups.length === 0) {
       // 没有分组，所有任务都放入未分组
       displayGroups.push({
         title: "未分组",
-        tasks: unCompletedTasks,
+        tasks: displayTasks,
         type: "ungrouped",
       });
     } else {
@@ -60,7 +100,7 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
       });
 
       // 将任务分配到对应的分组
-      unCompletedTasks.forEach((task) => {
+      displayTasks.forEach((task) => {
         if (task.groupId) {
           // 找到任务所属的分组
           const taskGroup = groups.find((group) => group.id === task.groupId);
@@ -115,56 +155,88 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
     }
   } else {
     // 时间分组模式
-    const timeGrouped: { [key: string]: Todo[] } = {};
+    // 预定义的特殊时间分组
+    const today = dayjs().format("YYYY-MM-DD");
+    const tomorrow = dayjs().add(1, "day").format("YYYY-MM-DD");
+    const sevenDaysFromNow = dayjs().add(7, "day");
+
+    // 初始化分组对象
+    const timeGrouped: { [key: string]: Todo[] } = {
+      今天: [],
+      明天: [],
+      最近七天: [],
+      之后: [],
+    };
 
     // 构建任务ID集合，用于快速检查父任务是否存在
     // 筛选任务：包含有截止日期的顶层任务和找不到父组件的子任务
-    const tasksWithDeadlineTop = unCompletedTasks.filter((task) => {
+    const tasksWithDeadlineTop = displayTasks.filter((task) => {
       return activeListId === "bin"
-        ? unCompletedTasks.some((taskI) => {
+        ? displayTasks.some((taskI) => {
             return task.id === taskI.parentId;
           })
         : task.deadline;
     });
-    // 分配时间分组
-    unCompletedTasks.forEach((taskO) => {
-      const date = dayjs(taskO.deadline).format("YYYY-MM-DD");
 
+    // 分配时间分组
+    displayTasks.forEach((taskO) => {
+      const taskDate = dayjs(taskO.deadline);
+      if (!taskDate.isValid()) return;
+
+      const date = taskDate.format("YYYY-MM-DD");
       const parentT = tasksWithDeadlineTop.find((taskI) => {
         return taskO.parentId === taskI.id;
       });
+
+      // 确定任务应该属于哪个时间分组
+      let targetGroup = "之后";
+
+      if (date === today) {
+        targetGroup = "今天";
+      } else if (date === tomorrow) {
+        targetGroup = "明天";
+      } else if (
+        taskDate.isAfter(dayjs()) &&
+        taskDate.isBefore(sevenDaysFromNow, "day")
+      ) {
+        targetGroup = "最近七天";
+      }
+
       if (parentT && parentT.deadline) {
-        // 确保父任务有截止日期
-        const parentDate = dayjs(parentT.deadline).format("YYYY-MM-DD");
-        // 确保时间分组数组已初始化
-        if (!timeGrouped[parentDate]) {
-          timeGrouped[parentDate] = [];
+        // 如果有父任务且父任务有截止日期，使用父任务的截止日期来确定分组
+        const parentDate = dayjs(parentT.deadline);
+        if (!parentDate.isValid()) return;
+
+        if (parentDate.format("YYYY-MM-DD") === today) {
+          targetGroup = "今天";
+        } else if (parentDate.format("YYYY-MM-DD") === tomorrow) {
+          targetGroup = "明天";
+        } else if (
+          parentDate.isAfter(dayjs()) &&
+          parentDate.isBefore(sevenDaysFromNow, "day")
+        ) {
+          targetGroup = "最近七天";
         }
-        timeGrouped[parentDate].push(taskO);
-      } else {
-        // 如果父任务不存在或没有截止日期，则使用任务自身的截止日期
-        if (!timeGrouped[date]) {
-          timeGrouped[date] = [];
-        }
-        timeGrouped[date].push(taskO);
+      }
+
+      // 将任务添加到相应的分组
+      timeGrouped[targetGroup].push(taskO);
+    });
+
+    // 转换为统一的显示分组格式，只添加有任务的分组
+    const groupOrder = ["今天", "明天", "最近七天", "之后"];
+    groupOrder.forEach((groupName) => {
+      if (timeGrouped[groupName].length > 0) {
+        displayGroups.push({
+          title: groupName,
+          tasks: timeGrouped[groupName],
+          type: "time",
+        });
       }
     });
 
-    // 转换为统一的显示分组格式并排序
-    Object.keys(timeGrouped)
-      .sort((a, b) => dayjs(a).diff(dayjs(b)))
-      .forEach((date) => {
-        displayGroups.push({
-          title: date,
-          tasks: timeGrouped[date],
-          type: "time",
-        });
-      });
-
     // 添加未设置截止日期的任务
-    const tasksWithoutDeadline = unCompletedTasks.filter(
-      (task) => !task.deadline,
-    );
+    const tasksWithoutDeadline = displayTasks.filter((task) => !task.deadline);
     if (tasksWithoutDeadline.length > 0) {
       displayGroups.push({
         title: "未设置截止日期",
@@ -177,6 +249,6 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
   return {
     groupMode,
     displayGroups,
-    allTasks: unCompletedTasks,
+    allTasks: displayTasks,
   };
 }

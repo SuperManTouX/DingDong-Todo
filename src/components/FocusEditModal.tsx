@@ -11,13 +11,15 @@ import {
   message,
   Typography,
   Select,
+  Popconfirm,
+  Button,
 } from "antd";
 import type { Dayjs } from "dayjs";
 import type { MenuProps } from "antd/es/menu";
 import dayjs from "dayjs";
 import type { ApiFocusRecord } from "@/services/focusService";
 import { focusService } from "@/services/focusService";
-import { CheckOutlined } from "@ant-design/icons";
+import { CheckOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useTodoStore } from "@/store/todoStore";
 
 interface FocusEditModalProps {
@@ -27,6 +29,7 @@ interface FocusEditModalProps {
   selectedTodo?: any | null;
   setSelectedTodo?: (todo: any | null) => void;
   onSuccess?: (newRecord: ApiFocusRecord) => void;
+  onDelete?: (recordId: string) => void;
   onCancel: () => void;
 }
 
@@ -37,6 +40,7 @@ export const FocusEditModal: React.FC<FocusEditModalProps> = ({
   selectedTodo,
   setSelectedTodo,
   onSuccess,
+  onDelete,
   onCancel,
 }) => {
   // 使用外部传入的form或创建新的form实例
@@ -208,11 +212,61 @@ export const FocusEditModal: React.FC<FocusEditModalProps> = ({
     }
   };
 
+  const handleDelete = async () => {
+    if (!record) return;
+    
+    try {
+      // 调用API删除记录
+      await focusService.deleteFocusRecord(record.id);
+      message.success("专注记录删除成功");
+      
+      if (onDelete) {
+        onDelete(record.id);
+      }
+      
+      onCancel();
+    } catch (error) {
+      console.error("删除专注记录失败:", error);
+      message.error("删除专注记录失败，请稍后重试");
+    }
+  };
+
+  // 自定义Modal底部按钮
+  const footer = (
+    <div className="flex justify-between w-full">
+      {/* 原有按钮保持不变 */}
+      <div>
+        <Button onClick={onCancel}>取消</Button>
+        <Button type="primary" onClick={handleOk} className="ml-2">
+          {mode === "add" ? "添加" : "保存"}
+        </Button>
+      </div>
+      {/* 仅在编辑模式下显示删除按钮 */}
+      {mode === "edit" && record && (
+        <Popconfirm
+              title="确定要删除这条专注记录吗？"
+              description="删除后将无法恢复"
+              onConfirm={handleDelete}
+              okText="确定"
+              cancelText="取消"
+              placement="topRight"
+            >
+              <Button 
+                type="text" 
+                danger 
+                icon={<DeleteOutlined />}
+                title="删除记录"
+              />
+            </Popconfirm>
+      )}
+    </div>
+  );
+
   return (
     <Modal
       title={mode === "add" ? "添加专注记录" : "编辑专注记录"}
       open={isOpen}
-      onOk={handleOk}
+      footer={footer}
       onCancel={onCancel}
       width={500}
     >

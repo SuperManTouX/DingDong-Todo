@@ -8,6 +8,7 @@ import { AntdStaticHolder } from "./utils/antdStatic";
 import { initializeTheme, useThemeStore } from "./store/themeStore";
 import { AppRouter } from "./routes";
 import { useAuthStore } from "./store/authStore";
+import { HotkeysProvider } from "react-hotkeys-hook";
 
 // 初始化主题
 initializeTheme();
@@ -37,6 +38,8 @@ const AppWithTheme: React.FC = () => {
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <AppWithTheme />
+    <HotkeysProvider>
+      <AppWithTheme />
+    </HotkeysProvider>
   </StrictMode>,
 );
