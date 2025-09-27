@@ -1,19 +1,15 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { TodoModule } from './todo/todo.module';
+import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
+import { TodoModule } from './todo/todo.module';
 import { TodoListModule } from './todo-list/todo-list.module';
 import { TodoTagModule } from './todo-tag/todo-tag.module';
 import { TaskGroupModule } from './task-group/task-group.module';
 import { BinModule } from './bin/bin.module';
-import { User } from './user/user.entity';
-import { TodoList } from './todo-list/todo-list.entity';
-import { TaskGroup } from './task-group/task-group.entity';
-import { Task } from './todo/todo.entity';
-import { TodoTag } from './todo-tag/todo-tag.entity';
-import { TaskTag } from './task-tag/task-tag.entity';
-import { Bin } from './bin/bin.entity';
+import { FocusRecordModule } from './focus-record/focus-record.module';
+import { S3Config } from './config/s3.config';
 
 @Module({
   imports: [
@@ -28,16 +24,19 @@ import { Bin } from './bin/bin.entity';
       username: process.env.DB_USERNAME || 'root',
       password: process.env.DB_PASSWORD || '',
       database: process.env.DB_DATABASE || 'todo_db',
-      entities: [User, TodoList, TaskGroup, Task, TodoTag, TaskTag, Bin],
-      synchronize: false,
       autoLoadEntities: true,
+      synchronize: false,
       logging: true
     }),
-    TodoModule,
+    UserModule,
     AuthModule,
+    TodoModule,
     TodoListModule,
     TodoTagModule,
     TaskGroupModule,
     BinModule,
+    FocusRecordModule,
   ],
+  providers: [S3Config],
+  exports: [S3Config]
 })export class AppModule {}

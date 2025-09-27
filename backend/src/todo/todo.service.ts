@@ -210,8 +210,25 @@ export class TaskService {
   }
   
   /**
-   * 递归将指定任务及其所有子任务移至回收站
+   * 批量清空指定groupId的所有任务的groupId字段
    */
+  async clearTasksGroupId(groupId: string, userId: string): Promise<void> {
+    // 查找所有属于该分组的任务
+    const tasks = await this.taskRepository.find({
+      where: { groupId, userId },
+    });
+    
+    // 批量更新任务的groupId为undefined
+    for (const task of tasks) {
+      task.groupId = undefined;
+      task.updatedAt = new Date();
+    }
+    
+    // 批量保存更新后的任务
+    if (tasks.length > 0) {
+      await this.taskRepository.save(tasks);
+    }
+  }
   private async moveNestedTasksToBin(taskId: string, userId: string): Promise<void> {
     // 查找当前任务的所有直接子任务
     const childTasks = await this.taskRepository.find({

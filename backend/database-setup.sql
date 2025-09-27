@@ -3,6 +3,16 @@
 CREATE DATABASE IF NOT EXISTS todo_db;
 USE todo_db;
 
+-- 删除表（按照依赖关系顺序删除）
+DROP TABLE IF EXISTS focus_record CASCADE;
+DROP TABLE IF EXISTS task_tag CASCADE;
+DROP TABLE IF EXISTS bin CASCADE;
+DROP TABLE IF EXISTS task CASCADE;
+DROP TABLE IF EXISTS todo_tag CASCADE;
+DROP TABLE IF EXISTS task_group CASCADE;
+DROP TABLE IF EXISTS todo_list CASCADE;
+DROP TABLE IF EXISTS user CASCADE;
+
 -- 2. 创建用户表
 CREATE TABLE IF NOT EXISTS user (
   id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -43,6 +53,7 @@ CREATE TABLE IF NOT EXISTS todo_tag (
   name VARCHAR(255) NOT NULL,
   parent_id VARCHAR(36) NULL,
   user_id VARCHAR(36) NOT NULL,
+  color VARCHAR(255) NULL DEFAULT '#1890ff',
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
@@ -130,28 +141,30 @@ VALUES
   ('group-008', 'todolist-006', '准备工作', 'user-001', NOW(), NOW());
 
 -- 11. 插入标签数据 (标准化ID格式: tag-xxx)
-INSERT INTO todo_tag (id, name, parent_id, user_id, created_at, updated_at)
+INSERT INTO todo_tag (id, name, parent_id, user_id, color, created_at, updated_at)
 VALUES
-  ('tag-001', '学习', NULL, 'user-001', NOW(), NOW()),
-  ('tag-002', 'React', 'tag-001', 'user-001', NOW(), NOW()),
-  ('tag-003', '视频课程', 'tag-001', 'user-001', NOW(), NOW()),
-  ('tag-004', '后端', 'tag-001', 'user-001', NOW(), NOW()),
-  ('tag-005', 'TypeScript', 'tag-002', 'user-001', NOW(), NOW()),
-  ('tag-006', '工作', NULL, 'user-001', NOW(), NOW()),
-  ('tag-007', '会议', 'tag-006', 'user-001', NOW(), NOW()),
-  ('tag-008', '项目管理', 'tag-006', 'user-001', NOW(), NOW()),
-  ('tag-009', '计划', 'tag-006', 'user-001', NOW(), NOW()),
-  ('tag-010', '执行', 'tag-006', 'user-001', NOW(), NOW()),
-  ('tag-011', '团队协作', 'tag-006', 'user-001', NOW(), NOW()),
-  ('tag-012', '生活', NULL, 'user-002', NOW(), NOW()),
-  ('tag-013', '礼物', 'tag-012', 'user-002', NOW(), NOW()),
-  ('tag-014', '运动', 'tag-012', 'user-002', NOW(), NOW()),
-  ('tag-015', '阅读', NULL, 'user-002', NOW(), NOW()),
-  ('tag-016', '技术书籍', 'tag-015', 'user-002', NOW(), NOW()),
-  ('tag-017', '健身', NULL, 'user-003', NOW(), NOW()),
-  ('tag-018', '跑步', 'tag-017', 'user-003', NOW(), NOW()),
-  ('tag-019', '旅行', NULL, 'user-001', NOW(), NOW()),
-  ('tag-020', '准备', 'tag-019', 'user-001', NOW(), NOW());
+  ('tag-001', '学习', NULL, 'user-001', '#1890ff', NOW(), NOW()),
+  ('tag-002', 'React', 'tag-001', 'user-001', '#52c41a', NOW(), NOW()),
+  ('tag-003', '视频课程', 'tag-001', 'user-001', '#faad14', NOW(), NOW()),
+  ('tag-004', '后端', 'tag-001', 'user-001', '#722ed1', NOW(), NOW()),
+  ('tag-005', 'TypeScript', 'tag-002', 'user-001', '#f5222d', NOW(), NOW()),
+  ('tag-006', '工作', NULL, 'user-001', '#13c2c2', NOW(), NOW()),
+  ('tag-007', '会议', 'tag-006', 'user-001', '#eb2f96', NOW(), NOW()),
+  ('tag-008', '项目管理', 'tag-006', 'user-001', '#597ef7', NOW(), NOW()),
+  ('tag-009', '计划', 'tag-006', 'user-001', '#fa8c16', NOW(), NOW()),
+  ('tag-010', '执行', 'tag-006', 'user-001', '#a0d911', NOW(), NOW()),
+  ('tag-011', '团队协作', 'tag-006', 'user-001', '#fadb14', NOW(), NOW()),
+  ('tag-012', '生活', NULL, 'user-002', '#1890ff', NOW(), NOW()),
+  ('tag-013', '礼物', 'tag-012', 'user-002', '#eb2f96', NOW(), NOW()),
+  ('tag-014', '运动', 'tag-012', 'user-002', '#f5222d', NOW(), NOW()),
+  ('tag-015', '阅读', NULL, 'user-002', '#722ed1', NOW(), NOW()),
+  ('tag-016', '技术书籍', 'tag-015', 'user-002', '#13c2c2', NOW(), NOW()),
+  ('tag-017', '健身', NULL, 'user-003', '#f5222d', NOW(), NOW()),
+  ('tag-018', '跑步', 'tag-017', 'user-003', '#13c2c2', NOW(), NOW()),
+  ('tag-019', '旅行', NULL, 'user-001', '#faad14', NOW(), NOW()),
+  ('tag-020', '准备', 'tag-019', 'user-001', '#52c41a', NOW(), NOW());
+
+
 
 -- 12. 插入任务数据 (标准化ID格式: task-xxx)
 INSERT INTO task (id, title, text, completed, priority, datetime_local, deadline, parent_id, depth, list_id, group_id, user_id, created_at, updated_at)
@@ -429,5 +442,52 @@ ALTER TABLE todo_tag ADD INDEX idx_todo_tag_parent_id (parent_id);
 ALTER TABLE bin ADD INDEX idx_bin_user_id (user_id);
 ALTER TABLE bin ADD INDEX idx_bin_deleted_at (deleted_at);
 
--- 脚本完成提示
+-- 16. 创建专注记录表（在所有依赖表数据插入后创建）
+CREATE TABLE IF NOT EXISTS focus_record (
+  id VARCHAR(36) NOT NULL PRIMARY KEY,
+  user_id VARCHAR(36) NOT NULL,
+  task_id VARCHAR(36) NOT NULL,
+  start_time DATETIME NOT NULL,
+  end_time DATETIME NOT NULL,
+  duration_minutes INT NULL COMMENT '持续时间（分钟）',
+  notes TEXT NULL,
+  completed BOOLEAN NOT NULL DEFAULT FALSE,
+  mode ENUM('pomodoro', 'normal') NOT NULL DEFAULT 'pomodoro',
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+  FOREIGN KEY (task_id) REFERENCES task(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 添加触发器，自动计算持续时间
+DELIMITER //
+CREATE TRIGGER calculate_duration_before_insert
+BEFORE INSERT ON focus_record
+FOR EACH ROW
+BEGIN
+  SET NEW.duration_minutes = TIMESTAMPDIFF(MINUTE, NEW.start_time, NEW.end_time);
+END//
+
+CREATE TRIGGER calculate_duration_before_update
+BEFORE UPDATE ON focus_record
+FOR EACH ROW
+BEGIN
+  SET NEW.duration_minutes = TIMESTAMPDIFF(MINUTE, NEW.start_time, NEW.end_time);
+END//
+DELIMITER ;
+
+-- 为专注记录表添加索引
+ALTER TABLE focus_record ADD INDEX idx_focus_record_user_id (user_id);
+ALTER TABLE focus_record ADD INDEX idx_focus_record_task_id (task_id);
+ALTER TABLE focus_record ADD INDEX idx_focus_record_created_at (created_at);
+
+-- 插入专注记录测试数据 (标准化ID格式: focus-xxx) - 在task表数据插入后进行
+INSERT INTO focus_record (id, user_id, task_id, start_time, end_time, duration_minutes, notes, completed, mode, created_at, updated_at)
+VALUES
+  ('focus-001', 'user-001', 'task-001', '2025-09-16 09:00:00', '2025-09-16 09:25:00', 25, '专注学习React基础', true, 'pomodoro', '2025-09-16 09:00:00', '2025-09-16 09:25:00'),
+  ('focus-002', 'user-001', 'task-002', '2025-09-16 09:35:00', '2025-09-16 10:00:00', 25, '学习React Hooks', true, 'pomodoro', '2025-09-16 09:35:00', '2025-09-16 10:00:00'),
+  ('focus-003', 'user-001', 'task-007', '2025-09-16 14:00:00', '2025-09-16 15:30:00', 90, '深入学习TypeScript高级特性', true, 'normal', '2025-09-16 14:00:00', '2025-09-16 15:30:00'),
+  ('focus-004', 'user-002', 'task-015', '2025-09-16 20:00:00', '2025-09-16 20:25:00', 25, '阅读代码整洁之道', true, 'pomodoro', '2025-09-16 20:00:00', '2025-09-16 20:25:00'),
+  ('focus-005', 'user-003', 'task-018', '2025-09-17 07:00:00', '2025-09-17 07:45:00', 45, '晨跑训练', true, 'normal', '2025-09-17 07:00:00', '2025-09-17 07:45:00'),
+  ('focus-006', 'user-001', 'task-009', '2025-09-17 10:00:00', '2025-09-17 10:25:00', 25, '完成API文档编写', true, 'pomodoro', '2025-09-17 10:00:00', '2025-09-17 10:25:00');
 -- 执行此脚本以创建数据库表并插入示例数据。注意：密码已进行哈希处理（示例密码为123456、password123和demo123）。
