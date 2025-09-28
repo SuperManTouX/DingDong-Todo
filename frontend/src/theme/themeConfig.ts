@@ -42,11 +42,26 @@ export const greenTheme: ThemeConfig = {
   hoverColor: "rgba(34, 197, 94, 0.08)", // 主色调的浅色版本
 };
 
+// 红色主题配置
+export const redTheme: ThemeConfig = {
+  key: "red",
+  name: "红色主题",
+  primaryColor: "#ef4444", // 主色调 - 红色
+  successColor: "#22c55e", // 成功色 - 绿色
+  warningColor: "#f59e0b", // 警告色 - 琥珀色
+  errorColor: "#dc2626", // 错误色 - 深红色
+  infoColor: "#3b82f6", // 信息色 - 蓝色
+  bgColor: "#fef2f2", // 背景色 - 浅红色
+  textColor: "#374151", // 文本色 - 深灰色
+  hoverColor: "rgba(239, 68, 68, 0.08)", // 主色调的浅色版本
+};
+
 // 所有可用主题
 export const AVAILABLE_THEMES: ThemeConfig[] = [
   lightTheme,
   darkTheme,
   greenTheme,
+  redTheme,
 ];
 
 // 根据主题ID获取主题配置
@@ -58,29 +73,29 @@ export const getThemeById = (themeId: string): ThemeConfig | undefined => {
 export const generateAntdThemeConfig = (currentTheme: ThemeConfig) => {
   return {
     token: {
-      colorPrimary: currentTheme.primaryColor || '#1890ff',
-      colorSuccess: currentTheme.successColor || '#52c41a',
-      colorWarning: currentTheme.warningColor || '#faad14',
-      colorError: currentTheme.errorColor || '#f5222d',
-      colorInfo: currentTheme.infoColor || '#1890ff',
-      colorBgBase: currentTheme.bgColor || '#ffffff',
-      colorTextBase: currentTheme.textColor || '#333333',
+      colorPrimary: currentTheme.primaryColor || "#1890ff",
+      colorSuccess: currentTheme.successColor || "#52c41a",
+      colorWarning: currentTheme.warningColor || "#faad14",
+      colorError: currentTheme.errorColor || "#f5222d",
+      colorInfo: currentTheme.infoColor || "#1890ff",
+      colorBgBase: currentTheme.bgColor || "#ffffff",
+      colorTextBase: currentTheme.textColor || "#333333",
     },
     components: {
       Select: {
-        colorPrimary: currentTheme.primaryColor || '#1890ff',
-        controlItemBgActive: currentTheme.bgColor || '#ffffff',
-        controlItemBgHover: currentTheme.hoverColor || 'rgba(24, 144, 255, 0.08)',
+        colorPrimary: currentTheme.primaryColor || "#1890ff",
+        controlItemBgActive: currentTheme.bgColor || "#ffffff",
+        controlItemBgHover:
+          currentTheme.hoverColor || "rgba(24, 144, 255, 0.08)",
       },
       Menu: {
-        colorPrimary: currentTheme.primaryColor || '#1890ff',
-        itemColor: currentTheme.textColor || '#333333',
-        itemHoverColor: currentTheme.primaryColor || '#1890ff',
+        colorPrimary: currentTheme.primaryColor || "#1890ff",
+        itemColor: currentTheme.textColor || "#333333",
+        itemHoverColor: currentTheme.primaryColor || "#1890ff",
         itemHoverBg: currentTheme.hoverColor,
         itemSelectedBg: currentTheme.hoverColor,
-        subMenuItemBg: currentTheme.bgColor || '#ffffff',
-        subMenuItemColor: currentTheme.textColor || '#333333',
-        subMenuItemHoverColor: currentTheme.primaryColor || '#1890ff',
+        subMenuItemColor: currentTheme.textColor || "#333333",
+        subMenuItemHoverColor: currentTheme.primaryColor || "#1890ff",
         subMenuItemHoverBg: currentTheme.hoverColor,
       },
     },

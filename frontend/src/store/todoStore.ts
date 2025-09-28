@@ -1,7 +1,7 @@
 // 兼容性包装器 - 导出新的模块化store
-import { useTodoStore } from './index';
-import type { TodoState } from './types';
-
+import { useTodoStore } from "./index";
+import type { TodoState } from "./types";
+import type { Todo } from "@/types";
 // 创建一个兼容性对象，代理所有方法调用
 const todoStore = {
   ...useTodoStore,
@@ -11,10 +11,7 @@ const todoStore = {
   subscribe: (listener) => useTodoStore.subscribe(listener),
 };
 
-// 获取store状态，用于导出所有属性
-const storeState = useTodoStore.getState();
-
-// 导出原始store和所有可能被直接访问的方法、属性
+// 获取store状态，用于导出所有可能被直接访问的方法、属性
 export const {
   // 状态属性
   todoListData,
@@ -25,14 +22,14 @@ export const {
   tasks,
   groups,
   userId,
-  
+
   // 计算属性
   activeGroup,
   selectTodo,
-  
+
   // 方法
-  dispatchTodo, 
-  dispatchList, 
+  dispatchTodo,
+  dispatchList,
   dispatchTag,
   addGroup,
   updateGroup,
@@ -50,28 +47,73 @@ export const {
   setActiveListId,
   setSelectTodoId,
   setUserId,
-  loadData
-} = storeState;
+  loadData,
+} = useTodoStore.getState();
 
 // 为了确保兼容性，创建并导出一些可能使用的自定义hooks
-export const useSelectTodo = () => {
-  const selectTodo = useTodoStore(state => state.selectTodo);
-  return selectTodo;
+export const useSelectTodo = (): Todo | null => {
+  try {
+    const selectTodo = useTodoStore((state) => {
+      try {
+        // 确保state存在且有selectTodo属性
+        if (!state) {
+          console.warn("State is undefined in useSelectTodo");
+          return null;
+        }
+        // 返回state.selectTodo，它现在是一个getter
+        return state.selectTodo();
+      } catch (error) {
+        console.error("Error accessing selectTodo in store:", error);
+        return null;
+      }
+    });
+    // 确保返回的是null或有效的Todo对象
+    return selectTodo || null;
+  } catch (error) {
+    console.error("Error in useSelectTodo hook:", error);
+    return null;
+  }
 };
 
 export const useActiveGroup = () => {
-  const activeGroup = useTodoStore(state => state.activeGroup);
-  return activeGroup;
+  try {
+    const activeGroup = useTodoStore((state) => {
+      try {
+        if (!state) {
+          console.warn("State is undefined in useActiveGroup");
+          return null;
+        }
+        return state.activeGroup;
+      } catch (error) {
+        console.error("Error accessing activeGroup in store:", error);
+        return null;
+      }
+    });
+    return activeGroup || null;
+  } catch (error) {
+    console.error("Error in useActiveGroup hook:", error);
+    return null;
+  }
 };
 
 export const useTodoListData = () => {
-  const todoListData = useTodoStore(state => state.todoListData);
-  return todoListData;
+  try {
+    const todoListData = useTodoStore((state) => state.todoListData || []);
+    return Array.isArray(todoListData) ? todoListData : [];
+  } catch (error) {
+    console.error("Error in useTodoListData hook:", error);
+    return [];
+  }
 };
 
 export const useTasks = () => {
-  const tasks = useTodoStore(state => state.tasks);
-  return tasks;
+  try {
+    const tasks = useTodoStore((state) => state.tasks || []);
+    return Array.isArray(tasks) ? tasks : [];
+  } catch (error) {
+    console.error("Error in useTasks hook:", error);
+    return [];
+  }
 };
 
 export { useTodoStore };

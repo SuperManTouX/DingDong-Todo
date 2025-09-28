@@ -19,22 +19,9 @@ export default function AppLayout() {
   // 使用提取的函数生成Ant Design的Design Token配置
   const themeConfig = generateAntdThemeConfig(currentTheme);
 
-  // 主题切换器容器样式
-  const themeSwitcherContainerStyle: React.CSSProperties = {
-    position: "absolute",
-    top: "16px",
-    right: "16px",
-    zIndex: 1000,
-  };
-
   return (
     <ConfigProvider theme={themeConfig}>
       <Layout className="w-100 h-100">
-        {/* 主题切换器 - 不修改原有结构，只添加新的组件 */}
-        <div style={themeSwitcherContainerStyle}>
-          <ThemeSwitcher />
-        </div>
-
         <Sider collapsed={true} width="4%">
           {/* 使用侧边栏导航组件 */}
           <SidebarNav />

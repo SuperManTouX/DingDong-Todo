@@ -115,7 +115,7 @@ const SidebarNav: React.FC = () => {
       {/* 菜单区域 */}
       <Menu
         mode="vertical"
-        className={"flex-1"}
+        className={"flex-1 h-100"}
         items={menuItems}
         onClick={handleMenuClick}
         selectedKeys={[selectedKey]}

@@ -24,8 +24,8 @@ const Index: React.FC = () => {
 
   const activeListData = getActiveListData();
   const selectedTodo = useSelectTodo();
-  let activeListTitle: string = "";
-  if (activeListData.title === "") {
+  let activeListTitle: string = activeListData.title;
+  if (activeListTitle === "") {
     switch (activeListId) {
       case "tody":
         activeListTitle = "今天";
@@ -60,11 +60,7 @@ const Index: React.FC = () => {
           groupName={activeListTitle}
         ></FilteredTodoList>
       </Layout>
-      <Layout>
-        {selectedTodo && (
-          <EditTodo key={selectedTodo.id} onTodoChange={dispatchTodo} />
-        )}
-      </Layout>
+      <Layout>{selectedTodo && <EditTodo key={selectedTodo.id} />}</Layout>
       {/* 清单管理模态框 */}
       {listGroupManager.groupModal}
       {/* 标签管理模态框 */}

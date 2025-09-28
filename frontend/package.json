@@ -33,6 +33,9 @@
     "react-hotkeys-hook": "^5.1.0",
     "react-router-dom": "^7.9.1",
     "recharts": "^3.2.1",
+    "slate": "^0.118.1",
+    "slate-history": "^0.113.1",
+    "slate-react": "^0.117.4",
     "use-immer": "^0.11.0",
     "uuid": "^13.0.0",
     "zustand": "^5.0.8"

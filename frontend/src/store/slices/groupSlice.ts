@@ -1,5 +1,9 @@
 import { produce } from "immer";
-import { createGroup, updateGroup as updateGroupApi, deleteGroup as deleteGroupApi } from "@/services/todoService";
+import {
+  createGroup,
+  updateGroup as updateGroupApi,
+  deleteGroup as deleteGroupApi,
+} from "@/services/todoService";
 import type { Group, TodoState } from "../types";
 
 export const groupActions = {
@@ -8,7 +12,7 @@ export const groupActions = {
     groupName: string,
     groupItemIds: string[],
     set: any,
-    get: any
+    get: any,
   ): Promise<void> => {
     try {
       // 准备新分组数据
@@ -43,10 +47,7 @@ export const groupActions = {
     }
   },
 
-  updateGroup: async (
-    nGroup: Group,
-    set: any
-  ): Promise<void> => {
+  updateGroup: async (nGroup: Group, set: any): Promise<void> => {
     try {
       // 调用后端API更新分组
       await updateGroupApi(nGroup.id, nGroup);
@@ -71,35 +72,40 @@ export const groupActions = {
     listId: string,
     groupName: string,
     set: any,
-    get: any
+    get: any,
   ): Promise<void> => {
     try {
       // 查找要删除的分组
-      const group = get().groups.find(
-        (g: any) => g.listId === listId && g.groupName === groupName
+
+      const group: Group = get().groups.find(
+        (g: any) => g.id === listId && g.groupName === groupName,
       );
-      
+
       if (!group) return;
-      
+
       // 调用后端API删除分组
       await deleteGroupApi(group.id);
-      
+
       // 更新本地状态
       set(
         produce((draftState: TodoState) => {
           // 删除分组
           draftState.groups = draftState.groups.filter(
-            (g: any) => g.id !== group.id
+            (g: any) => g.id !== group.id,
           );
-          
+
           // 清除相关任务的groupId
           draftState.tasks = draftState.tasks.map((task: any) => {
             if (task.groupId === group.id) {
-              return { ...task, groupId: undefined, updatedAt: new Date().toISOString() };
+              return {
+                ...task,
+                groupId: undefined,
+                updatedAt: new Date().toISOString(),
+              };
             }
             return task;
           });
-        })
+        }),
       );
     } catch (error) {
       console.error("删除分组失败:", error);
@@ -107,10 +113,7 @@ export const groupActions = {
     }
   },
 
-  getGroupsByListId: (
-    listId: string,
-    get: any
-  ): Group[] => {
+  getGroupsByListId: (listId: string, get: any): Group[] => {
     return get().groups.filter((group: any) => group.listId === listId);
   },
 };
