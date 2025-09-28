@@ -1,6 +1,5 @@
 import type { ControllerProps } from "@/types";
-import { Button, Col, Input, Row, Dropdown, Menu, DatePicker, Tag } from "antd";
-import type { TagProps } from "antd";
+import { Button, Col, Input, Row, Dropdown, DatePicker, Tag } from "antd";
 import { message } from "@/utils/antdStatic";
 import { MESSAGES } from "@/constants/messages";
 import {
@@ -14,8 +13,7 @@ import dayjs from "dayjs";
 import { useTodoStore } from "@/store/todoStore";
 import TagTreeSelect from "@/components/TagTreeSelect";
 import { useState, useEffect, useRef } from "react";
-
-type TagValueType = string;
+import { Priority } from "@/constants";
 
 export default function Controller({
   onCompleteAll,
@@ -36,9 +34,9 @@ export default function Controller({
     activeListId,
   );
   // 存储当前选择的优先级
-  const [selectedPriority, setSelectedPriority] = useState<string | null>(null);
+  const [selectedPriority, setSelectedPriority] = useState<number | null>(null);
   // 存储当前选择的截止日期
-  const [selectedDeadline, setSelectedDeadline] = useState<Date | null>(null);
+  const [selectedDeadline, setSelectedDeadline] = useState<string | null>(null);
   // 控制Dropdown显示状态
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   // 数据加载状态
@@ -82,10 +80,10 @@ export default function Controller({
   // 处理日期选择
   const handleDateSelect = (date: any) => {
     if (date) {
-      const formattedDate = dayjs(date).format("YYYY-MM-DD HH:mm");
+      const formattedDate = dayjs(date).format("YYYY-MM-DD");
       console.log("Selected date:", formattedDate);
       // 设置截止日期状态
-      setSelectedDeadline(date.toDate());
+      setSelectedDeadline(formattedDate);
       message.info(`已选择截止日期: ${formattedDate}`);
     } else {
       // 清除截止日期
@@ -93,22 +91,8 @@ export default function Controller({
     }
   };
 
-  // 获取优先级对应的颜色
-  const getPriorityColor = () => {
-    switch (selectedPriority) {
-      case "高":
-        return "#ff4d4f"; // 红色
-      case "中":
-        return "#faad14"; // 黄色
-      case "低":
-        return "#1677ff"; // 蓝色
-      default:
-        return "#909399"; // 灰色
-    }
-  };
-
   // 处理优先级选择
-  const handlePrioritySelect = (priority: string | null) => {
+  const handlePrioritySelect = (priority: number | null) => {
     setSelectedPriority(priority);
     // 根据选择的优先级显示不同的提示信息
     const priorityText = priority === null ? "无" : priority;
@@ -143,7 +127,7 @@ export default function Controller({
     {
       key: "priority",
       label: (
-        <div 
+        <div
           style={{ display: "flex", gap: "8px", padding: "8px 0" }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -151,13 +135,13 @@ export default function Controller({
             size="small"
             style={{
               backgroundColor:
-                selectedPriority === "高" ? "#ff4d4f" : "transparent",
-              color: selectedPriority === "高" ? "#fff" : "#ff4d4f",
+                selectedPriority === 3 ? "#ff4d4f" : "transparent",
+              color: selectedPriority === 3 ? "#fff" : "#ff4d4f",
               borderColor: "#ff4d4f",
             }}
             onClick={(e) => {
               e.stopPropagation();
-              handlePrioritySelect("高");
+              handlePrioritySelect(Priority.High);
             }}
           >
             高
@@ -166,13 +150,13 @@ export default function Controller({
             size="small"
             style={{
               backgroundColor:
-                selectedPriority === "中" ? "#faad14" : "transparent",
-              color: selectedPriority === "中" ? "#fff" : "#faad14",
+                selectedPriority === 2 ? "#faad14" : "transparent",
+              color: selectedPriority === 2 ? "#fff" : "#faad14",
               borderColor: "#faad14",
             }}
             onClick={(e) => {
               e.stopPropagation();
-              handlePrioritySelect("中");
+              handlePrioritySelect(Priority.Medium);
             }}
           >
             中
@@ -181,13 +165,13 @@ export default function Controller({
             size="small"
             style={{
               backgroundColor:
-                selectedPriority === "低" ? "#1677ff" : "transparent",
-              color: selectedPriority === "低" ? "#fff" : "#1677ff",
+                selectedPriority === 1 ? "#1677ff" : "transparent",
+              color: selectedPriority === 1 ? "#fff" : "#1677ff",
               borderColor: "#1677ff",
             }}
             onClick={(e) => {
               e.stopPropagation();
-              handlePrioritySelect("低");
+              handlePrioritySelect(Priority.Low);
             }}
           >
             低
@@ -196,13 +180,13 @@ export default function Controller({
             size="small"
             style={{
               backgroundColor:
-                selectedPriority === null ? "#909399" : "transparent",
-              color: selectedPriority === null ? "#fff" : "#909399",
+                selectedPriority === 0 ? "#909399" : "transparent",
+              color: selectedPriority === 0 ? "#fff" : "#909399",
               borderColor: "#909399",
             }}
             onClick={(e) => {
               e.stopPropagation();
-              handlePrioritySelect(null);
+              handlePrioritySelect(Priority.None);
             }}
           >
             无
@@ -213,7 +197,7 @@ export default function Controller({
     {
       key: "date",
       icon: <CalendarOutlined />,
-      disabled: false,
+      disabled: true,
       label: (
         <div style={{ padding: "8px 0" }}>
           <DatePicker
@@ -228,10 +212,12 @@ export default function Controller({
     {
       key: "tags",
       icon: <TagOutlined />,
-      disabled: false,
 
       label: (
-        <div style={{ padding: "8px", width: "300px" }}>
+        <div
+          style={{ padding: "8px", width: "300px" }}
+          onClick={(e) => e.stopPropagation()}
+        >
           <TagTreeSelect
             todoTags={todoTags}
             todoTagsValue={selectedTags}
@@ -250,7 +236,7 @@ export default function Controller({
       tags: selectedTags,
       deadline: selectedDeadline,
       listId: selectedListId || activeListId,
-      completed: false // 默认任务未完成
+      completed: false, // 默认任务未完成
     };
   };
 
@@ -258,15 +244,15 @@ export default function Controller({
   const enhancedOnAdded = () => {
     // 创建完整的任务对象
     const taskData = createTaskObject();
-    
+
     // 记录任务数据
     console.log("添加新待办事项:", taskData);
 
     // 如果需要，可以在这里通过dispatchTodo直接添加任务
-    // dispatchTodo({
-    //   type: "added",
-    //   ...taskData
-    // });
+    dispatchTodo({
+      type: "added",
+      ...taskData,
+    });
 
     // 调用原始的onAdded函数
     onAdded();
@@ -274,70 +260,102 @@ export default function Controller({
 
   return (
     <li
-      className={`row d-flex justify-content-between highlight rounded pe-0 ps-0 pt-0 pb-0  `}
+      className={`row d-flex justify-content-between rounded pe-0 ps-0 pt-0 pb-0  `}
     >
-      <Row justify={"space-between"} align={"middle"} className="w-100">
-        <Col span={14}>
-          <Row justify={"start"} align={"middle"}>
-            {/*完成全部*/}
-            <input
-              style={{ marginLeft: "8px" }}
-              className="me-2"
-              type="checkbox"
-              checked={isAllDone}
-              onChange={(e) => {
-                onCompleteAll({
-                  type: "completedAll",
-                  completeOrUncomplete: e.target.checked,
-                  showType: showType,
-                });
-                if (e.currentTarget.checked)
-                  message.info(MESSAGES.INFO.ALL_COMPLETED);
+      {/*<Row justify={"space-between"} align={"middle"} className="w-100">*/}
+      <Row align={"middle"} className="w-100">
+        {/*<Col span={14}>*/}
+        <Row className={"w-100"} justify={"start"} align={"middle"}>
+          {/*完成全部*/}
+          <input
+            style={{ marginLeft: "8px" }}
+            className="me-2"
+            type="checkbox"
+            checked={isAllDone}
+            onChange={(e) => {
+              onCompleteAll({
+                type: "completedAll",
+                completeOrUncomplete: e.target.checked,
+                showType: showType,
+              });
+              if (e.currentTarget.checked)
+                message.info(MESSAGES.INFO.ALL_COMPLETED);
+            }}
+          />
+          {/*添加任务全部*/}
+          <div
+            style={{
+              position: "relative",
+              display: "inline-block",
+              width: "100%",
+            }}
+          >
+            <Input
+              value={text}
+              prefix={
+                <>
+                  {/* 显示选择的清单标题 */}
+                  {selectedListId && <Tag color="blue">^{activeListTitle}</Tag>}
+                  {/* 显示选择的截止日期 */}
+                  {selectedDeadline && (
+                    <Tag color="orange">
+                      <CalendarOutlined />
+                      {dayjs(selectedDeadline).format("YYYY-MM-DD HH:mm")}
+                    </Tag>
+                  )}
+                  {/* 显示选择的标签，选择几个显示几个 */}
+                  {selectedTags.map((tag, index) => (
+                    <Tag key={index} color="green">
+                      #{tag}
+                    </Tag>
+                  ))}
+                </>
+              }
+              onChange={(e) => setText(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === "Enter") {
+                  enhancedOnAdded();
+                }
+              }}
+              placeholder="请输入任务内容"
+              style={{ width: "100%" }}
+              // 移除addonAfter，改为自定义的点击区域
+              addonAfter={
+                <div
+                  style={{ cursor: "pointer", padding: "4px" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsDropdownOpen(!isDropdownOpen);
+                  }}
+                >
+                  <DownOutlined />
+                </div>
+              }
+              onClick={(e) => {
+                // 确保点击Input不会打开下拉菜单
+                e.stopPropagation();
               }}
             />
-            {/*添加任务全部*/}
-            <div className="w-100">
-              <Dropdown
-                menu={{ items: menuItems }}
-                placement="bottomLeft"
-                trigger={["click"]}
-                open={isDropdownOpen}
-                onOpenChange={handleOpenChange}
-                ref={dropdownRef}
-              >
-                <div style={{ position: "relative", display: "inline-block" }}>
-                  <Input
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    placeholder="请输入任务内容"
-                    style={{ width: "calc(100% - 80px)", marginRight: "8px" }}
-                    addonAfter={<DownOutlined />}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </div>
-              </Dropdown>
-              <Button
-                type="primary"
-                size="small"
-                onClick={enhancedOnAdded}
-                style={{ width: "72px" }}
-              >
-                添加
-              </Button>
-            </div>
-          </Row>
-        </Col>
-        <Col span={10}>
-          <Row justify={"end"} align={"middle"}>
-            <Input
-              prefix={<SearchOutlined />}
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              placeholder="搜索任务..."
-              style={{ width: "200px" }}
+            {/* 将Dropdown移到Input外部，通过isDropdownOpen控制显示 */}
+            <Dropdown
+              menu={{ items: menuItems }}
+              placement="bottom"
+              trigger={[]} // 不使用默认触发方式
+              open={isDropdownOpen}
+              onOpenChange={setIsDropdownOpen}
+              ref={dropdownRef}
             />
-          </Row>
-        </Col>
+          </div>
+        </Row>
+      </Row>
+      <Row className={"w-100"} justify={"start"} align={"middle"}>
+        <Input
+          prefix={<SearchOutlined />}
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          placeholder="搜索任务（临时位置）"
+          style={{ width: "200px" }}
+        />
       </Row>
     </li>
   );
