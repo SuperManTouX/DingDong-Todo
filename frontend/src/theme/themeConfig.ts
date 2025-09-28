@@ -98,6 +98,9 @@ export const generateAntdThemeConfig = (currentTheme: ThemeConfig) => {
         subMenuItemHoverColor: currentTheme.primaryColor || "#1890ff",
         subMenuItemHoverBg: currentTheme.hoverColor,
       },
+      DatePicker: {
+        activeBg: "transparent",
+      },
     },
   };
 };

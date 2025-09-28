@@ -32,7 +32,6 @@ export default function TodoTask({
   function renderEditInput() {
     return (
       <Input
-        autoFocus
         value={todo.title}
         onChange={(e) => {
           if (todo) {

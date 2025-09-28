@@ -22,6 +22,7 @@ interface UseTodoOperationsReturn {
 // 任务操作相关的hook
 export default function useTodoOperations(
   tasks: Todo[],
+  searchText: string = "",
 ): UseTodoOperationsReturn {
   const { dispatchTodo, loadData, selectTodoId } = useTodoStore();
   const [title, setTitle] = useState<string>("");
@@ -175,13 +176,26 @@ export default function useTodoOperations(
     [],
   );
 
+  // 过滤任务的函数，应用搜索文本过滤
+  const filterTasksBySearch = (taskList: Todo[]): Todo[] => {
+    if (!searchText.trim()) {
+      return taskList;
+    }
+    
+    const searchLower = searchText.toLowerCase().trim();
+    return taskList.filter((task) => 
+      (task.title && task.title.toLowerCase().includes(searchLower)) ||
+      (task.text && task.text.toLowerCase().includes(searchLower))
+    );
+  };
+
   //todo模板初始化
   function renderTodos(): Todo[] {
-    return tasks.filter((t) => !t.completed);
+    return filterTasksBySearch(tasks.filter((t) => !t.completed));
   }
 
   function renderOtherTodos(): Todo[] {
-    return tasks.filter((t) => t.completed);
+    return filterTasksBySearch(tasks.filter((t) => t.completed));
   }
 
   //当一键完成或一键取消完成的时候
@@ -197,10 +211,7 @@ export default function useTodoOperations(
 
   //计算未完成的个数
   function calculateUncompletedCount() {
-    return tasks.reduce((l, n) => {
-      if (!n.completed) return l + 1;
-      return l;
-    }, 0);
+    return renderTodos().length;
   }
 
   // 删除所有已完成
