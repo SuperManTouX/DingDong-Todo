@@ -38,6 +38,8 @@ export interface ControllerProps {
   onAdded: () => void;
   groupMode?: "normal" | "time" | "none";
   onToggleGroupMode?: (mode: "normal" | "time" | "none") => void;
+  searchText?: string;
+  setSearchText?: (text: string) => void;
 }
 
 export type Priority = (typeof Priority)[keyof typeof Priority];

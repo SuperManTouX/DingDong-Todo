@@ -19,14 +19,20 @@ interface UseTodoGroupingReturn {
 }
 
 // 任务分组相关的hook
-export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
+export default function useTodoGrouping(
+  tasks: Todo[],
+  searchText: string,
+): UseTodoGroupingReturn {
   const { getGroupsByListId } = useTodoStore();
 
   const { activeListId } = useTodoStore.getState();
-
+  const searchTasks = tasks.filter(
+    (task) => task.title.indexOf(searchText) !== -1,
+  );
   // 根据activeListId确定分组模式和过滤逻辑
   let groupMode: "normal" | "time" = "normal";
-  let filteredTasks = [...tasks];
+  let filteredTasks = [...searchTasks];
+
   let isCompletedMode = false;
 
   // 特殊activeListId处理
@@ -34,7 +40,7 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
     // 只显示今天的任务
     groupMode = "time";
     const today = dayjs().format("YYYY-MM-DD");
-    filteredTasks = tasks.filter(
+    filteredTasks = searchTasks.filter(
       (task) =>
         task.deadline && dayjs(task.deadline).format("YYYY-MM-DD") === today,
     );
@@ -43,7 +49,7 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
     groupMode = "time";
     const today = dayjs();
     const sevenDaysFromNow = dayjs().add(7, "day");
-    filteredTasks = tasks.filter((task) => {
+    filteredTasks = searchTasks.filter((task) => {
       if (!task.deadline) return false;
       const taskDate = dayjs(task.deadline);
       return (

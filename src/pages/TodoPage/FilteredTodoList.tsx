@@ -13,11 +13,14 @@ import useTodoOperations from "../../hooks/useTodoOperations";
 import useTodoHierarchy from "../../hooks/useTodoHierarchy";
 import { getActiveListTasks } from "@/store/todoStore";
 
+import { useState } from "react";
 export default function FilteredTodoList({ groupName }: { groupName: string }) {
   // 获取所有任务，然后根据用户ID过滤
   const tasks = getActiveListTasks();
+  // 搜索状态管理
+  const [searchText, setSearchText] = useState("");
   // 使用hooks获取各种功能
-  const { groupMode, displayGroups } = useTodoGrouping(tasks);
+  const { groupMode, displayGroups } = useTodoGrouping(tasks, searchText);
   const {
     title,
     setTitle,
@@ -28,7 +31,7 @@ export default function FilteredTodoList({ groupName }: { groupName: string }) {
     renderTodos,
     renderOtherTodos,
     isAllDone,
-  } = useTodoOperations(tasks);
+  } = useTodoOperations(tasks, searchText);
 
   const {
     expandedTasks,
@@ -68,6 +71,8 @@ export default function FilteredTodoList({ groupName }: { groupName: string }) {
                 setText={setTitle}
                 onAdded={handleAdded}
                 groupMode={groupMode}
+                searchText={searchText}
+                setSearchText={setSearchText}
               />
 
               {/*根据分组模式渲染任务列表*/}

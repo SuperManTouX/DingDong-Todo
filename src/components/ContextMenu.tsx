@@ -1,43 +1,28 @@
-import {
-  CalendarOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  RedoOutlined,
-} from "@ant-design/icons";
+import { DeleteOutlined, EditOutlined, RedoOutlined } from "@ant-design/icons";
 import type { ContextMenuProps } from "@/types";
-import {
-  DatePicker,
-  type DatePickerProps,
-  Dropdown,
-  type MenuProps,
-  Modal,
-  TreeSelect,
-  Tag,
-} from "antd";
+import { Dropdown, type MenuProps, Modal } from "antd";
 import { message } from "@/utils/antdStatic";
-import type { RangePickerProps } from "antd/es/date-picker";
-import type { TreeSelectProps } from "antd/es/tree-select";
-import type { Tag as TagT } from "@/types";
-import dayjs from "dayjs";
 import { MESSAGES } from "@/constants/messages";
 import { useTodoStore } from "@/store/todoStore";
+import TagTreeSelect from "./TagTreeSelect";
+import TaskDateTimePicker from "./TaskDateTimePicker";
+import { useState, useEffect, useRef } from "react";
 
 export default function ContextMenu({ todo, children }: ContextMenuProps) {
   const { dispatchTodo, todoTags } = useTodoStore();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const dropdownRef = useRef<Dropdown>(null);
 
   // 编辑时间
-  const onOk = (
-    deadLine: DatePickerProps["value"] | RangePickerProps["value"],
-  ) => {
+  const handleDateTimeChange = (date: any) => {
     dispatchTodo({
       type: "changed",
       todo: {
         ...todo,
-        // @ts-ignore
-        deadline: dayjs(deadLine).format("YYYY-MM-DD"),
+        deadline: date,
       },
     });
-    message.info(MESSAGES.INFO.DEADLINE_UPDATED);
   };
 
   // 添加子任务
@@ -53,62 +38,44 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
     });
   }
 
-  // 将扁平的标签数组转换为TreeSelect所需的树形结构
-  const buildTreeData = (tags: TagT[]): TreeSelectProps["treeData"] => {
-    // @ts-ignore
-    const tagMap = new Map<string, TreeSelectProps["treeData"][0]>();
-    const treeData: TreeSelectProps["treeData"] = [];
-
-    // 首先将所有标签转换为TreeSelect节点并存入Map
-    tags.forEach((tag) => {
-      tagMap.set(tag.id, {
-        value: tag.id,
-        title: (
-          <span className="flex items-center">
-            <Tag color={tag.color || "magenta"} className="mr-2">
-              {tag.name}
-            </Tag>
-          </span>
-        ),
-        children: [],
-      });
-    });
-
-    // 构建树形结构
-    tags.forEach((tag) => {
-      const node = tagMap.get(tag.id)!;
-
-      if (tag.parentId === null) {
-        // 根节点直接添加到treeData
-        treeData.push(node);
-      } else if (tagMap.has(tag.parentId)) {
-        // 非根节点添加到父节点的children中
-        const parentNode = tagMap.get(tag.parentId)!;
-        if (!parentNode.children) parentNode.children = [];
-        parentNode.children.push(node);
-      }
-    });
-
-    return treeData;
-  };
-
-  // 处理标签选择变化（多选）
-  // TreeSelect在multiple模式下，onChange参数类型可能是(string | number)[]
-  const handleTagsChange = (
-    keys: { label: React.ReactNode; value: string }[],
-  ) => {
-    const a: string[] = [];
-    keys.map((item) => a.push(item.value));
-    console.log(a);
+  // 处理标签变化
+  const handleTagsChange = (tags: string[]) => {
     // 确保转换为字符串数组后更新任务标签
     dispatchTodo({
       type: "changed",
       todo: {
         ...todo,
-        tags: a.slice(),
+        tags: tags.slice(),
       },
     });
-    message.info(MESSAGES.INFO.TAGS_UPDATED);
+  };
+
+  // 检查数据是否加载完成
+  useEffect(() => {
+    // 模拟数据加载检查，实际项目中可以根据具体的数据加载状态来判断
+    const checkDataLoaded = () => {
+      // 检查todo和todoTags是否已加载
+      if (todo && Array.isArray(todoTags)) {
+        setIsDataLoaded(true);
+      }
+    };
+
+    // 初始检查
+    checkDataLoaded();
+
+    // 监听数据变化
+    const interval = setInterval(checkDataLoaded, 100);
+    return () => clearInterval(interval);
+  }, [todo, todoTags]);
+
+  // 处理下拉菜单打开/关闭
+  const handleOpenChange = (open: boolean) => {
+    // 在数据加载完成前，强制保持打开状态
+    if (isDataLoaded) {
+      setIsOpen(open);
+    } else {
+      setIsOpen(true);
+    }
   };
 
   // 构建标签树形数据
@@ -116,40 +83,24 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
   const restoreFromBin = useTodoStore((state) => state.restoreFromBin);
   const deleteFromBin = useTodoStore((state) => state.deleteFromBin);
   const activeListId = useTodoStore((state) => state.activeListId);
-  const treeData = buildTreeData(todoTags);
+
   const normalItems: MenuProps["items"] = [
     {
       key: "date",
-      icon: <CalendarOutlined />,
-      label: <span>日期</span>,
-      disabled: true,
-    },
-    {
-      key: "date_set",
-      label: <DatePicker value={dayjs(todo.deadline)} showTime onOk={onOk} />,
+      label: (
+        <TaskDateTimePicker todo={todo} onDateChange={handleDateTimeChange} />
+      ),
       disabled: true,
     },
     {
       key: "tags_select",
       disabled: true,
       label: (
-        <div style={{ width: 300, padding: "8px 0" }}>
-          <TreeSelect
-            mode="multiple"
-            treeData={treeData}
-            // @ts-ignore
-            value={(todo.tags || []).filter(
-              (tagId) => typeof tagId === "string",
-            )}
-            onChange={handleTagsChange}
-            treeCheckable={true}
-            treeCheckStrictly={true} // 点击父标签不会自动选择子标签
-            placeholder="选择标签"
-            style={{ width: "100%" }}
-            maxTagCount="responsive"
-            allowClear={true}
-          />
-        </div>
+        <TagTreeSelect
+          todoTags={todoTags}
+          todoTagsValue={todo.tags}
+          onTagsChange={handleTagsChange}
+        />
       ),
     },
     {
@@ -231,6 +182,9 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
         items: activeListId === "bin" ? binItems : normalItems,
         className: "ctx-menu-left",
       }}
+      open={isOpen}
+      onOpenChange={handleOpenChange}
+      ref={dropdownRef}
     >
       {children}
     </Dropdown>

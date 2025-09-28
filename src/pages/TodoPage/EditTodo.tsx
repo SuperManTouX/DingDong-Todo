@@ -1,7 +1,5 @@
 import {
   Col,
-  DatePicker,
-  type DatePickerProps,
   Dropdown,
   Input,
   Row,
@@ -14,7 +12,6 @@ import { message } from "@/utils/antdStatic";
 import type { TodoAction } from "@/types";
 import { Priority } from "@/constants";
 import dayjs from "dayjs";
-import type { RangePickerProps } from "antd/es/date-picker";
 import { PlusOutlined } from "@ant-design/icons";
 import { useMemo } from "react";
 import { useTodoStore, dispatchTodo } from "@/store/todoStore";
@@ -22,6 +19,7 @@ import { useThemeStore } from "@/store/themeStore";
 import TimeCountDownNode from "@/pages/TodoPage/TimeCountDownNode"; // 导入主题状态管理
 import RichNote from "@/components/RichNote"; // 导入富文本编辑器组件
 import TodoCheckbox from "@/components/TodoCheckbox"; // 导入TodoCheckbox组件
+import TaskDateTimePicker from "@/components/TaskDateTimePicker"; // 导入TaskDateTimePicker组件
 
 // 解构Layout组件
 const { Header, Content, Footer } = Layout;
@@ -48,15 +46,12 @@ export default function EditTodo() {
       priClass = "";
   }
   // 更改日期
-  const onChange: DatePickerProps["onChange"] = (
-    deadLine: DatePickerProps["value"] | RangePickerProps["value"],
-  ) => {
+  const handleDateTimeChange = (date: string) => {
     dispatchTodo({
       type: "changed",
       todo: {
         ...selectTodo,
-        // @ts-ignore
-        deadline: dayjs(deadLine).format("YYYY-MM-DD"),
+        deadline: date,
       },
     });
     message.info("时间更改成功");
@@ -140,15 +135,9 @@ export default function EditTodo() {
                   message.info(`已完成${selectTodo.title}`);
               }}
             />
-            <DatePicker
-              value={dayjs(selectTodo.deadline)}
-              showTime
-              onChange={onChange}
-              style={{
-                backgroundColor: "transparent",
-                border: "none",
-                outline: "none",
-              }}
+            <TaskDateTimePicker
+              todo={selectTodo}
+              onDateChange={handleDateTimeChange}
             />
             <TimeCountDownNode
               deadline={selectTodo.deadline}
