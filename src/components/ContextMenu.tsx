@@ -34,7 +34,7 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
       todo: {
         ...todo,
         // @ts-ignore
-        deadline: dayjs(deadLine).format(),
+        deadline: dayjs(deadLine).format("YYYY-MM-DD"),
       },
     });
     message.info(MESSAGES.INFO.DEADLINE_UPDATED);
@@ -176,7 +176,8 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
           message.error("删除任务失败，请重试");
         }
       },
-    }];
+    },
+  ];
   const binItems: MenuProps["items"] = [
     {
       key: "recover",

@@ -6,64 +6,136 @@ import { useAuthStore } from "@/store/authStore";
 export const utilsActions = {
   // 获取指定ID的任务
   getTodoById: (id: string, get: any): any | null => {
-    return get().tasks.find((task: any) => task.id === id) || null;
+    try {
+      const state = get();
+      if (!state || !Array.isArray(state.tasks)) {
+        console.warn("State or tasks is invalid in getTodoById");
+        return null;
+      }
+      return state.tasks.find((task: any) => task.id === id) || null;
+    } catch (error) {
+      console.error("Error in getTodoById:", error);
+      return null;
+    }
   },
 
   // 根据任务ID获取所属的任务组
   getGroupByTodoId: (todoId: string, get: any): any | null => {
-    const task = get().tasks.find((t: any) => t.id === todoId);
-    if (!task) return null;
+    try {
+      const state = get();
+      if (!state || !Array.isArray(state.tasks) || !Array.isArray(state.todoListData)) {
+        console.warn("State or required arrays are invalid in getGroupByTodoId");
+        return null;
+      }
+      
+      const task = state.tasks.find((t: any) => t.id === todoId);
+      if (!task) return null;
 
-    return (
-      get().todoListData.find((list: any) => list.id === task.listId) || null
-    );
+      return (
+        state.todoListData.find((list: any) => list.id === task.listId) || null
+      );
+    } catch (error) {
+      console.error("Error in getGroupByTodoId:", error);
+      return null;
+    }
   },
 
   // 获取当前激活的任务组数据
   getActiveListData: (get: any): any => {
-    return (
-      get().todoListData.find(
-        (list: any) => list.id === get().activeListId,
-      ) || {
+    try {
+      const state = get();
+      if (!state || !Array.isArray(state.todoListData)) {
+        console.warn("State or todoListData is invalid in getActiveListData");
+        return {
+          id: "",
+          title: "",
+          userId: "",
+          createdAt: "",
+          updatedAt: "",
+        };
+      }
+      
+      return (
+        state.todoListData.find(
+          (list: any) => list.id === state.activeListId,
+        ) || {
+          id: "",
+          title: "",
+          userId: "",
+          createdAt: "",
+          updatedAt: "",
+        }
+      );
+    } catch (error) {
+      console.error("Error in getActiveListData:", error);
+      return {
         id: "",
         title: "",
         userId: "",
         createdAt: "",
         updatedAt: "",
-      }
-    );
+      };
+    }
   },
 
   // 获取当前激活列表的所有任务
   getActiveListTasks: (get: () => TodoState): Todo[] => {
-    // 激活的是清单
-    if (get().tasks.some((task: any) => task.listId === get().activeListId)) {
-      return get().tasks.filter(
-        (task: any) => task.listId === get().activeListId,
-      );
-      //激活的是特殊列表
-    } else {
-      if (get().activeListId === "bin") {
-        return get().bin;
+    try {
+      const state = get();
+      if (!state || !Array.isArray(state.tasks)) {
+        console.warn("State or tasks is invalid in getActiveListTasks");
+        return [];
       }
-      return get().tasks.filter(
-        (task: any) => task.userId === useAuthStore.getState().userId,
-      );
+      
+      // 激活的是清单
+      if (state.tasks.some((task: any) => task.listId === state.activeListId)) {
+        return state.tasks.filter(
+          (task: any) => task.listId === state.activeListId,
+        );
+        //激活的是特殊列表
+      } else {
+        if (state.activeListId === "bin") {
+          return Array.isArray(state.bin) ? state.bin : [];
+        }
+        
+        const userId = useAuthStore.getState()?.userId;
+        return state.tasks.filter(
+          (task: any) => task.userId === userId,
+        );
+      }
+    } catch (error) {
+      console.error("Error in getActiveListTasks:", error);
+      return [];
     }
   },
 
   // 设置激活的列表ID
   setActiveListId: (id: string, set: any): void => {
-    set({ activeListId: id });
+    try {
+      set({ activeListId: id });
+    } catch (error) {
+      console.error("Error in setActiveListId:", error);
+    }
   },
 
   // 设置选中的任务ID
   setSelectTodoId: (id: string | null, set: any): void => {
-    set({ selectTodoId: id });
+    try {
+      // 只设置selectTodoId，selectTodo会通过getter自动计算
+      set({ selectTodoId: id });
+    } catch (error) {
+      console.error("Error in setSelectTodoId:", error);
+    }
   },
 
   // 设置用户ID
   setUserId: (id: string | null, set: any): void => {
-    set({ userId: id });
+    try {
+      set({ userId: id });
+    } catch (error) {
+      console.error("Error in setUserId:", error);
+    }
   },
 };
+
+export default utilsActions;

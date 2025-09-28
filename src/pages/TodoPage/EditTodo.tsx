@@ -17,25 +17,23 @@ import dayjs from "dayjs";
 import type { RangePickerProps } from "antd/es/date-picker";
 import { PlusOutlined } from "@ant-design/icons";
 import { useMemo } from "react";
-import { useSelectTodo, useTodoStore } from "@/store/todoStore";
+import { useTodoStore, dispatchTodo } from "@/store/todoStore";
 import { useThemeStore } from "@/store/themeStore";
 import TimeCountDownNode from "@/pages/TodoPage/TimeCountDownNode"; // 导入主题状态管理
+import RichNote from "@/components/RichNote"; // 导入富文本编辑器组件
+import TodoCheckbox from "@/components/TodoCheckbox"; // 导入TodoCheckbox组件
 
 // 解构Layout组件
 const { Header, Content, Footer } = Layout;
 
-export default function EditTodo({
-  onTodoChange,
-}: {
-  onTodoChange: (action: TodoAction) => void;
-}) {
+export default function EditTodo() {
   const todoTags = useTodoStore((state) => state.todoTags);
   const todoListData = useTodoStore((state) => state.todoListData);
-  const selectTodo = useSelectTodo();
+  const selectTodo = useTodoStore((state) => state.selectTodo());
   const { currentTheme } = useThemeStore(); // 获取当前主题
-
   if (!selectTodo) return;
   let priClass;
+  //
   switch (selectTodo?.priority) {
     case Priority.Low:
       priClass = "low-todo";
@@ -49,15 +47,16 @@ export default function EditTodo({
     default:
       priClass = "";
   }
+  // 更改日期
   const onChange: DatePickerProps["onChange"] = (
     deadLine: DatePickerProps["value"] | RangePickerProps["value"],
   ) => {
-    onTodoChange({
+    dispatchTodo({
       type: "changed",
       todo: {
         ...selectTodo,
         // @ts-ignore
-        deadline: dayjs(deadLine).format(),
+        deadline: dayjs(deadLine).format("YYYY-MM-DD"),
       },
     });
     message.info("时间更改成功");
@@ -75,7 +74,7 @@ export default function EditTodo({
     // 添加新标签
     const updatedTags = [...(selectTodo.tags || []), tagId];
     console.log(selectTodo);
-    onTodoChange({
+    dispatchTodo({
       type: "changed",
       todo: {
         ...selectTodo,
@@ -126,20 +125,18 @@ export default function EditTodo({
           padding: "0 24px",
         }}
       >
-        <Row className={"h-100"} justify="space-between" align="middle">
+        <Row className="h-100 " justify="space-between" align="middle">
           <Row justify="start" align="middle">
-            <input
-              type="checkbox"
-              className={`me-1 mt-2 mb-2 ${priClass}`}
-              checked={selectTodo.completed}
-              onChange={(e) => {
-                onTodoChange({
-                  type: "toggle",
-                  todoId: selectTodo.id,
-                  listId: selectTodo.listId,
-                  newCompleted: e.currentTarget.checked,
+            <TodoCheckbox
+              completed={selectTodo.completed}
+              priority={selectTodo.priority}
+              title={selectTodo.title}
+              onChange={(checked) => {
+                dispatchTodo({
+                  type: "changed",
+                  todo: { ...selectTodo, completed: checked },
                 });
-                if (e.currentTarget.checked)
+                if (checked)
                   message.info(`已完成${selectTodo.title}`);
               }}
             />
@@ -169,7 +166,7 @@ export default function EditTodo({
               color: currentTheme.textColor,
             }}
             onChange={(priority) => {
-              onTodoChange({
+              dispatchTodo({
                 type: "changed",
                 todo: {
                   ...selectTodo,
@@ -189,7 +186,7 @@ export default function EditTodo({
       <Content
         style={{
           padding: "16px 24px",
-          backgroundColor: currentTheme.bgColor,
+          backgroundColor: "#f5f5f5",
           color: currentTheme.textColor,
           minHeight: "calc(100% - 100px)",
         }}
@@ -204,7 +201,7 @@ export default function EditTodo({
               value={selectTodo.title}
               onChange={(e) => {
                 if (selectTodo) {
-                  onTodoChange({
+                  dispatchTodo({
                     type: "changed",
                     todo: {
                       ...selectTodo,
@@ -225,30 +222,21 @@ export default function EditTodo({
                 color: currentTheme.textColor,
               }}
             />
-            {/*长文本内容编辑框*/}
-            <Input.TextArea
+            {/*富文本内容编辑框*/}
+            <RichNote
               value={selectTodo.text || ""}
-              onChange={(e) => {
+              onChange={(text) => {
                 if (selectTodo) {
-                  onTodoChange({
+                  dispatchTodo({
                     type: "changed",
                     todo: {
                       ...selectTodo,
-                      text: e.currentTarget.value,
+                      text: text,
                     },
                   });
                 }
               }}
-              style={{
-                borderRadius: "6px",
-                minHeight: "120px",
-                resize: "vertical",
-                border: `1px solid ${token.colorBorder}`,
-                backgroundColor: currentTheme.bgColor,
-                color: currentTheme.textColor,
-                padding: "8px 12px",
-              }}
-              autoSize={{ minRows: 20 }}
+              placeholder="开始编写待办详情..."
             />
             {/*标签列表*/}
             {selectTodo.tags?.map((tagId) => {
@@ -267,7 +255,7 @@ export default function EditTodo({
                     // 从tags数组中移除当前点击的标签
                     const updatedTags =
                       selectTodo.tags?.filter((id) => id !== tagId) || [];
-                    onTodoChange({
+                    dispatchTodo({
                       type: "changed",
                       todo: {
                         ...selectTodo,
@@ -304,7 +292,7 @@ export default function EditTodo({
       </Content>
       <Footer
         style={{
-          backgroundColor: currentTheme.bgColor,
+          backgroundColor: "#f5f5f5",
           color: currentTheme.textColor,
           borderTop: `1px solid ${token.colorBorder}`,
           padding: "0 24px",
@@ -326,7 +314,7 @@ export default function EditTodo({
             }
             onChange={(newListId) => {
               if (newListId !== selectTodo.listId) {
-                onTodoChange({
+                dispatchTodo({
                   type: "changed",
                   todo: {
                     ...selectTodo,

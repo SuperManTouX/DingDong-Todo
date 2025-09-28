@@ -40,6 +40,7 @@ const SettingsPage: React.FC = () => {
     { value: "light", label: "浅色主题" },
     { value: "dark", label: "深色主题" },
     { value: "green", label: "绿色主题" },
+    { value: "red", label: "红色主题" },
   ];
 
   // 处理头像上传

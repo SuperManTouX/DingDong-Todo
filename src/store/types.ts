@@ -15,8 +15,8 @@ export interface TodoState {
   userId: string | null; // 用户ID字段
 
   // 计算属性 - 这些属性在持久化时会被忽略
-  activeGroup: TodoListData;
-  selectTodo: Todo | null;
+  activeGroup(): TodoListData;
+  selectTodo(): Todo | null;
 
   // 处理todo相关的action
   dispatchTodo: (action: TodoActionExtended) => Promise<void>;

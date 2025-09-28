@@ -40,7 +40,7 @@ export default function FilteredTodoList({ groupName }: { groupName: string }) {
     handleDragOver,
     handleDragEnd,
   } = useTodoHierarchy(tasks, renderTodos, renderOtherTodos);
-
+  console.log(groupName);
   return (
     <>
       {/*标题栏*/}

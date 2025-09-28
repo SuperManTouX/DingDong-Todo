@@ -8,6 +8,7 @@ import { formatMessage, MESSAGES } from "@/constants/messages";
 import isoWeek from "dayjs/plugin/isoWeek";
 import { useTodoStore } from "@/store/todoStore";
 import TimeCountDownNode from "./TimeCountDownNode";
+import TodoCheckbox from "@/components/TodoCheckbox";
 
 dayjs.extend(isoWeek);
 export default function TodoTask({
@@ -19,43 +20,6 @@ export default function TodoTask({
 }: TodoItemProps) {
   const { dispatchTodo, setSelectTodoId } = useTodoStore();
   const { token } = theme.useToken(); // 获取主题令牌
-
-  // 基于优先级获取对应的样式颜色
-  const getPriorityColor = () => {
-    switch (todo.priority) {
-      case Priority.Low:
-        return token.colorPrimary;
-      case Priority.Medium:
-        return token.colorWarning;
-      case Priority.High:
-        return token.colorError;
-      default:
-        return token.colorPrimary;
-    }
-  };
-
-  // 创建自定义复选框样式
-  const customCheckboxStyle: React.CSSProperties = {
-    appearance: "none",
-    WebkitAppearance: "none",
-    MozAppearance: "none",
-    width: "1rem",
-    height: "1rem",
-    margin: "0",
-    verticalAlign: "middle",
-    cursor: "pointer",
-    border: `1px solid ${getPriorityColor()}`,
-    borderRadius: "4px",
-    backgroundColor: token.colorBgBase,
-    position: "relative",
-    outline: "none",
-  };
-
-  const customCheckboxCheckedStyle: React.CSSProperties = {
-    ...customCheckboxStyle,
-    backgroundColor: getPriorityColor(),
-    borderColor: getPriorityColor(),
-  };
 
   // 列表项悬停效果样式
   const todoItemHoverStyle: React.CSSProperties = {
@@ -103,6 +67,7 @@ export default function TodoTask({
         className={`cursor-pointer row d-flex justify-content-between highlight rounded pe-0 ps-0 pt-1 pb-1  ${other ? "opacity-25" : ""}`}
         onClick={() => {
           if (setSelectTodoId) {
+            console.log("TodoTask", todo.id);
             setSelectTodoId(todo.id);
           }
         }}
@@ -133,38 +98,16 @@ export default function TodoTask({
             style={todoItemHoverStyle}
           >
             <div style={{ position: "relative", display: "inline-block" }}>
-              <input
-                type="checkbox"
-                className={"me-2"}
-                style={
-                  todo.completed
-                    ? customCheckboxCheckedStyle
-                    : customCheckboxStyle
-                }
-                onMouseEnter={(e) => {
-                  if (!e.currentTarget.checked) {
-                    e.currentTarget.style.border = `2px solid ${getPriorityColor()}`;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!e.currentTarget.checked) {
-                    e.currentTarget.style.border = `1px solid ${getPriorityColor()}`;
-                  }
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.outline = `1px solid ${getPriorityColor()}`;
-                  e.currentTarget.style.outlineOffset = "1px";
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.outline = "none";
-                }}
-                checked={todo.completed}
-                onChange={(e) => {
+              <TodoCheckbox
+                completed={todo.completed}
+                priority={todo.priority}
+                title={todo.title}
+                onChange={(checked) => {
                   dispatchTodo({
                     type: "changed",
-                    todo: { ...todo, completed: e.currentTarget.checked },
+                    todo: { ...todo, completed: checked },
                   });
-                  if (e.currentTarget.checked)
+                  if (checked)
                     message.info(
                       formatMessage(MESSAGES.INFO.TASK_COMPLETED, {
                         taskTitle: todo.title,
@@ -172,21 +115,6 @@ export default function TodoTask({
                     );
                 }}
               />
-              {todo.completed && (
-                <div
-                  style={{
-                    position: "absolute",
-                    left: "4px",
-                    top: "6px",
-                    width: "5px",
-                    height: "10px",
-                    border: "solid white",
-                    borderWidth: "0 2px 2px 0",
-                    transform: "rotate(45deg)",
-                    pointerEvents: "none",
-                  }}
-                />
-              )}
             </div>
             <Row justify={"space-between"} className="w-100 " align={"middle"}>
               <Col className={"w-100"}>{renderEditInput()}</Col>

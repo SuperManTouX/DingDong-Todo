@@ -138,7 +138,7 @@ export default function FilterGroup({
             okText: "确定",
             cancelText: "取消",
             onOk: () => {
-              deleteGroup(groupToDelete.id);
+              deleteGroup(groupToDelete.id, groupToDelete.groupName);
               message.success(`成功删除组"${formatTitle()}"`);
             },
           });
