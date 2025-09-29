@@ -23,11 +23,13 @@ interface FocusTimerProps {
   onStartFocus: () => void;
   onStopFocus: () => void;
   isFocusing: boolean;
+  fetchAllFocusRecords: () => void;
 }
 
 export const FocusTimer: React.FC<FocusTimerProps> = ({
   onStartFocus,
   onStopFocus,
+  fetchAllFocusRecords,
   isFocusing,
 }) => {
   const [activeFocusKey, setActiveFocusKey] = React.useState<string>("2");
@@ -185,7 +187,6 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
                 endTimestamp: formattedEndTime,
               });
               message.success("专注记录已保存");
-
               onStopFocus(); // 自动结束专注
               return 0;
             }
@@ -260,6 +261,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
               message.success("创建专注记录成功:");
             } else {
               message.warning("请先选择一个任务");
+              fetchAllFocusRecords();
               onStopFocus(); // 自动结束专注
             }
           } catch (error) {
@@ -272,7 +274,6 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
       // 重置暂停状态
       setIsPaused(false);
       clearStatus();
-
       setLastPauseTimestamp(null);
     }
 

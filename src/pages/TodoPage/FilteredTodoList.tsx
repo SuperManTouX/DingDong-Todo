@@ -11,23 +11,25 @@ import { Content, Footer, Header } from "antd/es/layout/layout";
 import useTodoGrouping from "../../hooks/useTodoGrouping";
 import useTodoOperations from "../../hooks/useTodoOperations";
 import useTodoHierarchy from "../../hooks/useTodoHierarchy";
-import { getActiveListTasks } from "@/store/todoStore";
+import { getActiveListTasks, useTodoStore } from "@/store/todoStore";
 
 import { useState } from "react";
 export default function FilteredTodoList({ groupName }: { groupName: string }) {
   // 获取所有任务，然后根据用户ID过滤
   const tasks = getActiveListTasks();
+  const { activeListId } = useTodoStore();
+
   // 搜索状态管理
   const [searchText, setSearchText] = useState("");
   // 使用hooks获取各种功能
-  const { groupMode, displayGroups } = useTodoGrouping(tasks, searchText);
+  const { groupMode, displayGroups, uncompletedCount } = useTodoGrouping(
+    tasks,
+    searchText,
+  );
   const {
-    title,
-    setTitle,
     handleAdded,
     handleCompleteAll,
     handleDeleteAllCompleted,
-    calculateUncompletedCount,
     renderTodos,
     renderOtherTodos,
     isAllDone,
@@ -43,7 +45,6 @@ export default function FilteredTodoList({ groupName }: { groupName: string }) {
     handleDragOver,
     handleDragEnd,
   } = useTodoHierarchy(tasks, renderTodos, renderOtherTodos);
-  console.log(groupName);
   return (
     <>
       {/*标题栏*/}
@@ -64,16 +65,16 @@ export default function FilteredTodoList({ groupName }: { groupName: string }) {
           <ul className="col p-2">
             <Space className="w-100" direction="vertical" size="small">
               {/*顶部控制器组件*/}
-              <Controller
-                isAllDone={isAllDone}
-                onCompleteAll={handleCompleteAll}
-                text={title}
-                setText={setTitle}
-                onAdded={handleAdded}
-                groupMode={groupMode}
-                searchText={searchText}
-                setSearchText={setSearchText}
-              />
+              {activeListId !== "bin" && (
+                <Controller
+                  isAllDone={isAllDone}
+                  onCompleteAll={handleCompleteAll}
+                  onAdded={handleAdded}
+                  groupMode={groupMode}
+                  searchText={searchText}
+                  setSearchText={setSearchText}
+                />
+              )}
 
               {/*根据分组模式渲染任务列表*/}
               {groupMode === "none" &&
@@ -142,7 +143,7 @@ export default function FilteredTodoList({ groupName }: { groupName: string }) {
       </Content>
 
       {/*底部操作栏*/}
-      <Footer className="rounded-bottom">
+      <Footer className="rounded-bottom theme-color">
         <Row align={"middle"} justify={"space-between"}>
           <button
             type="button"
@@ -151,7 +152,7 @@ export default function FilteredTodoList({ groupName }: { groupName: string }) {
           >
             删除所有已完成
           </button>
-          <span className="">未完成：{calculateUncompletedCount()}个</span>
+          <span className="">未完成：{uncompletedCount}个</span>
         </Row>
       </Footer>
     </>

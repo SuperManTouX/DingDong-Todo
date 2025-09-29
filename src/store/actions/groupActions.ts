@@ -1,10 +1,10 @@
 import { produce } from "immer";
+import type { Group, TodoState } from "../types";
 import {
   createGroup,
-  updateGroup as updateGroupApi,
   deleteGroup as deleteGroupApi,
-} from "@/services/todoService";
-import type { Group, TodoState } from "../types";
+  updateGroup as updateGroupApi,
+} from "@/services/groupService";
 
 export const groupActions = {
   addGroup: async (
@@ -12,7 +12,7 @@ export const groupActions = {
     groupName: string,
     groupItemIds: string[],
     set: any,
-    get: any,
+    get: () => TodoState,
   ): Promise<void> => {
     try {
       // 准备新分组数据
@@ -72,7 +72,7 @@ export const groupActions = {
     listId: string,
     groupName: string,
     set: any,
-    get: any,
+    get: () => TodoState,
   ): Promise<void> => {
     try {
       // 查找要删除的分组
@@ -113,7 +113,7 @@ export const groupActions = {
     }
   },
 
-  getGroupsByListId: (listId: string, get: any): Group[] => {
+  getGroupsByListId: (listId: string, get: () => TodoState): Group[] => {
     return get().groups.filter((group: any) => group.listId === listId);
   },
 };

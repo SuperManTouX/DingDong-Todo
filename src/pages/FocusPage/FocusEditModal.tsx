@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Modal,
   Form,
@@ -46,6 +46,10 @@ export const FocusEditModal: React.FC<FocusEditModalProps> = ({
   // 使用外部传入的form或创建新的form实例
   const [internalForm] = Form.useForm();
   const form = internalForm;
+  
+  // 添加状态变量
+  const [pomodoroCount, setPomodoroCount] = useState<number>(1);
+  const [currentMode, setCurrentMode] = useState<string>("normal"); // 添加当前模式状态
 
   // 从todoStore中获取数据
   const {
@@ -133,25 +137,93 @@ export const FocusEditModal: React.FC<FocusEditModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       if (mode === "edit" && record) {
+        const modeValue = record.mode || "normal";
+        setCurrentMode(modeValue); // 更新当前模式状态
         form.setFieldsValue({
-          mode: record.mode,
+          mode: modeValue,
           startTime: record.start_time ? dayjs(record.start_time) : null,
           endTime: record.end_time ? dayjs(record.end_time) : null,
           taskTitle: record.taskTitle || "",
           note: record.notes || "",
         });
+        // 编辑模式下，如果是番茄计时，尝试计算番茄数量
+        if (modeValue === "pomodoro" && record.start_time && record.end_time) {
+          const durationMinutes = dayjs(record.end_time).diff(dayjs(record.start_time), 'minute');
+          const calculatedCount = Math.round(durationMinutes / 25);
+          setPomodoroCount(calculatedCount > 0 ? calculatedCount : 1);
+        }
       } else if (mode === "add") {
-        // 添加模式时设置默认值
-        form.setFieldsValue({
-          mode: "normal",
-          startTime: dayjs(),
-          endTime: dayjs().add(30, "minute"),
-          taskTitle: selectedTodo?.title || "",
-          note: "",
-        });
+        // 只有当modal首次打开时才设置默认值，避免任务变化时重置模式
+        if (!form.getFieldValue('mode')) {
+          const defaultMode = "normal";
+          setCurrentMode(defaultMode); // 更新当前模式状态
+          form.setFieldsValue({
+            mode: defaultMode,
+            startTime: dayjs(),
+            endTime: dayjs().add(30, "minute"),
+            taskTitle: selectedTodo?.title || "",
+            note: "",
+          });
+          setPomodoroCount(1);
+        } else {
+          // 如果已经设置了模式，只更新任务标题，不重置模式
+          form.setFieldsValue({
+            taskTitle: selectedTodo?.title || "",
+          });
+        }
       }
     }
   }, [isOpen, mode, record, selectedTodo, form]);
+
+  // 处理番茄数量变化
+  const handlePomodoroCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value) || 1;
+    setPomodoroCount(Math.max(1, value)); // 确保至少为1
+    
+    // 更新结束时间
+    const startTime = form.getFieldValue('startTime');
+    if (startTime) {
+      form.setFieldsValue({
+        endTime: dayjs(startTime).add(value * 25, 'minute')
+      });
+    }
+  };
+
+  // 处理模式变化
+  const handleModeChange = (e: any) => {
+    const newMode = e.target.value;
+    setCurrentMode(newMode); // 更新状态，触发重新渲染
+    form.setFieldsValue({ mode: newMode });
+    
+    // 如果切换到番茄计时模式，计算结束时间
+    if (newMode === "pomodoro") {
+      const startTime = form.getFieldValue('startTime') || dayjs();
+      form.setFieldsValue({
+        endTime: dayjs(startTime).add(pomodoroCount * 25, 'minute')
+      });
+    }
+    // 如果切换到正常模式，设置默认30分钟
+    else {
+      const startTime = form.getFieldValue('startTime') || dayjs();
+      form.setFieldsValue({
+        endTime: dayjs(startTime).add(30, 'minute')
+      });
+    }
+  };
+
+  // 处理开始时间变化
+  const handleStartTimeChange = (date: Dayjs | null) => {
+    if (date) {
+      form.setFieldsValue({ startTime: date });
+      
+      // 根据模式更新结束时间
+      if (currentMode === "pomodoro") {
+        form.setFieldsValue({
+          endTime: dayjs(date).add(pomodoroCount * 25, 'minute')
+        });
+      }
+    }
+  };
 
   const handleOk = async () => {
     try {
@@ -188,7 +260,6 @@ export const FocusEditModal: React.FC<FocusEditModalProps> = ({
           completed: true,
           mode: values.mode,
         };
-
         // 调用API添加记录
         const newRecord = await focusService.createFocusRecord(recordData);
         message.success("专注记录添加成功");
@@ -214,16 +285,16 @@ export const FocusEditModal: React.FC<FocusEditModalProps> = ({
 
   const handleDelete = async () => {
     if (!record) return;
-    
+
     try {
       // 调用API删除记录
       await focusService.deleteFocusRecord(record.id);
       message.success("专注记录删除成功");
-      
+
       if (onDelete) {
         onDelete(record.id);
       }
-      
+
       onCancel();
     } catch (error) {
       console.error("删除专注记录失败:", error);
@@ -244,20 +315,20 @@ export const FocusEditModal: React.FC<FocusEditModalProps> = ({
       {/* 仅在编辑模式下显示删除按钮 */}
       {mode === "edit" && record && (
         <Popconfirm
-              title="确定要删除这条专注记录吗？"
-              description="删除后将无法恢复"
-              onConfirm={handleDelete}
-              okText="确定"
-              cancelText="取消"
-              placement="topRight"
-            >
-              <Button 
-                type="text" 
-                danger 
-                icon={<DeleteOutlined />}
-                title="删除记录"
-              />
-            </Popconfirm>
+          title="确定要删除这条专注记录吗？"
+          description="删除后将无法恢复"
+          onConfirm={handleDelete}
+          okText="确定"
+          cancelText="取消"
+          placement="topRight"
+        >
+          <Button
+            type="text"
+            danger
+            icon={<DeleteOutlined />}
+            title="删除记录"
+          />
+        </Popconfirm>
       )}
     </div>
   );
@@ -276,11 +347,29 @@ export const FocusEditModal: React.FC<FocusEditModalProps> = ({
           name="mode"
           rules={[{ required: true, message: "请选择专注模式" }]}
         >
-          <Radio.Group>
+          <Radio.Group onChange={handleModeChange}>
             <Radio.Button value="normal">正常专注</Radio.Button>
             <Radio.Button value="pomodoro">番茄计时</Radio.Button>
           </Radio.Group>
         </Form.Item>
+
+        {/* 番茄计时数量输入框 - 仅在选择番茄计时模式时显示 */}
+        {currentMode === 'pomodoro' && (
+          <Form.Item
+            label="番茄数量"
+            help="每个番茄25分钟"
+          >
+            <Input
+              type="number"
+              min="1"
+              max="10"
+              value={pomodoroCount}
+              onChange={handlePomodoroCountChange}
+              addonAfter="个番茄"
+              style={{ width: '150px' }}
+            />
+          </Form.Item>
+        )}
 
         <Row gutter={16}>
           <Col span={12}>
@@ -293,6 +382,7 @@ export const FocusEditModal: React.FC<FocusEditModalProps> = ({
                 showTime
                 format={mode === "add" ? "YYYY-MM-DD HH:mm" : "HH:mm"}
                 placeholder="选择开始时间"
+                onChange={handleStartTimeChange}
               />
             </Form.Item>
           </Col>

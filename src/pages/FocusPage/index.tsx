@@ -11,7 +11,7 @@ import {
   MenuProps,
 } from "antd";
 import { Content, Header } from "antd/es/layout/layout";
-import FocusEditModal from "@/components/FocusEditModal";
+import FocusEditModal from "@/pages/FocusPage/FocusEditModal";
 import {
   focusService,
   type FocusRecord as ApiFocusRecord,
@@ -98,7 +98,7 @@ export const Index: React.FC = () => {
   const handleStopFocus = () => {
     setIsFocusing(false);
     // 结束专注后重新获取记录，确保显示最新数据
-    fetchAllFocusRecords();
+    // fetchAllFocusRecords();
   };
 
   // 获取专注统计信息
@@ -195,6 +195,7 @@ export const Index: React.FC = () => {
       <FocusTimer
         onStartFocus={handleStartFocus}
         onStopFocus={handleStopFocus}
+        fetchAllFocusRecords={fetchAllFocusRecords}
         isFocusing={isFocusing}
       />
       {/*概况*/}

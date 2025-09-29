@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
-import { useTodoStore } from '@/store/todoStore';
-import { useAuthStore } from '@/store/authStore';
+import { useEffect } from "react";
+import { useTodoStore } from "@/store/todoStore";
+import { useAuthStore } from "@/store/authStore";
 
 /**
  * 用于检测并加载初始状态下的待办数据
@@ -8,11 +8,11 @@ import { useAuthStore } from '@/store/authStore';
  */
 export const useTodoDataLoader = () => {
   const todoStoreState = useTodoStore.getState();
-  const { loadData } = useTodoStore();
+  const { loadDataAll } = useTodoStore();
 
   useEffect(() => {
     // 检查数据是否为初始化状态的条件
-    const isInitialState = 
+    const isInitialState =
       // 检查todoListData是否为空或只有fallback数据
       (todoStoreState.todoListData.length === 0 ||
         (todoStoreState.todoListData.length === 1 &&
@@ -22,7 +22,7 @@ export const useTodoDataLoader = () => {
 
     if (isInitialState) {
       console.log("检测到初始状态，加载数据...");
-      loadData();
+      loadDataAll();
     }
-  }, [loadData]);
+  }, [loadDataAll]);
 };

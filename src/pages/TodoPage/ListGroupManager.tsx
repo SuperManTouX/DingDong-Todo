@@ -12,9 +12,14 @@ import { useState } from "react";
 import { useTodoStore } from "@/store/todoStore";
 import {
   AppstoreOutlined,
+  CheckOutlined,
+  DeleteOutlined,
   EditOutlined,
   EllipsisOutlined,
+  OrderedListOutlined,
   PlusOutlined,
+  QuestionOutlined,
+  SunOutlined,
   TagOutlined,
 } from "@ant-design/icons";
 import type { Tag, TodoListData } from "@/types";
@@ -144,19 +149,26 @@ export default function ListGroupManager({
     const confirmContent = hasChildren
       ? `确定要删除标签 "${tagName}" 吗？此操作无法撤销。`
       : `确定要删除标签 "${tagName}" 吗？此操作无法撤销。`;
-
+    console.log(tagId);
     modal.confirm({
       title: "确认删除标签",
       content: confirmContent,
       okText: "确认删除",
       okType: "danger",
       cancelText: "取消",
-      onOk() {
-        dispatchTag({
-          type: "deleteTag",
-          payload: tagId,
-        });
-        message.success(MESSAGES.SUCCESS.TAG_DELETED);
+      onOk: async () => {
+        try {
+          // 等待异步dispatchTag操作完成
+          await dispatchTag({
+            type: "deleteTag",
+            payload: tagId,
+          });
+
+          // 注意：成功消息已经在tagSlice.ts中处理
+        } catch (error) {
+          // 错误处理由tagSlice.ts中的message.error处理
+          console.error("删除标签失败:", error);
+        }
       },
     });
   };
@@ -324,17 +336,18 @@ export default function ListGroupManager({
   const menuItem: MenuProps["items"] = [
     {
       key: "today",
-      icon: <AppstoreOutlined />,
+      icon: <SunOutlined />,
       label: "今天",
     },
     {
       key: "nearlyWeek",
-      icon: <AppstoreOutlined />,
+      icon: <QuestionOutlined />,
       label: "最近七天",
     },
     { type: "divider" },
     {
       key: "lists",
+      icon: <OrderedListOutlined />,
       label: (
         <Row justify={"space-between"} className="text-secondary fs-6">
           清单
@@ -370,12 +383,12 @@ export default function ListGroupManager({
     { type: "divider", style: { margin: "2rem 0" } },
     {
       key: "cp",
-      icon: <AppstoreOutlined />,
+      icon: <CheckOutlined />,
       label: "已完成",
     },
     {
       key: "bin",
-      icon: <AppstoreOutlined />,
+      icon: <DeleteOutlined />,
       label: "回收站",
     },
   ];

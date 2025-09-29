@@ -1,5 +1,5 @@
 import type { ControllerProps } from "@/types";
-import { Button, Col, Input, Row, Dropdown, DatePicker, Tag } from "antd";
+import { Button, Input, Row, Dropdown, DatePicker, Tag } from "antd";
 import { message } from "@/utils/antdStatic";
 import { MESSAGES } from "@/constants/messages";
 import {
@@ -19,13 +19,11 @@ export default function Controller({
   onCompleteAll,
   isAllDone,
   showType,
-  text,
-  setText,
-  onAdded,
   searchText,
   setSearchText,
 }: ControllerProps) {
   const { todoTags, todoListData, dispatchTodo, activeListId } = useTodoStore();
+  const [text, setText] = useState<string>("");
 
   // 存储当前选择的标签
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -33,6 +31,7 @@ export default function Controller({
   const [selectedListId, setSelectedListId] = useState<string | null>(
     activeListId,
   );
+
   // 存储当前选择的优先级
   const [selectedPriority, setSelectedPriority] = useState<number | null>(null);
   // 存储当前选择的截止日期
@@ -60,16 +59,6 @@ export default function Controller({
     const interval = setInterval(checkDataLoaded, 100);
     return () => clearInterval(interval);
   }, [todoTags]);
-
-  // 处理下拉菜单打开/关闭
-  const handleOpenChange = (open: boolean) => {
-    // 在数据加载完成前，强制保持打开状态
-    if (isDataLoaded) {
-      setIsDropdownOpen(open);
-    } else {
-      setIsDropdownOpen(true);
-    }
-  };
 
   // 处理标签变化
   const handleTagsChange = (tags: string[]) => {
@@ -254,8 +243,12 @@ export default function Controller({
       ...taskData,
     });
 
-    // 调用原始的onAdded函数
-    onAdded();
+    setText("");
+    setSelectedTags([]);
+    setSelectedListId(activeListId);
+    setSelectedPriority(0);
+    setSelectedDeadline(null);
+    message.success("添加新待办事项，成功！");
   };
 
   return (
@@ -303,12 +296,36 @@ export default function Controller({
                       {dayjs(selectedDeadline).format("YYYY-MM-DD HH:mm")}
                     </Tag>
                   )}
-                  {/* 显示选择的标签，选择几个显示几个 */}
-                  {selectedTags.map((tag, index) => (
-                    <Tag key={index} color="green">
-                      #{tag}
+                  {/* 显示选择的优先级 */}
+                  {selectedPriority !== 0 && (
+                    <Tag
+                      color={
+                        selectedPriority === 1
+                          ? "green"
+                          : selectedPriority === 2
+                            ? "blue"
+                            : "red"
+                      }
+                    >
+                      !优先级:{" "}
+                      {selectedPriority === 1
+                        ? "低"
+                        : selectedPriority === 2
+                          ? "中"
+                          : "高"}
                     </Tag>
-                  ))}
+                  )}
+                  {/* 显示选择的标签，选择几个显示几个 */}
+                  {selectedTags.map((tagId, index) => {
+                    // 根据标签ID查找对应的标签对象
+                    const tag = todoTags.find(t => t.id === tagId);
+                    // 如果找到标签，则显示其名称，否则显示未知标签
+                    return (
+                      <Tag key={index} color={tag?.color || "green"}>
+                        #{tag?.name || `未知标签`}
+                      </Tag>
+                    );
+                  })}
                 </>
               }
               onChange={(e) => setText(e.target.value)}

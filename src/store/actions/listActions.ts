@@ -1,13 +1,17 @@
 import { produce } from "immer";
 import { useAuthStore } from "@/store/authStore";
-import { createTodoList, updateTodoList, deleteTodoList } from "@/services/todoService";
 import type { ListGroupAction, TodoState } from "../types";
+import {
+  createTodoList,
+  deleteTodoList,
+  updateTodoList,
+} from "@/services/listService";
 
 export const listActions = {
   dispatchList: async (
     action: ListGroupAction,
     set: any,
-    get: any
+    get: () => TodoState,
   ): Promise<void> => {
     const authState = useAuthStore.getState();
     const { userId } = authState;

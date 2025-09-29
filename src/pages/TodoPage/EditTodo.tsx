@@ -1,17 +1,6 @@
-import {
-  Col,
-  Dropdown,
-  Input,
-  Row,
-  Select,
-  Tag,
-  theme,
-  Layout,
-} from "antd";
+import { Col, Dropdown, Input, Row, Select, Tag, theme, Layout } from "antd";
 import { message } from "@/utils/antdStatic";
-import type { TodoAction } from "@/types";
 import { Priority } from "@/constants";
-import dayjs from "dayjs";
 import { PlusOutlined } from "@ant-design/icons";
 import { useMemo } from "react";
 import { useTodoStore, dispatchTodo } from "@/store/todoStore";
@@ -113,9 +102,8 @@ export default function EditTodo() {
   return (
     <Layout className="h-100">
       <Header
+        className={"theme-color"}
         style={{
-          backgroundColor: currentTheme.bgColor,
-          color: currentTheme.textColor,
           borderBottom: `1px solid ${token.colorBorder}`,
           padding: "0 24px",
         }}
@@ -131,8 +119,7 @@ export default function EditTodo() {
                   type: "changed",
                   todo: { ...selectTodo, completed: checked },
                 });
-                if (checked)
-                  message.info(`已完成${selectTodo.title}`);
+                if (checked) message.info(`已完成${selectTodo.title}`);
               }}
             />
             <TaskDateTimePicker

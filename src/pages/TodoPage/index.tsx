@@ -4,7 +4,6 @@ import {
   useTodoStore,
   getActiveListData,
   useSelectTodo,
-  activeListId,
 } from "@/store/todoStore";
 import FilteredTodoList from "@/pages/TodoPage/FilteredTodoList";
 import EditTodo from "@/pages/TodoPage/EditTodo";
@@ -17,7 +16,7 @@ import { useTodoDataLoader } from "@/hooks/useTodoDataLoader";
  * 显示主待办事项列表和编辑功能
  */
 const Index: React.FC = () => {
-  const { setActiveListId, dispatchTodo, activeListId } = useTodoStore();
+  const { setActiveListId, activeListId } = useTodoStore();
 
   // 使用自定义hook加载待办数据
   useTodoDataLoader();
@@ -27,7 +26,7 @@ const Index: React.FC = () => {
   let activeListTitle: string = activeListData.title;
   if (activeListTitle === "") {
     switch (activeListId) {
-      case "tody":
+      case "today":
         activeListTitle = "今天";
         break;
       case "nearlyWeek":
@@ -54,13 +53,15 @@ const Index: React.FC = () => {
       <Sider width="250">
         <SideMenu menuItem={menuItem} onActiveGroupChange={setActiveListId} />
       </Sider>
-      <Layout>
+      <Layout className={"theme-color"}>
         <FilteredTodoList
           key={useTodoStore.getState().activeListId}
           groupName={activeListTitle}
-        ></FilteredTodoList>
+        />
       </Layout>
-      <Layout>{selectedTodo && <EditTodo key={selectedTodo.id} />}</Layout>
+      <Layout className={"theme-color"}>
+        {selectedTodo && <EditTodo key={selectedTodo.id} />}
+      </Layout>
       {/* 清单管理模态框 */}
       {listGroupManager.groupModal}
       {/* 标签管理模态框 */}

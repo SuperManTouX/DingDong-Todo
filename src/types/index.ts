@@ -33,8 +33,6 @@ export interface DeleteTodoListGroupAction {
 export interface ControllerProps {
   isAllDone: boolean;
   onCompleteAll: (action: TodoCompleteAllAction) => void;
-  text: string;
-  setText: (text: string) => void;
   onAdded: () => void;
   groupMode?: "normal" | "time" | "none";
   onToggleGroupMode?: (mode: "normal" | "time" | "none") => void;

@@ -46,5 +46,6 @@ export interface TodoState {
   getActiveListTasks: () => Todo[];
 
   // API加载数据方法
-  loadData: () => Promise<void>;
+  loadDataAll: () => Promise<void>;
+  loadTags: () => Promise<void>;
 }

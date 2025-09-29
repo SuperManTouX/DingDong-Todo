@@ -2,10 +2,11 @@ import type { TodoState } from "../types";
 import { useTodoStore } from "@/store";
 import type { Todo } from "@/types";
 import { useAuthStore } from "@/store/authStore";
+import { SpecialLists } from "@/constants";
 
 export const utilsActions = {
   // 获取指定ID的任务
-  getTodoById: (id: string, get: any): any | null => {
+  getTodoById: (id: string, get: () => TodoState): any | null => {
     try {
       const state = get();
       if (!state || !Array.isArray(state.tasks)) {
@@ -20,14 +21,20 @@ export const utilsActions = {
   },
 
   // 根据任务ID获取所属的任务组
-  getGroupByTodoId: (todoId: string, get: any): any | null => {
+  getGroupByTodoId: (todoId: string, get: () => TodoState): any | null => {
     try {
       const state = get();
-      if (!state || !Array.isArray(state.tasks) || !Array.isArray(state.todoListData)) {
-        console.warn("State or required arrays are invalid in getGroupByTodoId");
+      if (
+        !state ||
+        !Array.isArray(state.tasks) ||
+        !Array.isArray(state.todoListData)
+      ) {
+        console.warn(
+          "State or required arrays are invalid in getGroupByTodoId",
+        );
         return null;
       }
-      
+
       const task = state.tasks.find((t: any) => t.id === todoId);
       if (!task) return null;
 
@@ -41,7 +48,7 @@ export const utilsActions = {
   },
 
   // 获取当前激活的任务组数据
-  getActiveListData: (get: any): any => {
+  getActiveListData: (get: () => TodoState): any => {
     try {
       const state = get();
       if (!state || !Array.isArray(state.todoListData)) {
@@ -54,7 +61,7 @@ export const utilsActions = {
           updatedAt: "",
         };
       }
-      
+
       return (
         state.todoListData.find(
           (list: any) => list.id === state.activeListId,
@@ -86,22 +93,25 @@ export const utilsActions = {
         console.warn("State or tasks is invalid in getActiveListTasks");
         return [];
       }
-      
+
       // 激活的是清单
       if (state.tasks.some((task: any) => task.listId === state.activeListId)) {
         return state.tasks.filter(
           (task: any) => task.listId === state.activeListId,
+        );
+        //激活的是tag_id
+      } else if (state.activeListId.indexOf("tag") !== -1) {
+        return state.tasks.filter((task: any) =>
+          task.tags.some((tagId: any) => tagId === state.activeListId),
         );
         //激活的是特殊列表
       } else {
         if (state.activeListId === "bin") {
           return Array.isArray(state.bin) ? state.bin : [];
         }
-        
+
         const userId = useAuthStore.getState()?.userId;
-        return state.tasks.filter(
-          (task: any) => task.userId === userId,
-        );
+        return state.tasks.filter((task: any) => task.userId === userId);
       }
     } catch (error) {
       console.error("Error in getActiveListTasks:", error);

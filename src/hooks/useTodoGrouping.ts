@@ -16,6 +16,7 @@ interface UseTodoGroupingReturn {
   groupMode: "normal" | "time" | "none";
   displayGroups: DisplayGroup[];
   allTasks: Todo[];
+  uncompletedCount: number;
 }
 
 // 任务分组相关的hook
@@ -23,7 +24,7 @@ export default function useTodoGrouping(
   tasks: Todo[],
   searchText: string,
 ): UseTodoGroupingReturn {
-  const { getGroupsByListId } = useTodoStore();
+  const { getGroupsByListId, todoListData } = useTodoStore();
 
   const { activeListId } = useTodoStore.getState();
   const searchTasks = tasks.filter(
@@ -36,7 +37,12 @@ export default function useTodoGrouping(
   let isCompletedMode = false;
 
   // 特殊activeListId处理
-  if (activeListId === "today") {
+  if (activeListId.indexOf("tag") !== -1) {
+    // 当激活的列表ID包含"tag"时，按不同list分组
+    groupMode = "normal";
+    // 保持所有任务，不需要特殊过滤
+    filteredTasks = [...searchTasks];
+  } else if (activeListId === "today") {
     // 只显示今天的任务
     groupMode = "time";
     const today = dayjs().format("YYYY-MM-DD");
@@ -88,7 +94,35 @@ export default function useTodoGrouping(
   const groups = getGroupsByListId(activeListId);
   if (groupMode === "normal") {
     // 普通清单模式
-    if (groups.length === 0) {
+    if (activeListId.indexOf("tag") !== -1) {
+      // 当激活的列表ID包含"tag"时，按不同list分组
+      const listGrouped: { [key: string]: Todo[] } = {};
+
+      // 初始化分组并按listId分组任务
+      displayTasks.forEach((task) => {
+        const listId = task.listId || "未分类";
+        if (!listGrouped[listId]) {
+          listGrouped[listId] = [];
+        }
+        listGrouped[listId].push(task);
+      });
+
+      // 转换为统一的显示分组格式
+      Object.keys(listGrouped).forEach((listId) => {
+        // 查找listId对应的标题，如果找不到则使用listId
+        const listTitle =
+          listId === "未分类"
+            ? "未分类"
+            : todoListData.find((list) => list.id === listId)?.title || listId;
+
+        displayGroups.push({
+          id: `list_${listId}`,
+          title: listTitle,
+          tasks: listGrouped[listId],
+          type: "group",
+        });
+      });
+    } else if (groups.length === 0) {
       // 没有分组，所有任务都放入未分组
       displayGroups.push({
         title: "未分组",
@@ -252,9 +286,17 @@ export default function useTodoGrouping(
     }
   }
 
+  // 计算displayGroups中的任务总数
+  const displayTasksCount = displayGroups.reduce((total, group) => {
+    // 过滤掉占位任务
+    const validTasks = group.tasks.filter(task => task.id !== '' || task.title !== '占位Todo');
+    return total + validTasks.length;
+  }, 0);
+
   return {
     groupMode,
     displayGroups,
+    uncompletedCount: displayTasksCount,
     allTasks: displayTasks,
   };
 }

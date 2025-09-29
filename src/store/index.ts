@@ -1,20 +1,20 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import type { TodoState } from "./types";
-import { todoActions } from "./slices/todoSlice";
-import { listActions } from "./slices/listSlice";
-import { tagActions } from "./slices/tagSlice";
-import { groupActions } from "./slices/groupSlice";
-import { binActions } from "./slices/binSlice";
-import { utilsActions } from "./slices/utilsSlice";
-import { loadActions } from "./slices/loadSlice";
+import { todoActions } from "@/store/actions/todoActions";
+import { listActions } from "@/store/actions/listActions";
+import { tagActions } from "@/store/actions/tagActions";
+import { groupActions } from "@/store/actions/groupActions";
+import { binActions } from "@/store/actions/binActions";
+import { utilsActions } from "@/store/actions/utilsActions";
+import { loadActions } from "@/store/actions/loadActions";
 
 export const useTodoStore = create<TodoState>()(
   // 添加devtools中间件
   devtools(
     // 需要本地化再解开
     // persist(
-    (set, get) => {
+    (set, get: () => TodoState) => {
       // 将计算属性实现为函数而不是getter
 
       return {
@@ -94,7 +94,7 @@ export const useTodoStore = create<TodoState>()(
           groupActions.getGroupsByListId(listId, get),
 
         // 回收站相关操作
-        moveToBin: (todo) => binActions.moveToBin(todo, set, get),
+        moveToBin: (todo) => binActions.moveToBin(todo, set),
         restoreFromBin: (todoId) => binActions.restoreFromBin(todoId, set, get),
         deleteFromBin: (todoId) => binActions.deleteFromBin(todoId, set),
         emptyBin: () => binActions.emptyBin(set),
@@ -111,10 +111,10 @@ export const useTodoStore = create<TodoState>()(
         setUserId: (id) => utilsActions.setUserId(id, set),
 
         // 数据加载
-        loadData: () => loadActions.loadData(set, get),
+        loadDataAll: () => loadActions.loadDataAll(set, get),
+        loadTags: () => loadActions.loadActions(set, get),
       };
     },
-    // )
-    { name: "TodoStore" }, // devtools配置，设置store名称
+    { name: "TodoStore" },
   ),
 );

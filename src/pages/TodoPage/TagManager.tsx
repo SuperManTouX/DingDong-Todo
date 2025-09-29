@@ -10,13 +10,14 @@ import { useTodoStore } from "@/store/todoStore";
  * 负责标签的添加、编辑等功能
  */
 export default function TagManager() {
-  const { dispatchTag } = useTodoStore();
+  const { dispatchTag, todoTags } = useTodoStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mode, setMode] = useState<"add" | "edit">("add");
   const [tagName, setTagName] = useState("");
   const [selectedColor, setSelectedColor] = useState(ListColors.none);
   const [tagId, setTagId] = useState("");
   const [parentId, setParentId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   /**
    * 显示模态框
@@ -50,37 +51,56 @@ export default function TagManager() {
   };
 
   /**
+   * 获取所有顶级标签（parentId为null的标签）
+   */
+  const getTopLevelTags = () => {
+    return todoTags.filter(
+      (tag) => tag.parentId === null && (!mode || tag.id !== tagId),
+    );
+  };
+
+  /**
    * 处理确认按钮
    */
-  const handleOk = () => {
+  const handleOk = async () => {
     if (tagName.trim()) {
-      if (mode === "add") {
-        // 添加新标签
-        dispatchTag({
-          type: "addTag",
-          payload: {
-            name: tagName.trim(),
-            color: selectedColor,
-            parentId,
-          },
-        } as any);
-        message.success(MESSAGES.SUCCESS.TAG_ADDED);
-      } else if (mode === "edit") {
-        // 编辑现有标签
-        dispatchTag({
-          type: "updateTag",
-          payload: {
-            id: tagId,
-            updates: {
+      setIsLoading(true);
+      try {
+        if (mode === "add") {
+          // 添加新标签（使用await等待异步操作完成）
+          dispatchTag({
+            type: "addTag",
+            payload: {
               name: tagName.trim(),
               color: selectedColor,
               parentId,
             },
-          },
-        } as any);
-        message.success(MESSAGES.SUCCESS.TAG_UPDATED);
+          } as any);
+
+          // 注意：成功消息已经在tagSlice.ts中处理
+        } else if (mode === "edit") {
+          // 编辑现有标签（使用await等待异步操作完成）
+          dispatchTag({
+            type: "updateTag",
+            payload: {
+              id: tagId,
+              updates: {
+                name: tagName.trim(),
+                color: selectedColor,
+                parentId,
+              },
+            },
+          } as any);
+
+          // 注意：成功消息已经在tagSlice.ts中处理
+        }
+        setIsModalOpen(false);
+      } catch (error) {
+        // 错误处理由tagSlice.ts中的message.error处理
+        console.error("标签操作失败:", error);
+      } finally {
+        setIsLoading(false);
       }
-      setIsModalOpen(false);
     } else {
       message.warning(MESSAGES.WARNING.EMPTY_TAG_NAME);
     }
@@ -93,6 +113,9 @@ export default function TagManager() {
     setIsModalOpen(false);
   };
 
+  // 获取顶级标签列表用于选择器
+  const topLevelTags = getTopLevelTags();
+
   return {
     showModal,
     tagModal: (
@@ -103,6 +126,7 @@ export default function TagManager() {
         onOk={handleOk}
         onCancel={handleCancel}
         width={400}
+        confirmLoading={isLoading}
       >
         <div className="mb-3">
           <label htmlFor="tagName" className="form-label">
@@ -147,6 +171,48 @@ export default function TagManager() {
                 </div>
               ),
             }))}
+          />
+        </div>
+        <div className="mb-3">
+          <label htmlFor="parentTag" className="form-label">
+            父级标签
+          </label>
+          <Select
+            id="parentTag"
+            value={parentId}
+            style={{ width: "100%" }}
+            onChange={(value) => setParentId(value)}
+            placeholder="选择父级标签（可选）"
+            options={[
+              {
+                value: null,
+                label: "无父级标签",
+              },
+              ...topLevelTags.map((tag) => ({
+                value: tag.id,
+                label: (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    {tag.color && (
+                      <div
+                        style={{
+                          width: "16px",
+                          height: "16px",
+                          backgroundColor: tag.color,
+                          borderRadius: "50%",
+                        }}
+                      />
+                    )}
+                    <span>{tag.name}</span>
+                  </div>
+                ),
+              })),
+            ]}
           />
         </div>
         {mode === "add" && (
