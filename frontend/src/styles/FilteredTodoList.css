@@ -3,7 +3,7 @@
 }
 .theme-color {
     color: var(--theme-textColor);
-    background-color: var(--theme-bgColor);
+    background-color: #f5f5f5;
     border: 1px solid var(--theme-bgColor);
 }
 

@@ -12,8 +12,8 @@ export const PriorityName = Object.fromEntries(
 
 // 特殊清单常量 ，标签以后也得加
 export const SpecialLists = {
-  aa: "aa",
-  bb: "bb",
+  today: "today",
+  nearlyWeek: "nearlyWeek",
   bin: "bin",
   cp: "cp",
 } as const;

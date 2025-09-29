@@ -3,7 +3,7 @@ import { Col, List, Row, Typography } from "antd";
 import { ClockCircleFilled, ThunderboltFilled } from "@ant-design/icons";
 import type { FocusRecord } from "@/pages/FocusPage/types";
 import message from "antd/es/message";
-import FocusEditModal from "@/components/FocusEditModal";
+import FocusEditModal from "@/pages/FocusPage/FocusEditModal";
 
 interface FocusRecordsProps {
   records: FocusRecord[];

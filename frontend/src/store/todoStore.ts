@@ -47,7 +47,8 @@ export const {
   setActiveListId,
   setSelectTodoId,
   setUserId,
-  loadData,
+  loadDataAll,
+  loadTags,
 } = useTodoStore.getState();
 
 // 为了确保兼容性，创建并导出一些可能使用的自定义hooks
@@ -71,27 +72,6 @@ export const useSelectTodo = (): Todo | null => {
     return selectTodo || null;
   } catch (error) {
     console.error("Error in useSelectTodo hook:", error);
-    return null;
-  }
-};
-
-export const useActiveGroup = () => {
-  try {
-    const activeGroup = useTodoStore((state) => {
-      try {
-        if (!state) {
-          console.warn("State is undefined in useActiveGroup");
-          return null;
-        }
-        return state.activeGroup;
-      } catch (error) {
-        console.error("Error accessing activeGroup in store:", error);
-        return null;
-      }
-    });
-    return activeGroup || null;
-  } catch (error) {
-    console.error("Error in useActiveGroup hook:", error);
     return null;
   }
 };

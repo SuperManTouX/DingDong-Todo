@@ -6,12 +6,9 @@ import type { Todo, TodoCompleteAllAction } from "@/types";
 
 // 定义hook返回类型
 interface UseTodoOperationsReturn {
-  title: string;
-  setTitle: (title: string) => void;
   handleAdded: () => Promise<void>;
   handleCompleteAll: (action: TodoCompleteAllAction) => Promise<void>;
   handleDeleteAllCompleted: () => Promise<void>;
-  calculateUncompletedCount: () => number;
   renderTodos: () => Todo[];
   renderOtherTodos: () => Todo[];
   isAllDone: boolean;
@@ -24,8 +21,7 @@ export default function useTodoOperations(
   tasks: Todo[],
   searchText: string = "",
 ): UseTodoOperationsReturn {
-  const { dispatchTodo, loadData, selectTodoId } = useTodoStore();
-  const [title, setTitle] = useState<string>("");
+  const { dispatchTodo, loadDataAll, selectTodoId } = useTodoStore();
   // 保存最近删除的任务信息，用于撤销操作
   const [lastDeletedTask, setLastDeletedTask] = useState<Todo | null>(null);
   let isAllDone = tasks.length > 0 && tasks.every((t) => t.completed);
@@ -41,8 +37,7 @@ export default function useTodoOperations(
         completed: false,
         listId: activeListId,
       });
-      loadData();
-      setTitle("");
+      loadDataAll();
     } catch (error) {
       console.error("添加任务失败:", error);
       message.error("添加任务失败，请重试");
@@ -91,7 +86,7 @@ export default function useTodoOperations(
           // 如果有原始的任务ID，尝试恢复它（具体取决于store的实现）
           ...(lastDeletedTask.id && { originalId: lastDeletedTask.id }),
         });
-        loadData();
+        loadDataAll();
         setLastDeletedTask(null);
         message.success("已撤销删除操作");
       } catch (error) {
@@ -181,11 +176,12 @@ export default function useTodoOperations(
     if (!searchText.trim()) {
       return taskList;
     }
-    
+
     const searchLower = searchText.toLowerCase().trim();
-    return taskList.filter((task) => 
-      (task.title && task.title.toLowerCase().includes(searchLower)) ||
-      (task.text && task.text.toLowerCase().includes(searchLower))
+    return taskList.filter(
+      (task) =>
+        (task.title && task.title.toLowerCase().includes(searchLower)) ||
+        (task.text && task.text.toLowerCase().includes(searchLower)),
     );
   };
 
@@ -199,7 +195,9 @@ export default function useTodoOperations(
   }
 
   //当一键完成或一键取消完成的时候
-  async function handleCompleteAll(action: TodoCompleteAllAction): Promise<void> {
+  async function handleCompleteAll(
+    action: TodoCompleteAllAction,
+  ): Promise<void> {
     try {
       const { activeListId } = useTodoStore.getState();
       await dispatchTodo({ ...action, listId: activeListId });
@@ -207,11 +205,6 @@ export default function useTodoOperations(
       console.error("批量更新任务状态失败:", error);
       message.error("批量更新任务状态失败，请重试");
     }
-  }
-
-  //计算未完成的个数
-  function calculateUncompletedCount() {
-    return renderTodos().length;
   }
 
   // 删除所有已完成
@@ -231,12 +224,9 @@ export default function useTodoOperations(
   }
 
   return {
-    title,
-    setTitle,
     handleAdded,
     handleCompleteAll,
     handleDeleteAllCompleted,
-    calculateUncompletedCount,
     renderTodos,
     renderOtherTodos,
     isAllDone,

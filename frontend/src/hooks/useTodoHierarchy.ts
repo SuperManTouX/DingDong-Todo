@@ -27,7 +27,6 @@ export default function useTodoHierarchy(
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({
     // 默认可以在这里设置一些任务的展开状态
   });
-  const [tempTasks, setTempTasks] = useState<Todo[] | null>(null);
 
   // 设置@dnd-kit传感器
   const sensors = [
@@ -157,7 +156,7 @@ export default function useTodoHierarchy(
   };
   // 拖动时
   const handleDragOver = (event: any) => {
-    const { active, over, collisions } = event;
+    const { active, over } = event;
     if (!over || active.id === over.id) return;
     const activeId = active.id as string;
     const overId = over.id as string;
@@ -166,7 +165,7 @@ export default function useTodoHierarchy(
     const draggedTask = tasks.find((item) => item.id === activeId);
     const targetTask = tasks.find((item) => item.id === overId);
     if (!draggedTask || !overContainerId) return;
-
+    console.log(activeListId, SpecialLists);
     if (activeListId in SpecialLists) {
       dispatchTodo({
         type: "changed",
@@ -193,54 +192,86 @@ export default function useTodoHierarchy(
 
   // 拖动排序方法 - 使用@dnd-kit处理拖拽排序和层级转换
   const handleDragEnd = useCallback(
-    (event: any) => {
-      /*const { active, over } = event;
-
+    async (event: any) => {
+      const { active, over } = event;
       // 如果拖拽被取消或没有有效的放置目标，清除临时状态
       if (!over || active.id === over.id) {
-        setTempTasks(null);
         return;
       }
 
       // 获取拖动任务和放置目标任务
       const activeId = active.id as string;
       const overId = over.id as string;
+      const overContainerId = over.data.current.sortable.containerId as string;
 
       const draggedTask = tasks.find((item) => item.id === activeId);
       const targetTask = tasks.find((item) => item.id === overId);
-
-      if (!draggedTask || !targetTask) {
-        setTempTasks(null);
+      if (!draggedTask || !overContainerId) {
         return;
       }
 
       // 检查目标是否为FilterGroup
       const isTargetFilterGroup = over.data?.current?.type === "FilterGroup";
 
-      // 使用handleDragOver中已经处理好的临时状态作为最终结果
-      if (tempTasks) {
-        if (isTargetFilterGroup && over.data?.current?.groupKey) {
-          // 如果是拖入FilterGroup，添加到目标分组的localTask
-          dispatchTodo({
-            type: "add_to_group",
-            todoList: tempTasks,
-            groupKey: over.data.current.groupKey,
-            listId: targetTask.listId,
-          });
-        } else {
-          // 一次性替换整个列表，使用目标任务的listId
-          dispatchTodo({
-            type: "replaced",
-            todoList: tempTasks,
-            listId: targetTask.listId,
-          });
-        }
-      }
+      // 获取被拖动任务的所有子任务
+      const findSubtasks = (parentId: string): Todo[] => {
+        const directSubtasks = tasks.filter(
+          (task) => task.parentId === parentId,
+        );
+        let allSubtasks: Todo[] = [...directSubtasks];
 
-      // 清除临时状态
-      setTempTasks(null);*/
+        // 递归查找所有嵌套子任务
+        directSubtasks.forEach((subtask) => {
+          allSubtasks = [...allSubtasks, ...findSubtasks(subtask.id)];
+        });
+
+        return allSubtasks;
+      };
+
+      const subtasks = findSubtasks(draggedTask.id);
+      // 更新被拖动任务及其所有子任务
+      const updateTaskAndSubtasks = async () => {
+        try {
+          // 确定要更新的字段
+          let updateFields: Partial<Todo> = {};
+
+          if (activeListId in SpecialLists) {
+            // 在特殊列表中，更新deadline
+            updateFields.deadline =
+              targetTask?.deadline || draggedTask.deadline;
+          } else {
+            // 在普通列表中，更新groupId
+            updateFields.groupId = overContainerId;
+          }
+          console.log(updateFields);
+          // 更新拖动的任务
+          await dispatchTodo({
+            type: "changed",
+            todo: {
+              ...draggedTask,
+              ...updateFields,
+            },
+          });
+
+          // 更新所有子任务
+          for (const subtask of subtasks) {
+            await dispatchTodo({
+              type: "changed",
+              todo: {
+                ...subtask,
+                ...updateFields,
+              },
+            });
+          }
+        } catch (error) {
+          console.error("更新任务和子任务失败:", error);
+        }
+      };
+
+      // 执行更新
+      await updateTaskAndSubtasks();
     },
-    [tasks, tempTasks, dispatchTodo],
+    [tasks, dispatchTodo, activeListId],
   );
 
   return {

@@ -9,7 +9,7 @@ export const todoActions = {
   dispatchTodo: async (
     action: TodoActionExtended,
     set: any,
-    get: any
+    get: () => TodoState,
   ): Promise<void> => {
     const authState = useAuthStore.getState();
     const { userId } = authState;
@@ -116,7 +116,8 @@ export const todoActions = {
                     (task) => task.id === createdTask.parentId,
                   );
                   if (parentTaskIndex !== -1) {
-                    draftState.tasks[parentTaskIndex].updatedAt = new Date().toISOString();
+                    draftState.tasks[parentTaskIndex].updatedAt =
+                      new Date().toISOString();
                   }
                 }
               }
