@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { message } from "@/utils/antdStatic";
 import { MESSAGES } from "@/constants/messages";
 import { CheckSquareOutlined, ClockCircleFilled } from "@ant-design/icons";
+import { useToken } from "antd/es/theme/internal";
 
 /**
  * 侧边栏导航组件
@@ -21,12 +22,12 @@ const SidebarNav: React.FC = () => {
   const menuItems: MenuProps["items"] = [
     {
       key: "todos",
-      icon: <CheckSquareOutlined />,
+      icon: <CheckSquareOutlined className={"text-secondary"} />,
       label: "清单",
     },
     {
       key: "zhuanZhu",
-      icon: <ClockCircleFilled />,
+      icon: <ClockCircleFilled className={"text-secondary"} />,
       label: "专注",
     },
     {
@@ -74,11 +75,11 @@ const SidebarNav: React.FC = () => {
 
   return (
     <Col
+      className={"theme-bgcColor-primaryColor"}
       style={{
         display: "flex",
         flexDirection: "column",
         height: "100%",
-        backgroundColor: "var(--theme-bgColor)",
         paddingTop: "1rem",
       }}
     >
@@ -115,7 +116,7 @@ const SidebarNav: React.FC = () => {
       {/* 菜单区域 */}
       <Menu
         mode="vertical"
-        className={"flex-1 h-100"}
+        className={"flex-1 h-100 theme-bgcColor-primaryColor"}
         items={menuItems}
         onClick={handleMenuClick}
         selectedKeys={[selectedKey]}

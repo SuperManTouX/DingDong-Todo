@@ -1,5 +1,6 @@
 import type { ControllerProps } from "@/types";
 import { Button, Input, Row, Dropdown, DatePicker, Tag } from "antd";
+import { theme } from "antd";
 import { message } from "@/utils/antdStatic";
 import { MESSAGES } from "@/constants/messages";
 import {
@@ -24,7 +25,8 @@ export default function Controller({
 }: ControllerProps) {
   const { todoTags, todoListData, dispatchTodo, activeListId } = useTodoStore();
   const [text, setText] = useState<string>("");
-
+  // 使用useToken钩子获取全局主题token
+  const { token } = theme.useToken();
   // 存储当前选择的标签
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   // 存储当前选择的清单ID
@@ -288,7 +290,9 @@ export default function Controller({
               prefix={
                 <>
                   {/* 显示选择的清单标题 */}
-                  {selectedListId && <Tag color="blue">^{activeListTitle}</Tag>}
+                  {selectedListId && (
+                    <Tag color={token.colorPrimary}>^{activeListTitle}</Tag>
+                  )}
                   {/* 显示选择的截止日期 */}
                   {selectedDeadline && (
                     <Tag color="orange">
@@ -318,7 +322,7 @@ export default function Controller({
                   {/* 显示选择的标签，选择几个显示几个 */}
                   {selectedTags.map((tagId, index) => {
                     // 根据标签ID查找对应的标签对象
-                    const tag = todoTags.find(t => t.id === tagId);
+                    const tag = todoTags.find((t) => t.id === tagId);
                     // 如果找到标签，则显示其名称，否则显示未知标签
                     return (
                       <Tag key={index} color={tag?.color || "green"}>

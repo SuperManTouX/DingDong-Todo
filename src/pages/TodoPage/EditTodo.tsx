@@ -160,9 +160,9 @@ export default function EditTodo() {
         </Row>
       </Header>
       <Content
+        className={"theme-color"}
         style={{
           padding: "16px 24px",
-          backgroundColor: "#f5f5f5",
           color: currentTheme.textColor,
           minHeight: "calc(100% - 100px)",
         }}
@@ -267,8 +267,8 @@ export default function EditTodo() {
         </Row>
       </Content>
       <Footer
+        className={"theme-color"}
         style={{
-          backgroundColor: "#f5f5f5",
           color: currentTheme.textColor,
           borderTop: `1px solid ${token.colorBorder}`,
           padding: "0 24px",

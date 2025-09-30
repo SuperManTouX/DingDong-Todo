@@ -154,6 +154,7 @@ export default function FilterGroup({
           key: "1",
           label: (
             <div
+              className={"bgColor-transparent"}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -191,7 +192,10 @@ export default function FilterGroup({
             </div>
           ),
           children: (
-            <div className="filter-group-content" style={{ minHeight: "2rem" }}>
+            <div
+              className={"bgColor-transparent"}
+              style={{ minHeight: "2rem" }}
+            >
               {children ? (
                 <SortableList
                   items={getSortableTaskIds()}
@@ -229,7 +233,7 @@ export default function FilterGroup({
         },
       ]}
       defaultActiveKey={["1"]}
-      className="filter-group"
+      className="filter-group border-0 bgColor-transparent"
     />
   );
 }

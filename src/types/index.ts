@@ -55,17 +55,17 @@ export interface TodoListData {
 export interface Todo {
   id: string;
   title: string;
-  text?: string;
+  text?: string | null;
   completed: boolean;
   priority: number;
-  datetimeLocal?: string;
-  deadline?: string;
+  datetimeLocal?: string | null;
+  deadline?: string | null;
   parentId?: string | null; // 新增：指向父任务ID
   depth: number; // 新增：表示嵌套深度
   tags?: string[]; // 新增：任务标签数组，存储标签ID
   listId: string; // 新增：指向所属清单ID
-  groupId?: string; // 新增：指向所属清单ID
-  userId?: string; // 新增：指向创建任务的用户ID
+  groupId?: string | null; // 新增：指向所属清单ID
+  userId: string; // 新增：指向创建任务的用户ID
 }
 
 interface TodoAddAction {
