@@ -30,7 +30,7 @@ export default function SideMenu({
   return (
     <>
       <Menu
-        className="h-100"
+        className="h-100 theme-bgcColor-menuColor"
         onClick={handleClick}
         style={{
           width: "100%",

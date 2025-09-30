@@ -147,3 +147,6 @@
     box-shadow: none;
     border-color: transparent;
 }
+.selected-task{
+    background-color: var(--theme-hoverColor) !important;
+}

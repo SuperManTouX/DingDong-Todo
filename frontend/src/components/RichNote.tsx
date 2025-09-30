@@ -215,8 +215,8 @@ const RichNote: React.FC<RichNoteProps> = ({
 
   return (
     <div
+      className={"bgColor-transparent"}
       style={{
-        backgroundColor: "#f5f5f5",
         color: currentTheme.textColor,
         borderRadius: "6px",
         border: "1px solid #d9d9d9",

@@ -516,6 +516,12 @@ button + button {
 .ant-menu-item-active .opacityHover0-1 {
     opacity: 1;
 }
+.ant-collapse-content{
+    background: transparent !important;
+}
+.bgColor-transparent{
+    background: transparent !important;
+}
 
 /*.my-custom-menu .ant-menu-submenu .ant-menu-item {*/
 /*    padding-left: 40px !important;*/

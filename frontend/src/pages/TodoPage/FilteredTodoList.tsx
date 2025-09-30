@@ -48,7 +48,7 @@ export default function FilteredTodoList({ groupName }: { groupName: string }) {
   return (
     <>
       {/*标题栏*/}
-      <Header className="theme-color ">
+      <Header className="theme-color border-0">
         <Row className={"h-100"} align={"top"} justify="start">
           <span className={"h-100 d-inline-block"}>{groupName}</span>
         </Row>

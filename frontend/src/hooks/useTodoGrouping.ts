@@ -13,7 +13,7 @@ interface DisplayGroup {
 
 // 定义hook返回类型
 interface UseTodoGroupingReturn {
-  groupMode: "normal" | "time" | "none";
+  groupMode: "normal" | "time" | "none" | "list";
   displayGroups: DisplayGroup[];
   allTasks: Todo[];
   uncompletedCount: number;
@@ -31,7 +31,7 @@ export default function useTodoGrouping(
     (task) => task.title.indexOf(searchText) !== -1,
   );
   // 根据activeListId确定分组模式和过滤逻辑
-  let groupMode: "normal" | "time" = "normal";
+  let groupMode: "normal" | "time" | "list" = "normal";
   let filteredTasks = [...searchTasks];
 
   let isCompletedMode = false;

@@ -166,7 +166,18 @@ export default function useTodoHierarchy(
     const targetTask = tasks.find((item) => item.id === overId);
     if (!draggedTask || !overContainerId) return;
     console.log(activeListId, SpecialLists);
-    if (activeListId in SpecialLists) {
+    if (activeListId.indexOf("tag") !== -1) {
+      // 当激活的列表ID包含"tag"时，将draggedTask的listId更新为over的listId
+      console.log("tag", targetTask);
+      dispatchTodo({
+        type: "changed",
+        todo: {
+          ...draggedTask,
+          listId: targetTask.listId,
+          groupId: null,
+        },
+      });
+    } else if (activeListId in SpecialLists) {
       dispatchTodo({
         type: "changed",
         todo: {
@@ -239,6 +250,10 @@ export default function useTodoHierarchy(
             // 在特殊列表中，更新deadline
             updateFields.deadline =
               targetTask?.deadline || draggedTask.deadline;
+          } else if (activeListId.indexOf("tag") !== -1) {
+            // 在特殊列表中，更新deadline
+            updateFields.listId = targetTask.listId;
+            updateFields.groupId = null;
           } else {
             // 在普通列表中，更新groupId
             updateFields.groupId = overContainerId;

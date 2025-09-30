@@ -9,6 +9,7 @@ import isoWeek from "dayjs/plugin/isoWeek";
 import { useTodoStore } from "@/store/todoStore";
 import TimeCountDownNode from "./TimeCountDownNode";
 import TodoCheckbox from "@/components/TodoCheckbox";
+import "@/styles/TodoTask.css";
 
 dayjs.extend(isoWeek);
 export default function TodoTask({
@@ -18,7 +19,7 @@ export default function TodoTask({
   isExpanded = false,
   onToggleExpand,
 }: TodoItemProps) {
-  const { dispatchTodo, setSelectTodoId } = useTodoStore();
+  const { dispatchTodo, setSelectTodoId, selectTodoId } = useTodoStore();
   const { token } = theme.useToken(); // 获取主题令牌
 
   // 列表项悬停效果样式
@@ -59,11 +60,11 @@ export default function TodoTask({
 
   // SubList函数已移除，子任务现在在TodoList中直接渲染
   // 子任务图标已移除，子任务现在在TodoList中直接渲染;
-
+  console.log(selectTodoId, todo.id);
   return (
     <>
       <li
-        className={`cursor-pointer row d-flex justify-content-between highlight rounded pe-0 ps-0 pt-1 pb-1  ${other ? "opacity-25" : ""}`}
+        className={`cursor-pointer row d-flex justify-content-between highlight rounded pe-0 ps-0 pt-1 pb-1 ${selectTodoId === todo.id ? "selected-task" : ""}  ${other ? "opacity-25" : ""}`}
         onClick={() => {
           if (setSelectTodoId) {
             console.log("TodoTask", todo.id);

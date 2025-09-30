@@ -21,12 +21,12 @@ export default function AppLayout() {
 
   return (
     <ConfigProvider theme={themeConfig}>
-      <Layout className="w-100 h-100">
+      <Layout className="w-100 h-100 border-0 ">
         <Sider collapsed={true} width="4%">
           {/* 使用侧边栏导航组件 */}
           <SidebarNav />
         </Sider>
-        <Layout className={"overflow-y-auto d-flex flex-row"}>
+        <Layout className={"overflow-y-auto d-flex flex-row border-0 "}>
           {/* 使用Outlet组件显示子路由内容 */}
           <Outlet />
         </Layout>

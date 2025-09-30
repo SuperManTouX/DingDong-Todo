@@ -53,13 +53,13 @@ const Index: React.FC = () => {
       <Sider width="250">
         <SideMenu menuItem={menuItem} onActiveGroupChange={setActiveListId} />
       </Sider>
-      <Layout className={"theme-color"}>
+      <Layout className={"theme-color border-0"}>
         <FilteredTodoList
           key={useTodoStore.getState().activeListId}
           groupName={activeListTitle}
         />
       </Layout>
-      <Layout className={"theme-color"}>
+      <Layout className={"theme-color border-0"}>
         {selectedTodo && <EditTodo key={selectedTodo.id} />}
       </Layout>
       {/* 清单管理模态框 */}
