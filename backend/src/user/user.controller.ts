@@ -3,7 +3,9 @@ import { AuthGuard } from '@nestjs/passport';
 import { UserService } from './user.service';
 import { OssConfig } from '../config/oss.config';
 import { v4 as uuidv4 } from 'uuid';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('用户管理')
 @Controller('users')
 export class UserController {
   constructor(
@@ -11,12 +13,41 @@ export class UserController {
     private ossConfig: OssConfig
   ) {}
 
+  /**
+   * 获取用户个人信息
+   */
+  @ApiOperation({
+    summary: '获取用户个人信息',
+    description: '获取当前登录用户的详细个人信息',
+  })
+  @ApiBearerAuth()
+  @ApiResponse({ status: 200, description: '获取成功' })
+  @ApiResponse({ status: 401, description: '未授权' })
   @UseGuards(AuthGuard('jwt'))
   @Get('profile')
   getProfile(@Req() req) {
     return this.userService.findById(req.user.id);
   }
 
+  /**
+   * 更新用户个人信息
+   */
+  @ApiOperation({
+    summary: '更新用户个人信息',
+    description: '更新当前登录用户的个人信息',
+  })
+  @ApiBearerAuth()
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        username: { type: 'string', description: '用户名' },
+        bio: { type: 'string', description: '个人简介' },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: '更新成功' })
+  @ApiResponse({ status: 401, description: '未授权' })
   @UseGuards(AuthGuard('jwt'))
   @Put('profile')
   updateProfile(@Req() req, @Body() body) {

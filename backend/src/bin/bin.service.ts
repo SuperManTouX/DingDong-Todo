@@ -90,6 +90,8 @@ export class BinService {
       listId: binItem.listId,
       groupId: binItem.groupId,
       userId: binItem.userId,
+      isPinned: binItem.isPinned || false,
+      pinnedAt: binItem.pinnedAt || null,
       tags: [] // 标签需要单独处理
     };
     

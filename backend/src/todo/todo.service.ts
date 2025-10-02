@@ -24,8 +24,11 @@ export class TaskService {
    */
   async findAllByUserId(userId: string): Promise<any[]> {
     const tasks = await this.taskRepository.find({
-      where: { userId },
+      where: { userId, isPinned: false },
       relations: ['list', 'group', 'user', 'taskTags'],
+      order: {
+        updatedAt: 'DESC' // 非置顶任务按更新时间倒序
+      }
     });
     
     // 格式化返回数据，确保与前端数据结构一致
@@ -146,6 +149,8 @@ export class TaskService {
       listId: task.listId,
       groupId: task.groupId,
       userId: task.userId,
+      isPinned: task.isPinned || false,
+      pinnedAt: task.pinnedAt || null,
       // 注意：根据前端数据结构，createdAt和updatedAt可能不需要返回
     };
   }
@@ -256,5 +261,114 @@ export class TaskService {
       // 删除内存中的标签映射
       this.taskTagsMap.delete(taskId);
     }
+  }
+  
+  /**
+   * 获取当前用户的所有置顶任务
+   */
+  async getPinnedTodos(userId: string, listId: string): Promise<any[]> {
+    const tasks = await this.taskRepository.find({
+      where: { userId, isPinned: true, listId },
+      relations: ['list', 'group', 'user', 'taskTags'],
+      order: {
+        pinnedAt: 'DESC' // 按置顶时间倒序
+      }
+    });
+    
+    // 格式化返回数据
+    return tasks.map(task => this.formatTaskResponse(task));
+  }
+  
+  /**
+   * 切换任务置顶状态
+   */
+  async togglePin(id: string, userId: string): Promise<any> {
+    // 先验证任务存在且属于当前用户
+    const task = await this.findOne(id, userId);
+    const existingTask = await this.taskRepository.findOne({ where: { id } });
+    
+    if (!existingTask) {
+      throw new NotFoundException(`任务不存在`);
+    }
+    
+    // 切换置顶状态
+    const newPinState = !existingTask.isPinned;
+    existingTask.isPinned = newPinState;
+    existingTask.pinnedAt = newPinState ? new Date() : null;
+    existingTask.updatedAt = new Date();
+    
+    // 保存当前任务的更新
+    const updatedTask = await this.taskRepository.save(existingTask);
+    
+    // 递归处理所有子任务的置顶状态
+    await this.toggleChildTasksPin(id, userId, newPinState);
+    
+    return this.formatTaskResponse(updatedTask);
+  }
+  
+  /**
+   * 递归切换所有子任务的置顶状态
+   */
+  private async toggleChildTasksPin(parentId: string, userId: string, isPinned: boolean): Promise<void> {
+    // 查找当前任务的所有直接子任务
+    const childTasks = await this.taskRepository.find({
+      where: { parentId, userId },
+    });
+    
+    // 递归处理每个子任务
+    for (const childTask of childTasks) {
+      // 更新子任务的置顶状态
+      childTask.isPinned = isPinned;
+      childTask.pinnedAt = isPinned ? new Date() : null;
+      childTask.updatedAt = new Date();
+      await this.taskRepository.save(childTask);
+      
+      // 递归处理子任务的子任务
+      await this.toggleChildTasksPin(childTask.id, userId, isPinned);
+    }
+  }
+  
+  /**
+   * 批量更新任务顺序
+   */
+  async batchUpdateOrder(tasks: any[], userId: string): Promise<void> {
+    // 验证所有任务都属于当前用户
+    const taskIds = tasks.map(task => task.id);
+    const userTasks = await this.taskRepository.find({
+      where: { id: In(taskIds), userId },
+      select: ['id']
+    });
+    
+    const userTaskIds = new Set(userTasks.map(task => task.id));
+    
+    for (const task of tasks) {
+      if (!userTaskIds.has(task.id)) {
+        throw new NotFoundException(`任务 ${task.id} 不存在或您没有权限访问`);
+      }
+    }
+    
+    // 批量更新顺序
+    for (const task of tasks) {
+      await this.taskRepository.update(
+        { id: task.id },
+        { updatedAt: new Date() }
+      );
+    }
+  }
+  
+  // 获取所有任务
+  async findAll(userId: string): Promise<any[]> {
+    return this.findAllByUserId(userId);
+  }
+  
+  // 删除任务（接口别名）
+  async remove(id: string, userId: string): Promise<{ message: string }> {
+    await this.delete(id, userId);
+    return { message: '任务已成功删除' };
+  }
+  
+  // 创建演示任务（接口别名）
+  async createDemo(): Promise<any> {
+    return this.createTestTask();
   }
 }

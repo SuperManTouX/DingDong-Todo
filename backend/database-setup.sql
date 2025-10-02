@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS user (
   email VARCHAR(255) NOT NULL UNIQUE,
   password VARCHAR(255) NOT NULL,
   avatar VARCHAR(255) NULL,
+  bio TEXT NULL COMMENT '个人简介',
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -74,12 +75,19 @@ CREATE TABLE IF NOT EXISTS task (
   list_id VARCHAR(36) NOT NULL,
   group_id VARCHAR(36) NULL,
   user_id VARCHAR(36) NOT NULL,
+  is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
+  pinned_at DATETIME NULL,
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   FOREIGN KEY (list_id) REFERENCES todo_list(id) ON DELETE CASCADE,
   FOREIGN KEY (group_id) REFERENCES task_group(id) ON DELETE SET NULL,
   FOREIGN KEY (parent_id) REFERENCES task(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 添加索引以优化置顶任务的查询性能
+CREATE INDEX idx_task_is_pinned ON task(is_pinned);
+CREATE INDEX idx_task_pinned_at ON task(pinned_at);
+CREATE INDEX idx_task_user_pinned ON task(user_id, is_pinned, pinned_at);
 
 -- 7. 创建任务标签关联表
 CREATE TABLE IF NOT EXISTS task_tag (
@@ -106,17 +114,19 @@ CREATE TABLE IF NOT EXISTS bin (
   list_id VARCHAR(36) NOT NULL,
   group_id VARCHAR(36) NULL,
   user_id VARCHAR(36) NOT NULL,
+  is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
+  pinned_at DATETIME NULL,
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   deleted_at DATETIME NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 8. 插入用户数据 (标准化ID格式: user-xxx)
-INSERT INTO user (id, username, email, password, avatar, created_at, updated_at)
+INSERT INTO user (id, username, email, password, avatar, bio, created_at, updated_at)
 VALUES
-  ('user-001', 'admin', 'admin@example.com', '$2b$10$3JvWUaWw1lWGwPKcdk2BDOl.rgXfJEhnQoksmRrdo735ONVJfXSSm', 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin', NOW(), NOW()),
-  ('user-002', 'testuser', 'test@example.com', '$2b$10$Gz7v8n9m0P1q2r3s4t5u6v7w8x9y0z1A2B3C4D5E6F7G8H9I0J', 'https://api.dicebear.com/7.x/avataaars/svg?seed=testuser', NOW(), NOW()),
-  ('user-003', 'demo', 'demo@example.com', '$2b$10$H1i2j3k4l5m6n7o8p9q0r1s2t3u4v5w6x7y8z9A0B1C2D3E4F', 'https://api.dicebear.com/7.x/avataaars/svg?seed=demo', NOW(), NOW());
+  ('user-001', 'admin', 'admin@example.com', '$2b$10$3JvWUaWw1lWGwPKcdk2BDOl.rgXfJEhnQoksmRrdo735ONVJfXSSm', 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin', '我是系统管理员，负责维护和管理系统', NOW(), NOW()),
+  ('user-002', 'testuser', 'test@example.com', '$2b$10$Gz7v8n9m0P1q2r3s4t5u6v7w8x9y0z1A2B3C4D5E6F7G8H9I0J', 'https://api.dicebear.com/7.x/avataaars/svg?seed=testuser', '测试用户，用于系统功能测试', NOW(), NOW()),
+  ('user-003', 'demo', 'demo@example.com', '$2b$10$H1i2j3k4l5m6n7o8p9q0r1s2t3u4v5w6x7y8z9A0B1C2D3E4F', 'https://api.dicebear.com/7.x/avataaars/svg?seed=demo', '演示用户，展示系统功能', NOW(), NOW());
 
 -- 9. 插入待办事项列表数据 (标准化ID格式: todolist-xxx)
 INSERT INTO todo_list (id, title, emoji, color, created_at, updated_at, user_id)

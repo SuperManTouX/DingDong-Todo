@@ -2,7 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Task } from './todo.entity';
 import { TaskService } from './todo.service';
-import { TaskController } from './todo.controller';
+import { TodoController, TodoAliasController } from './todo.controller';
 import { User } from '../user/user.entity';
 import { TodoList } from '../todo-list/todo-list.entity';
 import { TaskGroup } from '../task-group/task-group.entity';
@@ -15,7 +15,7 @@ import { BinModule } from '../bin/bin.module';
     forwardRef(() => BinModule) // 添加forwardRef导入以解决循环依赖
   ],
   providers: [TaskService],
-  controllers: [TaskController],
+  controllers: [TodoController, TodoAliasController],
   exports: [TaskService],
 })
 export class TodoModule {}
