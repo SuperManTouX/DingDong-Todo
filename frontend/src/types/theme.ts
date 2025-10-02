@@ -13,6 +13,7 @@ export interface ThemeConfig {
   menuBgColor: string;
   textColor: string;
   hoverColor: string;
+  menuHoverColor: string; // 菜单悬停颜色
   dateColor: string; // 日期颜色
 }
 

@@ -1,10 +1,52 @@
 import { message } from "antd";
 import api from "./api";
 import { getUserInfo } from "./authService";
+import { useAuthStore } from "@/store/authStore";
 import { MAX_UPLOAD_SIZE, SUPPORTED_IMAGE_TYPES } from "@/constants/config";
 
 // 开发环境标志
 export const IS_DEV_MODE = import.meta.env.DEV;
+
+/**
+ * 更新用户个人信息
+ * @param userData 用户信息数据
+ * @returns 更新结果
+ */
+export const updateUserProfile = async (userData: {
+  username: string;
+  email: string;
+  bio?: string;
+  avatar?: string;
+}): Promise<{ success: boolean; data?: any }> => {
+  try {
+    console.log("更新用户个人信息 - 开始");
+    message.loading("保存中...");
+
+    // 调用后端API更新用户信息
+    const response = await api.put("/users/profile", userData);
+    
+    console.log("用户个人信息更新成功");
+    message.success("个人信息更新成功！");
+    
+    // 重新获取用户信息，确保前端用户状态与后端同步
+    try {
+      console.log('重新获取最新用户信息...');
+      await useAuthStore.getState().loadUserInfo();
+      console.log('成功获取最新用户信息');
+    } catch (getUserInfoError) {
+      console.error('重新获取用户信息失败，但个人信息更新已成功:', getUserInfoError);
+    }
+    
+    return {
+      success: true,
+      data: response
+    };
+  } catch (error) {
+    console.error("更新用户个人信息失败:", error);
+    message.error("更新个人信息失败，请稍后重试");
+    throw new Error("更新个人信息失败");
+  }
+};
 
 /**
  * 生成OSS上传策略

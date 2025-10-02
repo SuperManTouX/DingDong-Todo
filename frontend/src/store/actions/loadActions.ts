@@ -48,7 +48,7 @@ export const loadActions = {
   },
 
   // 加载所有标签数据并更新到state
-  loadActions: async (set: any, get: () => TodoState): Promise<void> => {
+  loadTags: async (set: any, get: () => TodoState): Promise<void> => {
     try {
       const authState =
         get().userId ||

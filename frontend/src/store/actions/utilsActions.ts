@@ -1,6 +1,6 @@
 import type { TodoState } from "../types";
 import { useTodoStore } from "@/store";
-import type { Todo } from "@/types";
+import type { Todo, TodoListData } from "@/types";
 import { useAuthStore } from "@/store/authStore";
 import { SpecialLists } from "@/constants";
 
@@ -49,39 +49,28 @@ export const utilsActions = {
 
   // 获取当前激活的任务组数据
   getActiveListData: (get: () => TodoState): any => {
+    const TLD: TodoListData = {
+      id: "",
+      title: "",
+      emoji: "",
+      userId: "",
+      createdAt: "",
+      updatedAt: "",
+    };
     try {
       const state = get();
       if (!state || !Array.isArray(state.todoListData)) {
-        console.warn("State or todoListData is invalid in getActiveListData");
-        return {
-          id: "",
-          title: "",
-          userId: "",
-          createdAt: "",
-          updatedAt: "",
-        };
+        return TLD;
       }
 
       return (
         state.todoListData.find(
           (list: any) => list.id === state.activeListId,
-        ) || {
-          id: "",
-          title: "",
-          userId: "",
-          createdAt: "",
-          updatedAt: "",
-        }
+        ) || TLD
       );
     } catch (error) {
       console.error("Error in getActiveListData:", error);
-      return {
-        id: "",
-        title: "",
-        userId: "",
-        createdAt: "",
-        updatedAt: "",
-      };
+      return TLD;
     }
   },
 

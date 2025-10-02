@@ -1,15 +1,18 @@
 import React from "react";
 import { Col, Dropdown, Menu } from "antd";
 import type { MenuProps } from "antd";
-import type { DropdownProps } from "antd";
 import { useAuthStore } from "@/store/authStore";
 import { useTodoStore } from "@/store/todoStore";
 
 import { useNavigate } from "react-router-dom";
 import { message } from "@/utils/antdStatic";
 import { MESSAGES } from "@/constants/messages";
-import { CheckSquareOutlined, ClockCircleFilled } from "@ant-design/icons";
-import { useToken } from "antd/es/theme/internal";
+import {
+  CheckSquareOutlined,
+  ClockCircleFilled,
+  PieChartOutlined,
+  SettingOutlined,
+} from "@ant-design/icons";
 
 /**
  * 侧边栏导航组件
@@ -22,22 +25,22 @@ const SidebarNav: React.FC = () => {
   const menuItems: MenuProps["items"] = [
     {
       key: "todos",
-      icon: <CheckSquareOutlined className={"text-secondary"} />,
+      icon: <CheckSquareOutlined className={"sideNav-icon"} />,
       label: "清单",
     },
     {
       key: "zhuanZhu",
-      icon: <ClockCircleFilled className={"text-secondary"} />,
+      icon: <ClockCircleFilled className={"sideNav-icon"} />,
       label: "专注",
     },
     {
-      key: "stats",
-      icon: <span>📊</span>,
+      key: "status",
+      icon: <PieChartOutlined className={"sideNav-icon"} />,
       label: "数据",
     },
     {
       key: "settings",
-      icon: <span>⚙️</span>,
+      icon: <SettingOutlined className={"sideNav-icon"} />,
       label: "设置",
     },
   ];
@@ -116,7 +119,7 @@ const SidebarNav: React.FC = () => {
       {/* 菜单区域 */}
       <Menu
         mode="vertical"
-        className={"flex-1 h-100 theme-bgcColor-primaryColor"}
+        className={"sidebar-nav lex-1 h-100 theme-bgcColor-primaryColor"}
         items={menuItems}
         onClick={handleMenuClick}
         selectedKeys={[selectedKey]}

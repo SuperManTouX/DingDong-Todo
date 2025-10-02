@@ -3,6 +3,7 @@ import { message } from "@/utils/antdStatic";
 import { formatMessage, MESSAGES } from "@/constants/messages";
 import { Priority } from "@/constants";
 import { theme } from "antd";
+import { RollbackOutlined } from "@ant-design/icons";
 
 interface TodoCheckboxProps {
   completed: boolean;
@@ -59,13 +60,28 @@ const TodoCheckbox: React.FC<TodoCheckboxProps> = ({
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange(e.currentTarget.checked);
-    if (e.currentTarget.checked) {
-      message.info(
-        formatMessage(MESSAGES.INFO.TASK_COMPLETED, {
-          taskTitle: title,
-        }),
-      );
+    const checked = e.currentTarget.checked;
+    onChange(checked);
+    if (checked) {
+      message.info({
+        content: (
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <span>
+              {formatMessage(MESSAGES.INFO.TASK_COMPLETED, {
+                taskTitle: title,
+              })}
+            </span>
+            <RollbackOutlined
+              style={{ marginLeft: 8, cursor: "pointer", color: "orange" }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange(false); // 撤销完成状态
+              }}
+            />
+          </div>
+        ),
+        duration: 3, // 消息显示3秒
+      });
     }
   };
 

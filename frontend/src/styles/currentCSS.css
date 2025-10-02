@@ -523,12 +523,25 @@ button + button {
     background: transparent !important;
 }
 
-/*.my-custom-menu .ant-menu-submenu .ant-menu-item {*/
-/*    padding-left: 40px !important;*/
-/*}*/
-/*.my-custom-menu .ant-menu-submenu .ant-menu-submenu-title {*/
-/*    padding-left: 10px !important;*/
-/*}*/
+.sideNav-icon{
+    opacity: .3 ;
+    color: white  !important;
+}
+.sideNav-icon:hover{
+    opacity: 1 ;
+    color: white !important;
+
+}
+.ant-menu-item-selected .sideNav-icon{
+    opacity: 1 ;
+    color: white !important;
+}
+
+
+.sidebar-nav .ant-menu-item.ant-menu-item-selected,
+.sidebar-nav .ant-menu-item:hover {
+    background-color: transparent !important;
+}
 .ant-layout-header {
     height: 50px;
     padding: 0 25px;
