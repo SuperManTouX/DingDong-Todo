@@ -23,7 +23,7 @@ export default function useTodoHierarchy(
   renderTodos: () => Todo[],
   renderOtherTodos: () => Todo[],
 ): UseTodoHierarchyReturn {
-  const { dispatchTodo, activeListId, updateGroup } = useTodoStore();
+  const { dispatchTodo, activeListId, pinnedTasks } = useTodoStore();
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({
     // 默认可以在这里设置一些任务的展开状态
   });
@@ -50,7 +50,10 @@ export default function useTodoHierarchy(
 
   // 检查任务是否有子任务
   const hasSubTasks = (taskId: string): boolean => {
-    return tasks.some((task) => task.parentId === taskId);
+    return (
+      tasks.some((task) => task.parentId === taskId) ||
+      pinnedTasks.some((task) => task.parentId === taskId)
+    );
   };
 
   // 获取层次化的任务列表（考虑过滤条件）

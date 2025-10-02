@@ -66,6 +66,8 @@ export interface Todo {
   listId: string; // 新增：指向所属清单ID
   groupId?: string | null; // 新增：指向所属清单ID
   userId: string; // 新增：指向创建任务的用户ID
+  isPinned?: boolean; // 新增：是否置顶
+  pinnedAt?: string | null; // 新增：置顶时间，用于多个置顶任务的排序
 }
 
 interface TodoAddAction {
@@ -75,6 +77,10 @@ interface TodoAddAction {
   completed: false;
   parentId?: string | null; // 可选：用于添加子任务
   depth?: number; // 可选：表示嵌套深度
+  groupId?: string | null;
+  isPinned?: boolean;
+  pinnedAt?: string | null;
+  tags?: string[] | [];
 }
 
 interface TodoToggleAction {

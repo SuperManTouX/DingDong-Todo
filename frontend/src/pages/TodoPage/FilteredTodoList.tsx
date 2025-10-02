@@ -29,10 +29,9 @@ export default function FilteredTodoList({
 }) {
   // 获取所有任务，然后根据用户ID过滤
   const tasks = getActiveListTasks();
-  const { activeListId } = useTodoStore();
+  const { pinnedTasks, activeListId } = useTodoStore();
   // 搜索状态管理
   const [searchText, setSearchText] = useState("");
-
   // 获取全局设置和操作方法
   const {
     showTaskDetails,
@@ -73,7 +72,8 @@ export default function FilteredTodoList({
   };
 
   // 使用hooks获取各种功能
-  const { groupMode, displayGroups, uncompletedCount } = useTodoGrouping(
+  const { groupMode, displayGroups, displayUncompletedCount } = useTodoGrouping(
+    pinnedTasks,
     tasks,
     searchText,
   );
@@ -143,6 +143,32 @@ export default function FilteredTodoList({
                   searchText={searchText}
                   setSearchText={setSearchText}
                 />
+              )}
+
+              {/*已置顶分组*/}
+              {pinnedTasks.length > 0 && (
+                <FilterGroup
+                  key={"pinned"}
+                  title={"⭐已置顶"}
+                  tasks={pinnedTasks}
+                >
+                  {
+                    // 已置顶分组元素
+                    getHierarchicalTasksForGroup(pinnedTasks).map((item) => (
+                      <TaskItemRenderer
+                        key={
+                          typeof item === "object" && "id" in item
+                            ? item.id
+                            : `group-${Math.random()}`
+                        }
+                        item={item}
+                        expandedTasks={expandedTasks}
+                        hasSubTasks={hasSubTasks}
+                        toggleTaskExpand={toggleTaskExpand}
+                      />
+                    ))
+                  }
+                </FilterGroup>
               )}
 
               {/*根据分组模式渲染任务列表*/}
@@ -224,7 +250,9 @@ export default function FilteredTodoList({
           >
             删除所有已完成
           </button>
-          <span className="">未完成：{uncompletedCount}个</span>
+          <span className="">
+            未完成：{displayUncompletedCount + pinnedTasks.length}个
+          </span>
         </Row>
       </Footer>
     </>

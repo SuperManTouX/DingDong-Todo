@@ -45,7 +45,7 @@ const TaskItemRenderer: React.FC<TaskItemRendererProps> = ({
       <SortableItem key={subTodo.id} id={subTodo.id}>
         <div
           style={{
-            marginLeft: `${subTodo.depth * 15}px`,
+            marginLeft: `${subTodo.depth * 22}px`,
           }}
           className="sub-task-container"
         >

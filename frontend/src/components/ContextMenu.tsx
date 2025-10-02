@@ -1,9 +1,10 @@
 import { DeleteOutlined, EditOutlined, RedoOutlined } from "@ant-design/icons";
-import type { ContextMenuProps } from "@/types";
+import type { ContextMenuProps, Todo } from "@/types";
 import { Dropdown, type MenuProps, Modal } from "antd";
 import { message } from "@/utils/antdStatic";
 import { MESSAGES } from "@/constants/messages";
 import { useTodoStore } from "@/store/todoStore";
+import { togglePinTask } from "@/services/todoService";
 import TagTreeSelect from "./TagTreeSelect";
 import TaskDateTimePicker from "./TaskDateTimePicker";
 import { useState, useEffect, useRef } from "react";
@@ -26,14 +27,16 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
   };
 
   // 添加子任务
-  function handleAddSubTask(parentId: string, parentDepth: number): void {
+  function handleAddSubTask(todo: Todo): void {
     const { activeListId } = useTodoStore.getState();
     dispatchTodo({
       type: "added",
       title: "",
       completed: false,
-      parentId,
-      depth: parentDepth + 1,
+      parentId: todo.parentId,
+      depth: todo.depth + 1,
+      groupId: todo.groupId,
+      isPinned: todo.isPinned,
       listId: activeListId,
     });
   }
@@ -104,12 +107,33 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
       ),
     },
     {
+      key: "pin",
+      icon: <EditOutlined />,
+      label: todo.isPinned ? "取消置顶" : "置顶",
+      onClick: async () => {
+        try {
+          // 直接调用togglePinTask API，而不是使用dispatchTodo
+          const newIsPinned = !todo.isPinned;
+          await togglePinTask(todo.id, newIsPinned);
+
+          // 重新加载数据以反映子任务的变化
+          const { loadPinnedTasks, loadTodos } = useTodoStore.getState();
+          await loadPinnedTasks(activeListId);
+          await loadTodos();
+
+          message.success(MESSAGES.SUCCESS.TASK_PINNED);
+        } catch (error) {
+          message.error("更新任务置顶状态失败，请重试");
+        }
+      },
+    },
+    {
       key: "add_sub",
       icon: <EditOutlined />,
       label: "添加子任务",
       onClick: () => {
         if (handleAddSubTask) {
-          handleAddSubTask(todo.id, todo.depth);
+          handleAddSubTask(todo);
         } else {
           message.warning(MESSAGES.WARNING.SUBTASK_NOT_AVAILABLE);
         }

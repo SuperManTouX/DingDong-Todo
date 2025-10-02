@@ -13,6 +13,7 @@ export interface TodoState {
   tasks: Todo[]; // 独立的任务数组
   groups: Group[]; // 全局分组数组
   userId: string | null; // 用户ID字段
+  pinnedTasks: Todo[]; // 置顶任务数组
 
   // 计算属性 - 这些属性在持久化时会被忽略
   activeGroup(): TodoListData;
@@ -48,4 +49,5 @@ export interface TodoState {
   // API加载数据方法
   loadDataAll: () => Promise<void>;
   loadTags: () => Promise<void>;
+  loadListPinnedTasks: (listId: string) => Promise<void>; // 加载指定清单的置顶任务
 }

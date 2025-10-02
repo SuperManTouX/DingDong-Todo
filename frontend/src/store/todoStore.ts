@@ -22,6 +22,7 @@ export const {
   tasks,
   groups,
   userId,
+  pinnedTasks,
 
   // 计算属性
   activeGroup,
@@ -49,6 +50,7 @@ export const {
   setUserId,
   loadDataAll,
   loadTags,
+  loadListPinnedTasks,
 } = useTodoStore.getState();
 
 // 为了确保兼容性，创建并导出一些可能使用的自定义hooks
@@ -76,6 +78,7 @@ export const useSelectTodo = (): Todo | null => {
   }
 };
 
+// 使用useMemo优化todoListData的获取，避免不必要的重渲染
 export const useTodoListData = () => {
   try {
     const todoListData = useTodoStore((state) => state.todoListData || []);
@@ -92,6 +95,16 @@ export const useTasks = () => {
     return Array.isArray(tasks) ? tasks : [];
   } catch (error) {
     console.error("Error in useTasks hook:", error);
+    return [];
+  }
+};
+
+export const usePinnedTasks = () => {
+  try {
+    const pinnedTasks = useTodoStore((state) => state.pinnedTasks || []);
+    return Array.isArray(pinnedTasks) ? pinnedTasks : [];
+  } catch (error) {
+    console.error("Error in usePinnedTasks hook:", error);
     return [];
   }
 };
