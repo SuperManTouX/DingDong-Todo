@@ -38,6 +38,12 @@ export class Bin {
   @Column({ name: 'user_id' })
   userId: string;
 
+  @Column({ name: 'is_pinned', default: false })
+  isPinned: boolean;
+
+  @Column({ type: 'datetime', nullable: true, name: 'pinned_at' })
+  pinnedAt: Date | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

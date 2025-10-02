@@ -15,7 +15,7 @@ export class UserService {
   /**
    * 注册新用户
    */
-  async register(username: string, email: string, password: string): Promise<User> {
+  async register(username: string, email: string, password: string, bio?: string): Promise<User> {
     // 检查用户名是否已存在
     const existingUsername = await this.userRepository.findOneBy({ username });
     if (existingUsername) {
@@ -37,6 +37,7 @@ export class UserService {
       username,
       email,
       password: hashedPassword,
+      bio,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
