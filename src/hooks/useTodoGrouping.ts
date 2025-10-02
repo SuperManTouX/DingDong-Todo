@@ -16,25 +16,36 @@ interface UseTodoGroupingReturn {
   groupMode: "normal" | "time" | "none" | "list";
   displayGroups: DisplayGroup[];
   allTasks: Todo[];
-  uncompletedCount: number;
+  displayUncompletedCount: number;
 }
 
 // 任务分组相关的hook
 export default function useTodoGrouping(
+  pinnedTasks: Todo[],
   tasks: Todo[],
   searchText: string,
 ): UseTodoGroupingReturn {
   const { getGroupsByListId, todoListData } = useTodoStore();
 
   const { activeListId } = useTodoStore.getState();
-  const searchTasks = tasks.filter(
-    (task) => task.title.indexOf(searchText) !== -1,
-  );
+  const searchTasks =
+    searchText === ""
+      ? tasks
+      : tasks.filter((task) => task.title.indexOf(searchText) !== -1);
   // 根据activeListId确定分组模式和过滤逻辑
   let groupMode: "normal" | "time" | "list" = "normal";
   let filteredTasks = [...searchTasks];
-
+  let pinnedGroup: DisplayGroup = {
+    title: "已置顶",
+    tasks: [],
+    type: "group",
+  };
   let isCompletedMode = false;
+
+  // 树形已置顶数组
+  if (pinnedTasks.length > 0) {
+    console.log("PINNED TASK");
+  }
 
   // 特殊activeListId处理
   if (activeListId.indexOf("tag") !== -1) {
@@ -89,7 +100,6 @@ export default function useTodoGrouping(
       allTasks: [],
     };
   }
-
   // 获取当前清单的所有分组
   const groups = getGroupsByListId(activeListId);
   if (groupMode === "normal") {
@@ -289,14 +299,16 @@ export default function useTodoGrouping(
   // 计算displayGroups中的任务总数
   const displayTasksCount = displayGroups.reduce((total, group) => {
     // 过滤掉占位任务
-    const validTasks = group.tasks.filter(task => task.id !== '' || task.title !== '占位Todo');
+    const validTasks = group.tasks.filter(
+      (task) => task.id !== "" || task.title !== "占位Todo",
+    );
     return total + validTasks.length;
   }, 0);
 
   return {
     groupMode,
     displayGroups,
-    uncompletedCount: displayTasksCount,
+    displayUncompletedCount: displayTasksCount,
     allTasks: displayTasks,
   };
 }

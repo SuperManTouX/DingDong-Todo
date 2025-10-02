@@ -1,5 +1,12 @@
 import React from "react";
-import { Collapse, Dropdown, Input, Modal, type MenuProps } from "antd";
+import {
+  Collapse,
+  Dropdown,
+  Input,
+  Modal,
+  type MenuProps,
+  Typography,
+} from "antd";
 import { EllipsisOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 import { useState } from "react";
 import TodoTask from "./TodoTask";
@@ -179,6 +186,13 @@ export default function FilterGroup({
               ) : (
                 <span className="theme-color-text font-medium">
                   {formatTitle()}
+                  <Typography.Text
+                    type="secondary"
+                    className={"ms-2"}
+                    style={{ fontSize: "12px" }}
+                  >
+                    {tasks.length}
+                  </Typography.Text>
                 </span>
               )}
               {isGroupMode && (

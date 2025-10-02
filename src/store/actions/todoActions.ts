@@ -32,6 +32,7 @@ export const todoActions = {
             depth: action.depth || 0,
             tags: action.tags || [],
             listId: action.listId,
+            isPinned: action.isPinned,
             groupId: action.groupId || undefined,
             userId,
           };

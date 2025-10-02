@@ -11,6 +11,7 @@ import TimeCountDownNode from "./TimeCountDownNode";
 import TodoCheckbox from "@/components/TodoCheckbox";
 import "@/styles/TodoTask.css";
 import { RightOutlined } from "@ant-design/icons";
+import { login } from "@/services/authService";
 
 dayjs.extend(isoWeek);
 export default function TodoTask({
@@ -76,7 +77,13 @@ export default function TodoTask({
         }}
       >
         <Row justify={"space-between"} align={"middle"} className="ps-0">
-          <Col span={1}>
+          <Col
+            span={1}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleExpand();
+            }}
+          >
             <Row justify={"end"} align={"middle"}>
               {hasSubTasks && onToggleExpand && (
                 <RightOutlined
@@ -86,10 +93,6 @@ export default function TodoTask({
                     cursor: "pointer",
                     transition: "transform 0.3s",
                     transform: isExpanded ? "rotate(90deg)" : "rotate(0)",
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleExpand();
                   }}
                 />
               )}
