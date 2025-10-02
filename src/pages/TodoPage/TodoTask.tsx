@@ -1,8 +1,8 @@
-import { RightOutlined } from "@ant-design/icons";
 import { Priority } from "@/constants";
-import { Col, Input, Row, Tag, theme } from "antd";
+import { Col, Input, Row, Tag, Typography, theme } from "antd";
 import { message } from "@/utils/antdStatic";
 import dayjs from "dayjs";
+import { useGlobalSettingsStore } from "@/store/globalSettingsStore";
 import type { TodoItemProps } from "@/types";
 import { formatMessage, MESSAGES } from "@/constants/messages";
 import isoWeek from "dayjs/plugin/isoWeek";
@@ -10,6 +10,7 @@ import { useTodoStore } from "@/store/todoStore";
 import TimeCountDownNode from "./TimeCountDownNode";
 import TodoCheckbox from "@/components/TodoCheckbox";
 import "@/styles/TodoTask.css";
+import { RightOutlined } from "@ant-design/icons";
 
 dayjs.extend(isoWeek);
 export default function TodoTask({
@@ -20,6 +21,7 @@ export default function TodoTask({
   onToggleExpand,
 }: TodoItemProps) {
   const { dispatchTodo, setSelectTodoId, selectTodoId } = useTodoStore();
+  const { showTaskDetails, setIsTodoDrawerOpen } = useGlobalSettingsStore();
   const { token } = theme.useToken(); // 获取主题令牌
 
   // 列表项悬停效果样式
@@ -60,15 +62,16 @@ export default function TodoTask({
 
   // SubList函数已移除，子任务现在在TodoList中直接渲染
   // 子任务图标已移除，子任务现在在TodoList中直接渲染;
-  console.log(selectTodoId, todo.id);
   return (
     <>
       <li
-        className={`cursor-pointer row d-flex justify-content-between highlight rounded pe-0 ps-0 pt-1 pb-1 ${selectTodoId === todo.id ? "selected-task" : ""}  ${other ? "opacity-25" : ""}`}
+        className={`border-bottom  cursor-pointer row d-flex justify-content-between highlight rounded pe-0 ps-0 pt-1 pb-1 ${selectTodoId === todo.id ? "selected-task" : ""}  ${other ? "opacity-25" : ""}`}
         onClick={() => {
           if (setSelectTodoId) {
             console.log("TodoTask", todo.id);
             setSelectTodoId(todo.id);
+            // 直接调用store中的方法打开Drawer
+            setIsTodoDrawerOpen(true);
           }
         }}
       >
@@ -94,7 +97,7 @@ export default function TodoTask({
           </Col>
           <Col
             span={23}
-            className="d-flex lh-base align-items-center h-100 border-bottom cursor-pointer"
+            className="d-flex lh-base align-items-center h-100 scursor-pointer"
             style={todoItemHoverStyle}
           >
             <div style={{ position: "relative", display: "inline-block" }}>
@@ -107,12 +110,6 @@ export default function TodoTask({
                     type: "changed",
                     todo: { ...todo, completed: checked },
                   });
-                  if (checked)
-                    message.info(
-                      formatMessage(MESSAGES.INFO.TASK_COMPLETED, {
-                        taskTitle: todo.title,
-                      }),
-                    );
                 }}
               />
             </div>
@@ -144,6 +141,39 @@ export default function TodoTask({
             </Row>
           </Col>
         </Row>
+        {/*task详情 - 条件渲染基于全局设置*/}
+        {showTaskDetails && (
+          <Row justify={"space-between"} align={"middle"} className="ps-0">
+            <Col offset={2} span={22}>
+              <Typography.Text type="secondary" style={{ fontSize: "12px" }}>
+                {(() => {
+                  try {
+                    // 尝试将text字段解析为JSON，处理富文本数据
+                    if (
+                      typeof todo.text === "string" &&
+                      todo.text.startsWith("{")
+                    ) {
+                      const parsed = JSON.parse(todo.text);
+                      // 如果解析后的数据包含text字段，则使用该字段作为纯文本
+                      if (
+                        parsed &&
+                        typeof parsed === "object" &&
+                        "text" in parsed
+                      ) {
+                        return parsed.text;
+                      }
+                    }
+                    // 否则直接返回text字段
+                    return todo.text || "";
+                  } catch (error) {
+                    // 解析失败时，直接返回原始文本
+                    return todo.text || "";
+                  }
+                })()}
+              </Typography.Text>
+            </Col>
+          </Row>
+        )}
         {/*子任务列表已移除，子任务现在在TodoList中直接渲染*/}
         {/*编辑折叠框*/}
       </li>

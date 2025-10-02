@@ -210,4 +210,5 @@ export interface ContextMenuProps {
 export interface SideMenuProps {
   menuItem: MenuProps["items"];
   onActiveGroupChange: (listId: string) => void;
+  collapsed?: boolean;
 }

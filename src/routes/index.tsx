@@ -38,7 +38,7 @@ const router = createBrowserRouter([
         element: <FocusPage />,
       },
       {
-        path: "stats",
+        path: "status",
         element: <StatsPage />,
       },
       {

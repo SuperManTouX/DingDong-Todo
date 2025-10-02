@@ -22,8 +22,9 @@ const TimeCountDownNode: FC<TimeCountDownNodeProps> = ({
 }) => {
   if (!deadline && !datetimeLocal) return null;
 
-  const leftDay = dayjs(deadline).diff(dayjs(), "day");
-
+  const leftDay = dayjs(deadline)
+    .startOf("day")
+    .diff(dayjs().startOf("day"), "day");
   // 计算本周下周
   const countWeek = () => {
     if (dayjs(deadline).isoWeek() - dayjs().isoWeek() === 0) {

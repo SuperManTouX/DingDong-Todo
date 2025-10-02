@@ -10,6 +10,7 @@ import { useState } from "react";
 export default function SideMenu({
   menuItem,
   onActiveGroupChange,
+  collapsed = false,
 }: SideMenuProps) {
   // 默认选中菜单项
   const [selectedKeys, setSelectedKeys] = useState<string[]>(["a"]);

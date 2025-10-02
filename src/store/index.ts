@@ -112,7 +112,7 @@ export const useTodoStore = create<TodoState>()(
 
         // 数据加载
         loadDataAll: () => loadActions.loadDataAll(set, get),
-        loadTags: () => loadActions.loadActions(set, get),
+        loadTags: () => loadActions.loadTags(set, get),
       };
     },
     { name: "TodoStore" },

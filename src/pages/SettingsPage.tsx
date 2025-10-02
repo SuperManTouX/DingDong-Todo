@@ -11,29 +11,33 @@ import {
   Upload,
   Modal,
   message,
+  Form,
+  Space,
 } from "antd";
-import { UploadOutlined, UserOutlined, EyeOutlined } from "@ant-design/icons";
+import { UploadOutlined, UserOutlined, EditOutlined } from "@ant-design/icons";
 import { useThemeStore } from "@/store/themeStore";
 import { useAuthStore } from "@/store/authStore";
-import { uploadAvatar } from "@/services/userService";
+import { uploadAvatar, updateUserProfile } from "@/services/userService";
 import { MAX_UPLOAD_SIZE, SUPPORTED_IMAGE_TYPES } from "@/constants/config";
-import { getUserAvatarUrl } from "@/utils/avatarUtils";
 import type { UploadProps } from "antd";
+import type { RuleObject } from "antd/es/form";
 
-const { Title, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
 
 /**
  * 设置页面组件
- * 提供应用的各项设置功能，包括头像上传
+ * 提供应用的各项设置功能，包括头像上传和个人信息修改
  */
 const SettingsPage: React.FC = () => {
   const { currentTheme, setTheme } = useThemeStore();
   const { user, updateUserInfo } = useAuthStore();
   const [loading, setLoading] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewImage, setPreviewImage] = useState("");
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [form] = Form.useForm();
+  const [tempAvatar, setTempAvatar] = useState<string | null>(null);
 
   // 主题选项
   const themeOptions = [
@@ -43,15 +47,6 @@ const SettingsPage: React.FC = () => {
     { value: "red", label: "红色主题" },
   ];
 
-  // 处理头像上传
-  const handleUploadChange: UploadProps["onChange"] = ({ file, fileList }) => {
-    if (file.status === "done") {
-      message.success(`${file.name} 上传成功`);
-    } else if (file.status === "error") {
-      message.error(`${file.name} 上传失败`);
-    }
-  };
-
   // 自定义上传请求 - 使用统一的uploadAvatar函数
   const customRequest: UploadProps["customRequest"] = async ({
     file,
@@ -59,15 +54,13 @@ const SettingsPage: React.FC = () => {
     onError,
   }) => {
     try {
-      setLoading(true);
+      setAvatarUploading(true);
       // 使用统一的上传函数处理整个流程
       const result = await uploadAvatar(file);
 
       if (result.success) {
-        // 更新本地用户信息
-        if (updateUserInfo) {
-          updateUserInfo({ ...user, avatar: result.avatarUrl });
-        }
+        // 更新临时头像，等待用户保存个人信息
+        setTempAvatar(result.avatarUrl);
 
         onSuccess?.();
         message.success("头像上传成功！");
@@ -79,37 +72,16 @@ const SettingsPage: React.FC = () => {
       onError?.(error);
       message.error("头像上传失败，请重试");
     } finally {
-      setLoading(false);
+      setAvatarUploading(false);
     }
   };
-
-  // 处理头像预览
-  const handlePreview = async (file: any) => {
-    if (!file.url && !file.preview) {
-      file.preview = await getBase64(file.originFileObj);
-    }
-
-    setPreviewImage(file.url || file.preview);
-    setPreviewOpen(true);
-  };
-
-  // 获取base64编码
-  const getBase64 = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = (error) => reject(error);
-    });
 
   // 上传配置
   const uploadProps: UploadProps = {
     name: "avatar",
-    listType: "picture-card",
-    className: "avatar-uploader",
-    showUploadList: false,
+    listType: "picture",
+    showUploadList: true,
     customRequest,
-    onChange: handleUploadChange,
     beforeUpload: (file) => {
       const isSupportedType = SUPPORTED_IMAGE_TYPES.includes(file.type);
       if (!isSupportedType) {
@@ -124,84 +96,119 @@ const SettingsPage: React.FC = () => {
       return isSupportedType && isWithinSizeLimit;
     },
   };
-  console.log(user);
+
+  // 处理编辑个人信息模态框打开
+  const handleEditProfile = () => {
+    if (user) {
+      form.setFieldsValue({
+        username: user.username,
+        email: user.email,
+        bio: user.bio || "",
+      });
+    }
+    // 重置临时头像
+    setTempAvatar(null);
+    setEditModalOpen(true);
+  };
+
+  // 处理编辑个人信息模态框关闭
+  const handleModalCancel = () => {
+    setEditModalOpen(false);
+    form.resetFields();
+    // 重置临时头像
+    setTempAvatar(null);
+  };
+
+  // 处理编辑个人信息提交
+  const handleEditSubmit = async (values: any) => {
+    try {
+      setLoading(true);
+      // 调用API更新用户信息
+      console.log("更新用户信息:", values);
+
+      // 调用后端API更新用户信息，包含可能更新的头像
+      await updateUserProfile({
+        username: values.username,
+        email: values.email,
+        bio: values.bio,
+        avatar: tempAvatar || user?.avatar,
+      });
+
+      message.success("个人信息更新成功！");
+      setEditModalOpen(false);
+      // 重置临时头像
+      setTempAvatar(null);
+    } catch (error) {
+      console.error("更新个人信息失败:", error);
+      message.error("更新失败，请重试");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 自定义表单校验规则
+  const usernameValidator = (_: RuleObject, value: string) => {
+    if (!value || value.trim().length < 2) {
+      return Promise.reject(new Error("用户名至少需要2个字符"));
+    }
+    return Promise.resolve();
+  };
+
   return (
     <div className={"w-100"} style={{ padding: "24px" }}>
       <Title level={2}>设置</Title>
 
+      {/* 账户信息卡片 */}
       <Card
-        title="账户信息"
-        style={{
-          marginBottom: "16px",
-          maxWidth: "800px",
-          margin: "0 auto 16px",
-        }}
+        title={
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <UserOutlined />
+            <span>账户信息</span>
+          </div>
+        }
+        style={{ marginBottom: "24px" }}
       >
         <div
           style={{
             display: "flex",
             alignItems: "center",
             marginBottom: "16px",
-            justifyContent: "center",
           }}
         >
-          <div style={{ position: "relative" }}>
-            <Avatar
-              size={120}
-              src={user?.avatar}
-              icon={<UserOutlined />}
-              style={{ cursor: "pointer" }}
-            />
-            <Upload {...uploadProps}>
-              <div
-                style={{
-                  position: "absolute",
-                  bottom: 0,
-                  right: 0,
-                  backgroundColor: "#1890ff",
-                  borderRadius: "50%",
-                  padding: "4px",
-                  cursor: "pointer",
-                }}
-              >
-                <UploadOutlined style={{ color: "white", fontSize: "16px" }} />
-              </div>
-            </Upload>
-            {user?.avatar && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  right: 0,
-                  backgroundColor: "#666",
-                  borderRadius: "50%",
-                  padding: "4px",
-                  cursor: "pointer",
-                }}
-                onClick={() => handlePreview({ preview: user.avatar })}
-              >
-                <EyeOutlined style={{ color: "white", fontSize: "16px" }} />
+          <Avatar
+            size={100}
+            src={user?.avatar}
+            icon={<UserOutlined />}
+            style={{ marginRight: "24px" }}
+          />
+          <div>
+            <div style={{ marginBottom: "8px" }}>
+              <Text strong>用户名：</Text>
+              <Text>{user?.username || "用户"}</Text>
+            </div>
+            <div style={{ marginBottom: "8px" }}>
+              <Text strong>邮箱：</Text>
+              <Text>{user?.email || "example@example.com"}</Text>
+            </div>
+            {user?.bio && (
+              <div>
+                <Text strong>个人简介：</Text>
+                <Text>{user.bio}</Text>
               </div>
             )}
           </div>
         </div>
-        <div style={{ textAlign: "center" }}>
-          <Title level={4}>{user?.username || "用户"}</Title>
-          <Paragraph>{user?.email || "example@example.com"}</Paragraph>
-          <Button type="primary" style={{ marginTop: "8px" }} loading={loading}>
-            修改个人资料
-          </Button>
-        </div>
+        <Button
+          type="primary"
+          icon={<EditOutlined />}
+          onClick={handleEditProfile}
+        >
+          修改个人信息
+        </Button>
       </Card>
 
-      <Card
-        title="主题设置"
-        style={{
-          marginBottom: "16px",
-          maxWidth: "800px",
-          margin: "0 auto 16px",
-        }}
-      >
+      {/* 主题设置 */}
+      <Card title="主题设置" style={{ marginBottom: "16px" }}>
         <div style={{ marginBottom: "16px" }}>
           <span style={{ marginRight: "16px" }}>选择主题：</span>
           <Select
@@ -229,14 +236,8 @@ const SettingsPage: React.FC = () => {
         </div>
       </Card>
 
-      <Card
-        title="通知设置"
-        style={{
-          marginBottom: "16px",
-          maxWidth: "800px",
-          margin: "0 auto 16px",
-        }}
-      >
+      {/* 通知设置 */}
+      <Card title="通知设置" style={{ marginBottom: "16px" }}>
         <div
           style={{
             display: "flex",
@@ -260,21 +261,102 @@ const SettingsPage: React.FC = () => {
         </div>
       </Card>
 
-      <Card title="反馈" style={{ maxWidth: "800px", margin: "0 auto" }}>
+      {/* 反馈 */}
+      <Card title="反馈">
         <TextArea rows={4} placeholder="请输入您的建议或问题..." />
         <Button type="primary" style={{ marginTop: "16px" }}>
           提交反馈
         </Button>
       </Card>
 
-      {/* 头像预览弹窗 */}
+      {/* 修改个人信息弹窗 - 包含头像上传 */}
       <Modal
-        open={previewOpen}
-        title="头像预览"
+        title="修改个人信息"
+        open={editModalOpen}
+        onCancel={handleModalCancel}
         footer={null}
-        onCancel={() => setPreviewOpen(false)}
+        width={600}
+        centered
       >
-        <img alt="头像预览" style={{ width: "100%" }} src={previewImage} />
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleEditSubmit}
+          style={{ maxWidth: "500px", margin: "0 auto" }}
+        >
+          {/* 头像上传区域 */}
+          <div style={{ textAlign: "center", marginBottom: "24px" }}>
+            <Avatar
+              size={120}
+              src={tempAvatar || user?.avatar}
+              icon={<UserOutlined />}
+              style={{ marginBottom: "16px" }}
+            />
+            <Upload {...uploadProps}>
+              <Button
+                icon={<UploadOutlined />}
+                loading={avatarUploading}
+                disabled={loading}
+              >
+                上传新头像
+              </Button>
+            </Upload>
+            <Text
+              type="secondary"
+              style={{ display: "block", marginTop: "8px" }}
+            >
+              支持JPG、PNG格式，文件大小不超过{MAX_UPLOAD_SIZE / 1024 / 1024}MB
+            </Text>
+          </div>
+
+          {/* 用户名输入 */}
+          <Form.Item
+            name="username"
+            label="用户名"
+            rules={[{ required: true, validator: usernameValidator }]}
+          >
+            <Input placeholder="请输入用户名" />
+          </Form.Item>
+
+          {/* 邮箱输入 */}
+          <Form.Item
+            name="email"
+            label="邮箱"
+            rules={[
+              { required: true, message: "请输入邮箱" },
+              { type: "email", message: "请输入有效的邮箱地址" },
+            ]}
+          >
+            <Input placeholder="请输入邮箱" />
+          </Form.Item>
+
+          {/* 个人简介 */}
+          <Form.Item
+            name="bio"
+            label="个人简介"
+            rules={[{ max: 200, message: "个人简介不能超过200个字符" }]}
+          >
+            <TextArea rows={4} placeholder="介绍一下自己吧..." />
+          </Form.Item>
+
+          <Form.Item>
+            <Space style={{ width: "100%", justifyContent: "flex-end" }}>
+              <Button
+                onClick={handleModalCancel}
+                loading={loading || avatarUploading}
+              >
+                取消
+              </Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={loading || avatarUploading}
+              >
+                保存
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   );

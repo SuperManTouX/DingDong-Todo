@@ -14,7 +14,8 @@ export const lightTheme: ThemeConfig = {
   bgColor: "#ffffff", // 更浅的背景色，接近白色
   menuBgColor: "#f0f0f0", // 加深的菜单背景色
   textColor: "#333333",
-  hoverColor: "#1890ff4d", // 主色调的浅色版本 (0.3透明度)
+  hoverColor: "#1890ff30", // 主色调的更浅色透明版本 (0.30透明度)
+  menuHoverColor: "#e6f7ff", // 菜单悬停颜色
   dateColor: "#1890ff", // 使用主题色
 };
 
@@ -32,7 +33,8 @@ export const darkTheme: ThemeConfig = {
   bgColor: "#1e1e1e", // 更浅的深色背景
   menuBgColor: "#050505", // 加深的菜单背景色
   textColor: "#ffffff",
-  hoverColor: "#177ddc4d", // 主色调的深色版本 (0.3透明度)
+  hoverColor: "#177ddc30", // 主色调的更浅色透明版本 (0.30透明度)
+  menuHoverColor: "#1890ff20", // 菜单悬停颜色
   dateColor: "#177ddc", // 使用主题色
 };
 
@@ -48,9 +50,10 @@ export const greenTheme: ThemeConfig = {
   errorColor: "#ef4444", // 错误色 - 红色
   infoColor: "#22d3ee", // 信息色 - 青色
   bgColor: "#edf1ec", // 更浅的背景色
-  menuBgColor: "#bcf5e4", // 加深的菜单背景色
+  menuBgColor: "#cef3e8", // 加深的菜单背景色
   textColor: "#1e293b", // 文本色 - 深灰色
-  hoverColor: "#3DC9AA4D", // 主色调的浅色透明版本 (0.30透明度)
+  hoverColor: "#d0f4ec", // 主色调的更浅色透明版本 (0.30透明度)
+  menuHoverColor: "#78e2cc78", // 菜单悬停颜色
   dateColor: "#3DC9AA", // 使用主题色
 };
 
@@ -68,7 +71,8 @@ export const redTheme: ThemeConfig = {
   bgColor: "#fff1f2", // 更浅的背景色
   menuBgColor: "#fecaca", // 加深的菜单背景色
   textColor: "#374151", // 文本色 - 深灰色
-  hoverColor: "#ef44444d", // 主色调的浅色版本 (0.30透明度)
+  hoverColor: "#ef444430", // 主色调的更浅色版本 (0.30透明度)
+  menuHoverColor: "#fee2e2", // 菜单悬停颜色
   dateColor: "#3b82f6", // 红色主题使用蓝色
 };
 
@@ -116,12 +120,13 @@ export const generateAntdThemeConfig = (currentTheme: ThemeConfig) => {
         colorPrimary: currentTheme.primaryColor || "#1890ff",
         itemColor: currentTheme.textColor || "#333333",
         itemHoverColor: currentTheme.textColor || "#1890ff",
-        itemHoverBg: currentTheme.hoverColor,
-        itemSelectedBg: currentTheme.hoverColor,
+        itemHoverBg: currentTheme.menuHoverColor,
+        itemSelectedBg: currentTheme.menuHoverColor,
         itemSelectedColor: currentTheme.textColor,
         subMenuItemColor: currentTheme.textColor || "#333333",
         subMenuItemHoverColor: currentTheme.primaryColor || "#1890ff",
-        subMenuItemHoverBg: currentTheme.hoverColor,
+        subMenuItemHoverBg:
+          currentTheme.menuHoverColor || currentTheme.hoverColor,
       },
       DatePicker: {
         activeBg: "transparent",

@@ -14,3 +14,5 @@ DingDongList经验总结
 6. 阿里云的OSS。ai一键生成的代码行不通，要把官网上的例子给他看一遍然后让他写才可以
 
 7.dify
+
+8. Rendered more hooks than during the previous render  这违反了React Hook的核心规则：Hook必须在组件的顶层调用，不能在条件语句、循环或嵌套函数中调用
