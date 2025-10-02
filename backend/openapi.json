@@ -1,0 +1,1134 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/users/profile": {
+      "get": {
+        "operationId": "UserController_getProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["用户管理"],
+        "summary": "获取用户个人资料"
+      },
+      "put": {
+        "operationId": "UserController_updateProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["用户管理"],
+        "summary": "更新用户个人资料"
+      }
+    },
+    "/users/avatar/presigned-url": {
+      "post": {
+        "operationId": "UserController_getOssCredentialsForAvatar",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["用户管理"],
+        "summary": "获取头像上传凭证"
+      }
+    },
+    "/users/avatar": {
+      "put": {
+        "operationId": "UserController_updateAvatar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["用户管理"],
+        "summary": "更新用户头像"
+      }
+    },
+    "/users/test-sts-credentials": {
+      "get": {
+        "operationId": "UserController_testStsCredentials",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["用户管理"],
+        "summary": "测试STS凭证"
+      }
+    },
+    "/users/debug-oss-config": {
+      "get": {
+        "operationId": "UserController_debugOssConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["用户管理"],
+        "summary": "调试OSS配置"
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "description": "用户登录获取访问令牌",
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "description": "用户名"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "密码"
+                  }
+                },
+                "required": ["username", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "登录成功"
+          },
+          "401": {
+            "description": "用户名或密码错误"
+          }
+        },
+        "summary": "用户登录",
+        "tags": ["认证"]
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "description": "用户注册并自动登录",
+        "operationId": "AuthController_register",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "description": "用户名（唯一）"
+                  },
+                  "email": {
+                    "type": "string",
+                    "description": "邮箱（唯一）"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "密码"
+                  },
+                  "bio": {
+                    "type": "string",
+                    "description": "个人简介（可选）"
+                  }
+                },
+                "required": ["username", "email", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "注册成功"
+          },
+          "409": {
+            "description": "用户名或邮箱已存在"
+          }
+        },
+        "summary": "用户注册",
+        "tags": ["认证"]
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "description": "使用现有令牌刷新获取新令牌",
+        "operationId": "AuthController_refresh",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "description": "刷新令牌"
+                  }
+                },
+                "required": ["token"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "令牌刷新成功"
+          },
+          "401": {
+            "description": "令牌无效"
+          }
+        },
+        "summary": "刷新令牌",
+        "tags": ["认证"]
+      }
+    },
+    "/auth/profile": {
+      "get": {
+        "description": "获取当前登录用户的信息",
+        "operationId": "AuthController_getProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取用户信息",
+        "tags": ["认证"]
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "description": "用户注销登录",
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "注销成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "用户注销",
+        "tags": ["认证"]
+      }
+    },
+    "/todos": {
+      "get": {
+        "description": "获取当前登录用户创建的所有任务列表",
+        "operationId": "TaskController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取当前用户的所有任务",
+        "tags": ["任务管理"]
+      },
+      "post": {
+        "description": "创建一个新的任务",
+        "operationId": "TaskController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "任务ID（可选）"
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "任务标题",
+                    "example": "完成项目文档"
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "任务描述（可选）"
+                  },
+                  "completed": {
+                    "type": "boolean",
+                    "description": "完成状态（可选，默认false）"
+                  },
+                  "priority": {
+                    "type": "number",
+                    "description": "优先级 0-3（可选）"
+                  },
+                  "datetimeLocal": {
+                    "type": "string",
+                    "description": "日期时间（可选）"
+                  },
+                  "deadline": {
+                    "type": "string",
+                    "description": "截止日期（可选）"
+                  },
+                  "parentId": {
+                    "type": "string",
+                    "description": "父任务ID（可选）"
+                  },
+                  "depth": {
+                    "type": "number",
+                    "description": "任务深度（可选）"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "标签ID数组（可选）"
+                  },
+                  "listId": {
+                    "type": "string",
+                    "description": "所属清单ID"
+                  },
+                  "groupId": {
+                    "type": "string",
+                    "description": "所属分组ID（可选）"
+                  },
+                  "isPinned": {
+                    "type": "boolean",
+                    "description": "是否置顶（可选，默认false）"
+                  },
+                  "pinnedAt": {
+                    "type": "string",
+                    "description": "置顶时间（可选）"
+                  }
+                },
+                "required": ["title", "listId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "创建成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建新任务",
+        "tags": ["任务管理"]
+      }
+    },
+    "/todos/pinned": {
+      "get": {
+        "description": "获取当前登录用户的所有置顶任务",
+        "operationId": "TaskController_findPinned",
+        "parameters": [
+          {
+            "name": "listId",
+            "required": true,
+            "in": "query",
+            "description": "清单ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取所有置顶任务",
+        "tags": ["任务管理"]
+      }
+    },
+    "/todos/{id}": {
+      "get": {
+        "description": "根据ID获取特定任务的详细信息",
+        "operationId": "TaskController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "任务ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "任务不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取当前用户的单个任务",
+        "tags": ["任务管理"]
+      },
+      "put": {
+        "description": "更新指定ID的任务信息",
+        "operationId": "TaskController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "任务ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "任务标题"
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "任务描述"
+                  },
+                  "completed": {
+                    "type": "boolean",
+                    "description": "完成状态"
+                  },
+                  "priority": {
+                    "type": "number",
+                    "description": "优先级 0-3"
+                  },
+                  "datetimeLocal": {
+                    "type": "string",
+                    "description": "日期时间"
+                  },
+                  "deadline": {
+                    "type": "string",
+                    "description": "截止日期"
+                  },
+                  "parentId": {
+                    "type": "string",
+                    "description": "父任务ID"
+                  },
+                  "depth": {
+                    "type": "number",
+                    "description": "任务深度"
+                  },
+                  "listId": {
+                    "type": "string",
+                    "description": "所属清单ID"
+                  },
+                  "groupId": {
+                    "type": "string",
+                    "description": "所属分组ID"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "标签ID数组"
+                  },
+                  "isPinned": {
+                    "type": "boolean",
+                    "description": "是否置顶"
+                  },
+                  "pinnedAt": {
+                    "type": "string",
+                    "description": "置顶时间"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "任务不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "更新任务信息",
+        "tags": ["任务管理"]
+      },
+      "delete": {
+        "description": "删除指定ID的任务",
+        "operationId": "TaskController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "任务ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "任务不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除任务",
+        "tags": ["任务管理"]
+      }
+    },
+    "/todos/{id}/pin": {
+      "patch": {
+        "description": "切换任务的置顶状态",
+        "operationId": "TaskController_togglePin",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "任务ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "isPinned": {
+                    "type": "boolean",
+                    "description": "是否置顶"
+                  }
+                },
+                "required": ["isPinned"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "任务不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "置顶/取消置顶任务",
+        "tags": ["任务管理"]
+      }
+    },
+    "/todos/demo": {
+      "post": {
+        "description": "创建一个用于演示的带标签任务",
+        "operationId": "TaskController_createDemoTask",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "创建成功"
+          }
+        },
+        "summary": "创建演示任务",
+        "tags": ["任务管理"]
+      }
+    },
+    "/bin": {
+      "get": {
+        "operationId": "BinController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["回收站管理"],
+        "summary": "获取回收站内容"
+      },
+      "delete": {
+        "operationId": "BinController_emptyBin",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["回收站管理"],
+        "summary": "清空回收站"
+      }
+    },
+    "/bin/restore/{id}": {
+      "post": {
+        "operationId": "BinController_restore",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["回收站管理"],
+        "summary": "恢复回收站项目"
+      }
+    },
+    "/bin/{id}": {
+      "delete": {
+        "operationId": "BinController_permanentlyDelete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["回收站管理"],
+        "summary": "永久删除项目"
+      }
+    },
+    "/todo-lists": {
+      "get": {
+        "operationId": "TodoListController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["清单管理"],
+        "summary": "获取所有清单"
+      },
+      "post": {
+        "operationId": "TodoListController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["清单管理"],
+        "summary": "创建新清单"
+      }
+    },
+    "/todo-lists/{id}": {
+      "get": {
+        "operationId": "TodoListController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["清单管理"],
+        "summary": "获取单个清单"
+      },
+      "put": {
+        "operationId": "TodoListController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["清单管理"],
+        "summary": "更新清单信息"
+      },
+      "delete": {
+        "operationId": "TodoListController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["清单管理"],
+        "summary": "删除清单"
+      }
+    },
+    "/todo-tags": {
+      "get": {
+        "operationId": "TodoTagController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["标签管理"],
+        "summary": "获取所有标签"
+      },
+      "post": {
+        "operationId": "TodoTagController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["标签管理"],
+        "summary": "创建新标签"
+      }
+    },
+    "/todo-tags/{id}": {
+      "get": {
+        "operationId": "TodoTagController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["标签管理"],
+        "summary": "获取单个标签"
+      },
+      "put": {
+        "operationId": "TodoTagController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["标签管理"],
+        "summary": "更新标签信息"
+      },
+      "delete": {
+        "operationId": "TodoTagController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["标签管理"],
+        "summary": "删除标签"
+      }
+    },
+    "/todo-tags/task-tag-mappings": {
+      "get": {
+        "operationId": "TodoTagController_getTaskTagMappings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["标签管理"],
+        "summary": "获取任务标签映射关系"
+      }
+    },
+    "/task-groups": {
+      "get": {
+        "operationId": "TaskGroupController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["任务分组管理"],
+        "summary": "获取所有任务分组"
+      },
+      "post": {
+        "operationId": "TaskGroupController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["任务分组管理"],
+        "summary": "创建新任务分组"
+      }
+    },
+    "/task-groups/{id}": {
+      "get": {
+        "operationId": "TaskGroupController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["任务分组管理"],
+        "summary": "获取单个任务分组"
+      },
+      "put": {
+        "operationId": "TaskGroupController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["任务分组管理"],
+        "summary": "更新任务分组信息"
+      },
+      "delete": {
+        "operationId": "TaskGroupController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["任务分组管理"],
+        "summary": "删除任务分组"
+      }
+    },
+    "/focus-records": {
+      "post": {
+        "operationId": "FocusRecordController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFocusRecordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["专注记录管理"],
+        "summary": "创建专注记录"
+      },
+      "get": {
+        "operationId": "FocusRecordController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["专注记录管理"],
+        "summary": "获取所有专注记录"
+      }
+    },
+    "/focus-records/{id}": {
+      "get": {
+        "operationId": "FocusRecordController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["专注记录管理"],
+        "summary": "获取单个专注记录"
+      },
+      "put": {
+        "operationId": "FocusRecordController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFocusRecordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["专注记录管理"],
+        "summary": "更新专注记录"
+      },
+      "delete": {
+        "operationId": "FocusRecordController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["专注记录管理"],
+        "summary": "删除专注记录"
+      }
+    },
+    "/focus-records/task/{taskId}": {
+      "get": {
+        "operationId": "FocusRecordController_findByTaskId",
+        "parameters": [
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["专注记录管理"],
+        "summary": "获取任务的专注记录"
+      }
+    },
+    "/focus-records/stats/summary": {
+      "get": {
+        "operationId": "FocusRecordController_getStatistics",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["专注记录管理"],
+        "summary": "获取专注统计摘要"
+      }
+    }
+  },
+  "info": {
+    "title": "叮咚待办 (DingDongTodo) API",
+    "description": "DingDongTodo后端API文档",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "name": "Authorization",
+        "description": "JWT认证Bearer Token",
+        "in": "header"
+      }
+    },
+    "schemas": {
+      "CreateFocusRecordDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "UpdateFocusRecordDto": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  }
+}
