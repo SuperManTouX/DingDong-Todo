@@ -6,8 +6,8 @@ import "@/styles/FilteredTodoList.css";
 dayjs.extend(isoWeek);
 
 interface TimeCountDownNodeProps {
-  deadline?: string;
-  datetimeLocal?: string;
+  deadline?: string | null | undefined;
+  datetimeLocal?: string | null | undefined;
 }
 
 /**

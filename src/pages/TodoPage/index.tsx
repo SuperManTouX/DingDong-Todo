@@ -13,45 +13,26 @@ import Sider from "antd/es/layout/Sider";
 import SideMenu from "@/pages/TodoPage/SideMenu";
 import ListGroupManager from "@/pages/TodoPage/ListGroupManager";
 import { useTodoDataLoader } from "@/hooks/useTodoDataLoader";
-import { EditOutlined } from "@ant-design/icons";
 /**
  * 待办事项页面组件
  * 显示主待办事项列表和编辑功能
  */
 const Index: React.FC = () => {
   const { setActiveListId, activeListId, todoTags } = useTodoStore();
-  const { isTodoDrawerOpen, setIsTodoDrawerOpen } = useGlobalSettingsStore();
-  const [collapsed, setCollapsed] = useState(false);
-  const [isMobile, setIsMobile] = useState(false); // 添加isMobile状态
-  const toggleCollapsed = () => setCollapsed(!collapsed);
+  const {
+    isTodoDrawerOpen,
+    setIsTodoDrawerOpen,
+    isMobile,
+    collapsed,
+    toggleCollapsed,
+    setCollapsed,
+  } = useGlobalSettingsStore();
 
-  // 响应式监听：当屏幕宽度小到一定程度时设置状态
+  //若响应式模式变化
   useEffect(() => {
-    // 定义响应式阈值
-    const MOBILE_BREAKPOINT = 960;
+    setCollapsed(isMobile);
+  }, [isMobile]);
 
-    // 检查屏幕宽度并设置状态的函数
-    const checkScreenWidth = () => {
-      const screenWidth = window.innerWidth;
-      // 按照要求，小于960px时设置isMobile为false
-
-      setIsMobile(screenWidth <= MOBILE_BREAKPOINT);
-      console.log(
-        `屏幕宽度: ${screenWidth}px, isMobile: ${screenWidth <= MOBILE_BREAKPOINT}`,
-      );
-    };
-
-    // 初始化时检查一次
-    checkScreenWidth();
-
-    // 添加resize事件监听器
-    window.addEventListener("resize", checkScreenWidth);
-
-    // 清理函数
-    return () => {
-      window.removeEventListener("resize", checkScreenWidth);
-    };
-  }, []);
   // 使用自定义hook加载待办数据
   useTodoDataLoader();
 
