@@ -26,6 +26,7 @@ export const useTodoStore = create<TodoState>()(
         activeListId: "",
         selectTodoId: null,
         bin: [], // 初始化回收站数据
+        // 当前用户未置顶任务
         tasks: [],
         groups: [],
         userId: null,
@@ -43,7 +44,8 @@ export const useTodoStore = create<TodoState>()(
           const state = get();
           if (!state.selectTodoId) return null;
           return (
-            state.tasks.find((todo) => todo.id === state.selectTodoId) || null
+            state.tasks.find((todo) => todo.id === state.selectTodoId) ||
+            state.pinnedTasks.find((todo) => todo.id === state.selectTodoId)
           );
         },
 
@@ -108,7 +110,8 @@ export const useTodoStore = create<TodoState>()(
         loadTags: () => loadActions.loadTags(set, get),
         loadGroups: () => loadActions.loadGroups(set, get),
         loadBinItems: () => loadActions.loadBinItems(set, get),
-        loadPinnedTasks: (listId?: string) => loadActions.loadPinnedTasks(set, get, listId),
+        loadPinnedTasks: (listId?: string) =>
+          loadActions.loadPinnedTasks(set, get, listId),
         loadListPinnedTasks: async (listId: string) => {
           try {
             const pinnedTasks = await getListPinnedTodos(listId);

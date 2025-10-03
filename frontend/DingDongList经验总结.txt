@@ -16,3 +16,23 @@ DingDongList经验总结
 7.dify
 
 8. Rendered more hooks than during the previous render  这违反了React Hook的核心规则：Hook必须在组件的顶层调用，不能在条件语句、循环或嵌套函数中调用
+
+9. 响应式检测应该放在main？
+
+10. {
+              key: "sub3",
+              label: (
+                <Row justify="space-between" align="middle">
+                  <Col>
+                    <span>子菜单</span>
+                  </Col>
+                  <Col>
+                    <EllipsisOutlined
+                      className="opacityHover0-1"
+                      style={{ cursor: "pointer" }}
+                    />
+                  </Col>
+                </Row>
+              ),
+              icon: <FileTextOutlined />,}  antd中如果SubMenuItems中有icon，且label中有两层结构。只会显示icon，label会消失。
+              解决办法：children数组中的对象不返回icon属性；label返回字符串。

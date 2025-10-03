@@ -21,7 +21,6 @@ interface UseTodoGroupingReturn {
 
 // 任务分组相关的hook
 export default function useTodoGrouping(
-  pinnedTasks: Todo[],
   tasks: Todo[],
   searchText: string,
 ): UseTodoGroupingReturn {
@@ -35,17 +34,8 @@ export default function useTodoGrouping(
   // 根据activeListId确定分组模式和过滤逻辑
   let groupMode: "normal" | "time" | "list" = "normal";
   let filteredTasks = [...searchTasks];
-  let pinnedGroup: DisplayGroup = {
-    title: "已置顶",
-    tasks: [],
-    type: "group",
-  };
-  let isCompletedMode = false;
 
-  // 树形已置顶数组
-  if (pinnedTasks.length > 0) {
-    console.log("PINNED TASK");
-  }
+  let isCompletedMode = false;
 
   // 特殊activeListId处理
   if (activeListId.indexOf("tag") !== -1) {

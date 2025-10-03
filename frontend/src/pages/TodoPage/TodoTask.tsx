@@ -22,7 +22,8 @@ export default function TodoTask({
   onToggleExpand,
 }: TodoItemProps) {
   const { dispatchTodo, setSelectTodoId, selectTodoId } = useTodoStore();
-  const { showTaskDetails, setIsTodoDrawerOpen } = useGlobalSettingsStore();
+  const { showTaskDetails, setIsTodoDrawerOpen, isMobile } =
+    useGlobalSettingsStore();
   const { token } = theme.useToken(); // 获取主题令牌
 
   // 列表项悬停效果样式
@@ -71,8 +72,10 @@ export default function TodoTask({
           if (setSelectTodoId) {
             console.log("TodoTask", todo.id);
             setSelectTodoId(todo.id);
-            // 直接调用store中的方法打开Drawer
-            setIsTodoDrawerOpen(true);
+            if (isMobile) {
+              // 直接调用store中的方法打开Drawer
+              setIsTodoDrawerOpen(true);
+            }
           }
         }}
       >

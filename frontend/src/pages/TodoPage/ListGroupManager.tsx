@@ -10,6 +10,7 @@ import {
 import { MESSAGES } from "@/constants/messages";
 import { useState } from "react";
 import { useTodoStore } from "@/store/todoStore";
+import { useGlobalSettingsStore } from "@/store/globalSettingsStore";
 import {
   AppstoreOutlined,
   CheckOutlined,
@@ -41,6 +42,7 @@ export default function ListGroupManager({
   // 从全局导入的 message 和 modal，无需单独创建
   // 从store获取数据和方法
   const { todoListData, todoTags, dispatchList, dispatchTag } = useTodoStore();
+  const { collapsed } = useGlobalSettingsStore();
   // 统一管理添加和编辑的状态
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mode, setMode] = useState<"add" | "edit">("add"); // 模式：添加或编辑
@@ -208,15 +210,12 @@ export default function ListGroupManager({
           },
         ],
       };
-      return {
+      
+      // 创建基础菜单项对象
+      const menuItem: MenuProps["items"][number] = {
         key: tg.id,
-        icon: tg.emoji ? (
-          <span style={{ fontSize: "16px" }}>{tg.emoji}</span>
-        ) : (
-          <AppstoreOutlined />
-        ),
         label: (
-          <Row justify={"space-between"} align={"middle"}>
+          <Row className={"h-100"} justify={"space-between"} align={"middle"}>
             <span>{tg.title}</span>
             <Col>
               {tg.color && (
@@ -243,6 +242,17 @@ export default function ListGroupManager({
           </Row>
         ),
       };
+      
+      // 当collapsed不为true时，添加icon属性
+      if (!collapsed) {
+        menuItem.icon = tg.emoji ? (
+          <span style={{ fontSize: "16px" }}>{tg.emoji}</span>
+        ) : (
+          <AppstoreOutlined />
+        );
+      }
+      
+      return menuItem;
     });
   };
   //递归创建层次标签数组
@@ -291,10 +301,10 @@ export default function ListGroupManager({
           },
         ],
       };
-      //菜单Tag列表推入（push）
-      result.push({
+      
+      // 创建基础菜单项对象
+      const menuItem: MenuProps["items"][number] = {
         key: tag.id,
-        icon: <TagOutlined />,
         label: (
           <Row justify={"space-between"} align={"middle"}>
             <span>{tag.name}</span>
@@ -322,12 +332,19 @@ export default function ListGroupManager({
             </Col>
           </Row>
         ),
-
         onTitleClick: () => {
           onActiveGroupChange(tag.id);
         },
         children: renderTagsList(tag.id),
-      });
+      };
+      
+      // 当collapsed不为true时，添加icon属性
+      if (!collapsed) {
+        menuItem.icon = <TagOutlined />;
+      }
+      
+      //菜单Tag列表推入（push）
+      result.push(menuItem);
     });
     return result;
   }

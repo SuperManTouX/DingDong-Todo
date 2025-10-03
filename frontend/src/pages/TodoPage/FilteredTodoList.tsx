@@ -73,7 +73,6 @@ export default function FilteredTodoList({
 
   // 使用hooks获取各种功能
   const { groupMode, displayGroups, displayUncompletedCount } = useTodoGrouping(
-    pinnedTasks,
     tasks,
     searchText,
   );
