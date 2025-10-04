@@ -1,27 +1,32 @@
-import { Col, Dropdown, Input, Row, Select, Tag, theme, Layout } from "antd";
+import React, { useMemo } from "react";
+import { Col, Dropdown, Row, Select, Tag, theme, Layout } from "antd";
 import { message } from "@/utils/antdStatic";
 import { Priority } from "@/constants";
 import { PlusOutlined } from "@ant-design/icons";
-import { useMemo } from "react";
 import { useTodoStore, dispatchTodo } from "@/store/todoStore";
 import { useThemeStore } from "@/store/themeStore";
-import TimeCountDownNode from "@/pages/TodoPage/TimeCountDownNode"; // 导入主题状态管理
-import RichNote from "@/components/RichNote"; // 导入富文本编辑器组件
-import TodoCheckbox from "@/components/TodoCheckbox"; // 导入TodoCheckbox组件
-import TaskDateTimePicker from "@/components/TaskDateTimePicker"; // 导入TaskDateTimePicker组件
+import TimeCountDownNode from "@/pages/TodoPage/TimeCountDownNode";
+import RichNote from "@/components/RichNote";
+import TodoCheckbox from "@/components/TodoCheckbox";
+import TaskDateTimePicker from "@/components/TaskDateTimePicker";
 
 // 解构Layout组件
 const { Header, Content, Footer } = Layout;
 
 export default function EditTodo() {
+  // 获取状态
   const todoTags = useTodoStore((state) => state.todoTags);
   const todoListData = useTodoStore((state) => state.todoListData);
   const selectTodo = useTodoStore((state) => state.selectTodo());
-  const { currentTheme } = useThemeStore(); // 获取当前主题
-  if (!selectTodo) return;
-  let priClass;
-  //
-  switch (selectTodo?.priority) {
+  const { currentTheme } = useThemeStore();
+  const { token } = theme.useToken();
+
+  // 如果没有选中的任务，返回null
+  if (!selectTodo) return null;
+
+  // 确定优先级样式类
+  let priClass = "";
+  switch (selectTodo.priority) {
     case Priority.Low:
       priClass = "low-todo";
       break;
@@ -34,19 +39,6 @@ export default function EditTodo() {
     default:
       priClass = "";
   }
-  // 更改日期
-  const handleDateTimeChange = (date: string) => {
-    dispatchTodo({
-      type: "changed",
-      todo: {
-        ...selectTodo,
-        deadline: date,
-      },
-    });
-    message.info("时间更改成功");
-  };
-
-  const { token } = theme.useToken();
 
   // 处理标签点击添加
   const handleTagClick = (tagId: string) => {
@@ -55,15 +47,14 @@ export default function EditTodo() {
       message.info("该标签已添加");
       return;
     }
+
     // 添加新标签
     const updatedTags = [...(selectTodo.tags || []), tagId];
-    console.log(selectTodo);
     dispatchTodo({
       type: "changed",
       todo: {
         ...selectTodo,
         tags: updatedTags,
-        listId: selectTodo.listId,
       },
     });
 
@@ -85,6 +76,7 @@ export default function EditTodo() {
     onClick: () => handleTagClick(tag.id),
   }));
 
+  // 标签样式
   const tagPlusStyle: React.CSSProperties = {
     height: 22,
     background: token.colorBgContainer,
@@ -102,13 +94,13 @@ export default function EditTodo() {
   return (
     <Layout className="h-100">
       <Header
-        className={"theme-color"}
+        className="theme-color"
         style={{
           borderBottom: `1px solid ${token.colorBorder}`,
           padding: "0 24px",
         }}
       >
-        <Row className="h-100 " justify="space-between" align="middle">
+        <Row className="h-100" justify="space-between" align="middle">
           <Row justify="start" align="middle">
             <TodoCheckbox
               completed={selectTodo.completed}
@@ -122,17 +114,14 @@ export default function EditTodo() {
                 if (checked) message.info(`已完成${selectTodo.title}`);
               }}
             />
-            <TaskDateTimePicker
-              todo={selectTodo}
-              onDateChange={handleDateTimeChange}
-            />
+            <TaskDateTimePicker todo={selectTodo} />
             <TimeCountDownNode
               deadline={selectTodo.deadline}
               datetimeLocal={selectTodo.datetimeLocal}
             />
           </Row>
           <Select
-            className={"p-select"}
+            className="p-select"
             value={selectTodo.priority}
             style={{
               width: 60,
@@ -160,14 +149,14 @@ export default function EditTodo() {
         </Row>
       </Header>
       <Content
-        className={"theme-color"}
+        className="theme-color"
         style={{
           padding: "16px 24px",
           color: currentTheme.textColor,
           minHeight: "calc(100% - 100px)",
         }}
       >
-        <Row className={"h-100"} justify="start">
+        <Row className="h-100" justify="start">
           <Col className="w-100">
             {/*待办标题*/}
             <input
@@ -176,15 +165,13 @@ export default function EditTodo() {
               className="w-100"
               value={selectTodo.title}
               onChange={(e) => {
-                if (selectTodo) {
-                  dispatchTodo({
-                    type: "changed",
-                    todo: {
-                      ...selectTodo,
-                      title: e.currentTarget.value,
-                    },
-                  });
-                }
+                dispatchTodo({
+                  type: "changed",
+                  todo: {
+                    ...selectTodo,
+                    title: e.currentTarget.value,
+                  },
+                });
               }}
               style={{
                 fontSize: 18,
@@ -202,15 +189,13 @@ export default function EditTodo() {
             <RichNote
               value={selectTodo.text || ""}
               onChange={(text) => {
-                if (selectTodo) {
-                  dispatchTodo({
-                    type: "changed",
-                    todo: {
-                      ...selectTodo,
-                      text: text,
-                    },
-                  });
-                }
+                dispatchTodo({
+                  type: "changed",
+                  todo: {
+                    ...selectTodo,
+                    text: text,
+                  },
+                });
               }}
               placeholder="开始编写待办详情..."
             />
@@ -221,16 +206,21 @@ export default function EditTodo() {
 
               // 如果标签不存在，显示为"未知标签"并允许删除
               const tagName = tagItem?.name || `未知标签(${tagId})`;
+              const tagColor = tagItem?.color || "gray";
 
               return (
                 <Tag
+                  color={tagColor}
                   key={tagId}
-                  color={tagItem?.color || token.colorPrimary}
-                  closeIcon
+                  closable
+                  style={{ marginRight: 8, marginBottom: 8 }}
                   onClose={() => {
-                    // 从tags数组中移除当前点击的标签
-                    const updatedTags =
-                      selectTodo.tags?.filter((id) => id !== tagId) || [];
+                    // 过滤掉要删除的标签ID
+                    const updatedTags = selectTodo.tags
+                      ?.filter((id) => id !== tagId)
+                      .filter(Boolean);
+
+                    // 更新任务标签
                     dispatchTodo({
                       type: "changed",
                       todo: {
@@ -248,18 +238,9 @@ export default function EditTodo() {
             <Dropdown
               menu={{
                 items: dropdownItems,
-                style: {
-                  maxHeight: "300px",
-                  overflowY: "auto",
-                  backgroundColor: currentTheme.bgColor,
-                  color: currentTheme.textColor,
-                  border: `1px solid ${token.colorBorder}`,
-                },
               }}
-              trigger={["hover"]}
-              placement="bottomLeft"
             >
-              <Tag style={tagPlusStyle}>
+              <Tag style={tagPlusStyle} className="border-dashed">
                 <PlusOutlined /> New Tag
               </Tag>
             </Dropdown>
@@ -267,14 +248,14 @@ export default function EditTodo() {
         </Row>
       </Content>
       <Footer
-        className={"theme-color"}
+        className="theme-color"
         style={{
           color: currentTheme.textColor,
           borderTop: `1px solid ${token.colorBorder}`,
           padding: "0 24px",
         }}
       >
-        <Row justify={"start"} align={"middle"}>
+        <Row justify="start" align="middle">
           <span style={{ marginRight: "12px" }}>所属清单：</span>
           <Select
             value={selectTodo.listId}

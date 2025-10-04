@@ -68,6 +68,8 @@ export interface Todo {
   userId: string; // 新增：指向创建任务的用户ID
   isPinned?: boolean; // 新增：是否置顶
   pinnedAt?: string | null; // 新增：置顶时间，用于多个置顶任务的排序
+  reminder_at?: string | null; // 新增：提醒时间
+  is_reminded?: boolean; // 新增：是否已经提醒
 }
 
 interface TodoAddAction {

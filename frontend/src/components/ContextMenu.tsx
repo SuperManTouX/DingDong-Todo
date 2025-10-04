@@ -15,17 +15,6 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const dropdownRef = useRef<Dropdown>(null);
 
-  // 编辑时间
-  const handleDateTimeChange = (date: any) => {
-    dispatchTodo({
-      type: "changed",
-      todo: {
-        ...todo,
-        deadline: date,
-      },
-    });
-  };
-
   // 添加子任务
   function handleAddSubTask(todo: Todo): void {
     const { activeListId } = useTodoStore.getState();
@@ -90,9 +79,7 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
   const normalItems: MenuProps["items"] = [
     {
       key: "date",
-      label: (
-        <TaskDateTimePicker todo={todo} onDateChange={handleDateTimeChange} />
-      ),
+      label: <TaskDateTimePicker todo={todo} />,
       disabled: true,
     },
     {
