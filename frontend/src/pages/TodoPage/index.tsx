@@ -8,7 +8,6 @@ import {
 import { useGlobalSettingsStore } from "@/store/globalSettingsStore";
 import FilteredTodoList from "@/pages/TodoPage/FilteredTodoList";
 import EditTodo from "@/pages/TodoPage/EditTodo";
-import EditTodoDrawer from "@/pages/TodoPage/EditTodoDrawer";
 import Sider from "antd/es/layout/Sider";
 import SideMenu from "@/pages/TodoPage/SideMenu";
 import ListGroupManager from "@/pages/TodoPage/ListGroupManager";
@@ -85,17 +84,13 @@ const Index: React.FC = () => {
         />
       </Layout>
       {/*如果屏幕小了就不显示*/}
-      {!isMobile && (
-        <Layout className={"theme-color border-0"}>
-          {selectedTodo && <EditTodo key={selectedTodo.id} />}
-        </Layout>
-      )}
-      {isMobile && (
-        <EditTodoDrawer
-          open={isTodoDrawerOpen}
-          onClose={() => setIsTodoDrawerOpen(false)}
-        />
-      )}
+      <EditTodo
+        key={selectedTodo ? selectedTodo.id : "s"}
+        asDrawer={isMobile}
+        open={isMobile ? isTodoDrawerOpen : true}
+        onClose={isMobile ? () => setIsTodoDrawerOpen(false) : undefined}
+      />
+
       {/* 清单管理模态框 */}
       {listGroupManager.groupModal}
       {/* 标签管理模态框 */}
