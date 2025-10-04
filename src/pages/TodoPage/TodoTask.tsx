@@ -10,7 +10,11 @@ import { useTodoStore } from "@/store/todoStore";
 import TimeCountDownNode from "./TimeCountDownNode";
 import TodoCheckbox from "@/components/TodoCheckbox";
 import "@/styles/TodoTask.css";
-import { RightOutlined } from "@ant-design/icons";
+import {
+  BellOutlined,
+  ClockCircleOutlined,
+  RightOutlined,
+} from "@ant-design/icons";
 import { login } from "@/services/authService";
 
 dayjs.extend(isoWeek);
@@ -67,7 +71,7 @@ export default function TodoTask({
   return (
     <>
       <li
-        className={`border-bottom  cursor-pointer row d-flex justify-content-between highlight rounded pe-0 ps-0 pt-1 pb-1 ${selectTodoId === todo.id ? "selected-task" : ""}  ${other ? "opacity-25" : ""}`}
+        className={`cursor-pointer row d-flex justify-content-between highlight rounded pe-0 ps-0 pt-1 pb-1 ${selectTodoId === todo.id ? "selected-task" : ""}  ${other ? "opacity-25" : ""}`}
         onClick={() => {
           if (setSelectTodoId) {
             console.log("TodoTask", todo.id);
@@ -136,9 +140,12 @@ export default function TodoTask({
                 {todo.tags?.length > 0 && (
                   <Tag color="magenta">+{todo.tags?.length}</Tag>
                 )}
-                {/*{todo.tags?.map((tag, i) => (*/}
-                {/*  <Tag color="magenta">{tag}</Tag>*/}
-                {/*))}*/}
+                {/*{todo.tags?.map((tag, i) => (
+                  <Tag color="magenta">{tag}</Tag>
+                ))}*/}
+                {todo.reminder_at !== null && !todo.is_reminded && (
+                  <BellOutlined className={"me-2"} />
+                )}
                 <TimeCountDownNode
                   deadline={todo.deadline}
                   datetimeLocal={todo.datetimeLocal}

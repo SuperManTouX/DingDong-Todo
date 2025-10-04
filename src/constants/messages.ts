@@ -11,6 +11,7 @@ export const MESSAGES = {
     TASK_DELETED: "删除成功",
     TASK_RESTORED: "恢复完成",
     TASK_PINNED: "置顶完成",
+    TASK_UPDATED: "任务更新成功",
     TASK_PERMANENTLY_DELETED: "删除完成",
     USER_LOGGED_OUT: "用户已成功注销",
   },

@@ -51,18 +51,6 @@ export default function EditTodoDrawer({ open, onClose }: EditTodoDrawerProps) {
       priClass = "";
   }
 
-  // 更改日期
-  const handleDateTimeChange = (date: string) => {
-    dispatchTodo({
-      type: "changed",
-      todo: {
-        ...selectTodo,
-        deadline: date,
-      },
-    });
-    message.info("时间更改成功");
-  };
-
   // 处理标签点击添加
   const handleTagClick = (tagId: string) => {
     // 如果标签已经存在，则不重复添加
@@ -123,10 +111,7 @@ export default function EditTodoDrawer({ open, onClose }: EditTodoDrawerProps) {
                 if (checked) message.info(`已完成${selectTodo.title}`);
               }}
             />
-            <TaskDateTimePicker
-              todo={selectTodo}
-              onDateChange={handleDateTimeChange}
-            />
+            <TaskDateTimePicker todo={selectTodo} />
             <TimeCountDownNode
               deadline={selectTodo.deadline}
               datetimeLocal={selectTodo.datetimeLocal}
