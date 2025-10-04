@@ -37,13 +37,16 @@ export class TaskService {
   
   // 创建一个带有标签的测试任务，用于演示功能
   async createTestTask(): Promise<any> {
+    const now = new Date();
+    const tomorrow = new Date(now.getTime() + 86400000);
+    
     const testTask = {
       id: 'task-demo-with-tags',
       title: '演示任务带标签',
       completed: false,
       priority: 2,
-      datetimeLocal: new Date().toISOString().split('T')[0] + ' ' + new Date().toTimeString().split(' ')[0],
-      deadline: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+      datetimeLocal: now.toISOString(), // 使用ISO 8601格式
+      deadline: tomorrow.toISOString(), // 使用ISO 8601格式
       parentId: null,
       depth: 0,
       tags: ['tag-001', 'tag-002'],
@@ -78,11 +81,19 @@ export class TaskService {
     // 提取tags数组并从task对象中移除它，因为Task实体中没有这个字段
     const { tags, ...taskData } = task;
     
+    // 确保日期字段使用ISO 8601格式
+    const processedTaskData = {
+      ...taskData,
+      datetimeLocal: taskData.datetimeLocal ? this.ensureISOString(taskData.datetimeLocal) : null,
+      deadline: taskData.deadline ? this.ensureISOString(taskData.deadline) : null,
+      reminder_at: taskData.reminder_at ? this.ensureISOString(taskData.reminder_at) : null,
+    };
+    
     // 明确任务ID
     const taskId = task.id || `task-${Date.now()}`;
     
     const newTask = this.taskRepository.create({
-      ...taskData,
+      ...processedTaskData,
       id: taskId,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -120,6 +131,25 @@ export class TaskService {
     });
   }
   
+  // 辅助方法：确保日期值是ISO 8601格式的字符串
+  private ensureISOString(dateValue: any): string {
+    if (!dateValue) return '';
+    
+    // 如果已经是字符串且看起来像ISO格式，直接返回
+    if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/.test(dateValue)) {
+      return dateValue;
+    }
+    
+    // 如果是日期对象或可以转换为日期，转换为ISO字符串
+    const date = new Date(dateValue);
+    if (!isNaN(date.getTime())) {
+      return date.toISOString();
+    }
+    
+    // 对于其他情况，尝试直接返回原值
+    return String(dateValue);
+  }
+  
   // 辅助方法：格式化任务响应数据，确保与前端数据结构一致
   private formatTaskResponse(task: any): any {
     // 优先从任务对象中获取tags属性（创建任务时附加的）
@@ -143,6 +173,8 @@ export class TaskService {
       priority: task.priority,
       datetimeLocal: task.datetimeLocal,
       deadline: task.deadline,
+      reminder_at: task.reminder_at || null,
+      is_reminded: task.is_reminded || false,
       parentId: task.parentId || null,
       depth: task.depth,
       tags: tags,
@@ -173,7 +205,18 @@ export class TaskService {
     // 从task对象中移除标签字段，因为Task实体中没有这个字段
     const { tags: _, ...taskDataWithoutTags } = task as any;
     
-    Object.assign(existingTask, taskDataWithoutTags, { updatedAt: new Date() });
+    // 确保日期字段使用ISO 8601格式
+    const processedTaskData = {
+      ...taskDataWithoutTags,
+      datetimeLocal: taskDataWithoutTags.datetimeLocal !== undefined ? 
+        this.ensureISOString(taskDataWithoutTags.datetimeLocal) : existingTask.datetimeLocal,
+      deadline: taskDataWithoutTags.deadline !== undefined ? 
+        this.ensureISOString(taskDataWithoutTags.deadline) : existingTask.deadline,
+      reminder_at: taskDataWithoutTags.reminder_at !== undefined ? 
+        this.ensureISOString(taskDataWithoutTags.reminder_at) : existingTask.reminder_at,
+    };
+    
+    Object.assign(existingTask, processedTaskData, { updatedAt: new Date() });
     const updatedTask = await this.taskRepository.save(existingTask);
     
     // 处理标签关联
