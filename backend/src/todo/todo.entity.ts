@@ -21,11 +21,11 @@ export class Task {
   @Column({ default: 0 })
   priority: number;
 
-  @Column({ type: 'datetime', nullable: true, name: 'datetime_local' })
-  datetimeLocal: Date;
+  @Column({ type: 'varchar', nullable: true, name: 'datetime_local' })
+  datetimeLocal: string;
 
-  @Column({ type: 'date', nullable: true })
-  deadline: Date;
+  @Column({ type: 'varchar', nullable: true })
+  deadline: string;
 
   @Column({ nullable: true, name: 'parent_id' })
   parentId: string;
@@ -47,6 +47,12 @@ export class Task {
 
   @Column({ type: 'datetime', nullable: true, name: 'pinned_at' })
   pinnedAt: Date | null;
+
+  @Column({ type: 'datetime', nullable: true, name: 'reminder_at' })
+  reminder_at: Date | null;
+
+  @Column({ name: 'is_reminded', default: false })
+  is_reminded: boolean;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

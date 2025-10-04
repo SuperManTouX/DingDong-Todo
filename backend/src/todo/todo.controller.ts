@@ -76,6 +76,8 @@ export class TodoController {
         groupId: { type: 'string', description: '所属分组ID（可选）' },
         is_pinned: { type: 'boolean', description: '是否置顶（可选，默认false）' },
         pinned_at: { type: 'string', description: '置顶时间（可选）' },
+        reminder_at: { type: 'string', description: '提醒时间（可选）' },
+        is_reminded: { type: 'boolean', description: '是否已提醒（可选，默认false）' },
       },
       required: ['title', 'listId'],
     },
@@ -114,6 +116,8 @@ export class TodoController {
         tags: { type: 'array', items: { type: 'string' }, description: '标签ID数组' },
         is_pinned: { type: 'boolean', description: '是否置顶' },
         pinned_at: { type: 'string', description: '置顶时间' },
+        reminder_at: { type: 'string', description: '提醒时间' },
+        is_reminded: { type: 'boolean', description: '是否已提醒' },
       },
     },
   })
