@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, TreeRepository } from 'typeorm';
 import { Task } from './todo.entity';
 import { TaskTag } from '../task-tag/task-tag.entity';
 import { BinService } from '../bin/bin.service';
+import { TodoTag } from '../todo-tag/todo-tag.entity';
 
 @Injectable()
 export class TaskService {
@@ -15,6 +16,8 @@ export class TaskService {
     private taskRepository: Repository<Task>,
     @InjectRepository(TaskTag)
     private taskTagRepository: Repository<TaskTag>,
+    @InjectRepository(TodoTag)
+    private todoTagRepository: Repository<TodoTag>,
     @Inject(forwardRef(() => BinService))
     private binService: BinService
   ) {}
@@ -408,6 +411,164 @@ export class TaskService {
   async remove(id: string, userId: string): Promise<{ message: string }> {
     await this.delete(id, userId);
     return { message: '任务已成功删除' };
+  }
+  
+  /**
+   * 根据类型获取任务列表
+   * @param userId 用户ID
+   * @param type 任务类型：today（今天）、nearlyWeek（近一周）、cp（已完成）、bin（回收站）或标签ID
+   * @returns 任务列表
+   */
+  async getTasksByType(userId: string, type: string): Promise<any[]> {
+    // 如果类型中包含"bin"，从回收站获取任务
+    if (type.includes('bin')) {
+      const binItems = await this.binService.findAllByUserId(userId);
+      return binItems.map(binItem => ({
+        ...binItem,
+        taskTags: [] // 回收站项目可能没有标签信息
+      }));
+    }
+
+    // 检查是否是标签查询
+    if (type.startsWith('tag-')) {
+      const tagId = type;
+      
+      // 查询标签及其所有子标签
+      const allTagIds = await this.getAllTagIdsWithChildren(tagId, userId);
+      
+      if (allTagIds.length > 0) {
+        // 查询包含这些标签中任意一个的任务
+        const query = this.taskRepository.createQueryBuilder('task')
+          .where('task.userId = :userId', { userId })
+          .andWhere('task.isPinned = false')
+          .leftJoinAndSelect('task.taskTags', 'taskTags')
+          .innerJoin('task.taskTags', 'tt')
+          .andWhere('tt.tagId IN (:...tagIds)', { tagIds: allTagIds })
+          .orderBy('task.updatedAt', 'DESC');
+          
+        const tasks = await query.getMany();
+        return tasks.map(task => this.formatTaskResponse(task));
+      } else {
+        // 如果没有找到标签，返回空数组
+        return [];
+      }
+    } 
+    
+    // 处理其他类型的查询
+    const query = this.taskRepository.createQueryBuilder('task')
+      .where('task.userId = :userId', { userId })
+      .andWhere('task.isPinned = false')
+      .leftJoinAndSelect('task.taskTags', 'taskTags');
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const weekAgo = new Date(today);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const weekLater = new Date(today);
+    weekLater.setDate(weekLater.getDate() + 7);
+
+    switch (type) {
+      case 'today':
+        // 返回今天截止的任务
+        query.andWhere('DATE(task.deadline) = DATE(:today)', { today });
+        break;
+      
+      case 'nearlyWeek':
+        // 返回前后七天的任务
+        query.andWhere('task.deadline >= :weekAgo AND task.deadline <= :weekLater', { 
+          weekAgo, 
+          weekLater 
+        });
+        break;
+      
+      case 'cp':
+        // 返回已完成的任务
+        query.andWhere('task.completed = true');
+        break;
+      
+      default:
+        // 如果是普通列表ID，返回该列表的任务
+        query.andWhere('task.listId = :listId', { listId: type });
+    }
+
+    const tasks = await query.orderBy('task.updatedAt', 'DESC').getMany();
+    return tasks.map(task => this.formatTaskResponse(task));
+  }
+
+  /**
+   * 获取标签ID及其所有子标签ID（递归查询）
+   * @param tagId 标签ID
+   * @param userId 用户ID
+   * @returns 包含标签ID及其所有子标签ID的数组
+   */
+  private async getAllTagIdsWithChildren(tagId: string, userId: string): Promise<string[]> {
+    const result: string[] = [];
+    
+    // 先检查标签是否存在且属于当前用户
+    const rootTag = await this.todoTagRepository.findOne({
+      where: { id: tagId, userId }
+    });
+    
+    if (!rootTag) {
+      return [];
+    }
+    
+    // 递归获取所有子标签
+    async function collectTagIds(currentTagId: string) {
+      result.push(currentTagId);
+      
+      // 查询直接子标签
+      const children = await this.todoTagRepository.find({
+        where: { parentId: currentTagId, userId }
+      });
+      
+      // 递归处理每个子标签
+      for (const child of children) {
+        await collectTagIds.bind(this)(child.id);
+      }
+    }
+    
+    await collectTagIds.bind(this)(tagId);
+    return result;
+  }
+
+  /**
+   * 按关键词搜索任务
+   * @param userId 用户ID
+   * @param keyword 搜索关键词
+   * @returns 匹配关键词的任务列表
+   */
+  async searchTasks(userId: string, keyword: string): Promise<any[]> {
+    // 确保关键词不为空
+    if (!keyword || keyword.trim() === '') {
+      return [];
+    }
+
+    // 拆分关键词，处理空格分隔的多词搜索
+    const keywords = keyword.trim().split(/\s+/);
+    
+    // 构建搜索查询
+    const query = this.taskRepository.createQueryBuilder('task')
+      .where('task.userId = :userId', { userId });
+    
+    // 对每个关键词添加OR条件，匹配title或text字段
+    keywords.forEach((word, index) => {
+      const paramName = `keyword_${index}`;
+      const wordCondition = `(task.title LIKE :${paramName} OR task.text LIKE :${paramName})`;
+      
+      if (index === 0) {
+        query.andWhere(wordCondition, { [paramName]: `%${word}%` });
+      } else {
+        query.orWhere(wordCondition, { [paramName]: `%${word}%` });
+      }
+    });
+    
+    // 添加连接和排序
+    query.leftJoinAndSelect('task.taskTags', 'taskTags')
+         .orderBy('task.updatedAt', 'DESC');
+
+    const tasks = await query.getMany();
+    return tasks.map(task => this.formatTaskResponse(task));
   }
   
   // 创建演示任务（接口别名）
