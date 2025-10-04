@@ -36,7 +36,49 @@ export class TodoController {
     return this.todoService.getPinnedTodos(req.user.id, listId);
   }
 
-  // 获取单个任务
+  /**
+   * 根据类型获取任务列表
+   * @param type 任务类型：today、nearlyWeek、cp、bin 或普通列表ID
+   * @param request 请求对象，用于获取用户信息
+   * @returns 任务列表
+   */
+  @ApiOperation({
+    summary: '根据类型获取任务列表',
+    description: '获取不同类型的任务列表',
+  })
+  @ApiBearerAuth()
+  @ApiParam({ name: 'type', description: '任务类型' })
+  @ApiResponse({ status: 200, description: '获取成功' })
+  @ApiResponse({ status: 401, description: '未授权' })
+  @UseGuards(AuthGuard('jwt'))
+  @Get('type/:type')
+  async getTasksByType(@Param('type') type: string, @Req() req) {
+    return this.todoService.getTasksByType(req.user.id, type);
+  }
+
+  /**
+   * 按关键词搜索任务
+   * @param keyword 搜索关键词，支持空格分隔多个关键词
+   * @param request 请求对象，用于获取用户信息
+   * @returns 匹配的任务列表
+   */
+  @ApiOperation({
+    summary: '按关键词搜索任务',
+    description: '根据关键词搜索当前用户的任务',
+  })
+  @ApiBearerAuth()
+  // 创建演示任务
+  @ApiOperation({
+    summary: '创建演示任务',
+    description: '创建带标签的演示任务',
+  })
+  @ApiResponse({ status: 201, description: '创建成功' })
+  @Post('demo')
+  async createDemo() {
+    return this.todoService.createDemo();
+  }
+
+  // 获取单个任务 - 动态路由移到静态路由之后
   @ApiOperation({
     summary: '获取单个任务',
     description: '根据ID获取单个任务详情',
@@ -162,42 +204,7 @@ export class TodoController {
     return this.todoService.remove(id, req.user.id);
   }
 
-  // 创建演示任务
-  @ApiOperation({
-    summary: '创建演示任务',
-    description: '创建带标签的演示任务',
-  })
-  @ApiResponse({ status: 201, description: '创建成功' })
-  @Post('demo')
-  async createDemo() {
-    return this.todoService.createDemo();
-  }
-
-  // 批量更新任务顺序
-  @ApiOperation({
-    summary: '批量更新任务顺序',
-    description: '批量更新任务的排序信息',
-  })
-  @ApiBearerAuth()
-  @ApiBody({
-    schema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', description: '任务ID' },
-          orderIndex: { type: 'number', description: '排序索引' },
-        },
-      },
-    },
-  })
-  @ApiResponse({ status: 200, description: '更新成功' })
-  @ApiResponse({ status: 401, description: '未授权' })
-  @UseGuards(AuthGuard('jwt'))
-  @Put('batch-order')
-  async batchUpdateOrder(@Body() tasks: any[], @Req() req) {
-    return this.todoService.batchUpdateOrder(tasks, req.user.id);
-  }
+  // 重复的createDemo和searchTasks函数已删除，避免重复定义错误
 }
 
 // 单复数统一接口
