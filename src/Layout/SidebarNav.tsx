@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Col, Dropdown, Menu } from "antd";
 import type { MenuProps } from "antd";
 import { useAuthStore } from "@/store/authStore";
@@ -11,8 +11,11 @@ import {
   CheckSquareOutlined,
   ClockCircleFilled,
   PieChartOutlined,
+  SearchOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
+import { Todo } from "@/types";
+import SearchModal from "@/components/SearchModal";
 
 /**
  * 侧边栏导航组件
@@ -20,8 +23,11 @@ import {
  */
 const SidebarNav: React.FC = () => {
   const { user, logout } = useAuthStore();
-  const { setUserId } = useTodoStore();
+  const { setUserId, setActiveListId, loadTasksByType } = useTodoStore();
   const [selectedKey, setSelectedKey] = React.useState("todos"); // 默认选中todos菜单项
+
+  // 搜索Modal显示状态
+  const [searchModalVisible, setSearchModalVisible] = useState(true);
   const menuItems: MenuProps["items"] = [
     {
       key: "todos",
@@ -43,6 +49,11 @@ const SidebarNav: React.FC = () => {
       icon: <SettingOutlined className={"sideNav-icon"} />,
       label: "设置",
     },
+    {
+      key: "search",
+      icon: <SearchOutlined className={"sideNav-icon"} />,
+      label: "全局搜索",
+    },
   ];
 
   const navigate = useNavigate();
@@ -51,6 +62,12 @@ const SidebarNav: React.FC = () => {
     // 处理菜单点击事件
     console.log("Menu item clicked:", key);
     setSelectedKey(key); // 更新选中的菜单项
+    // 当点击搜索菜单项时，显示搜索Modal
+    // if (key === "search") {
+    //   setSearchModalVisible(true);
+    //   return;
+    // }
+
     // 路由跳转逻辑
     navigate(`/${key}`);
   };
@@ -75,6 +92,15 @@ const SidebarNav: React.FC = () => {
       danger: true, // 设置为红色危险项
     },
   ];
+
+  // 处理任务选择
+  const handleTaskSelect = (task: Todo) => {
+    // 如果任务有对应的列表，切换到该列表
+    if (task.listId) {
+      setActiveListId(task.listId);
+      loadTasksByType(task.listId);
+    }
+  };
 
   return (
     <Col
@@ -123,6 +149,11 @@ const SidebarNav: React.FC = () => {
         items={menuItems}
         onClick={handleMenuClick}
         selectedKeys={[selectedKey]}
+      />
+      <SearchModal
+        visible={searchModalVisible}
+        onCancel={() => setSearchModalVisible(false)}
+        onSelectTask={handleTaskSelect}
       />
     </Col>
   );

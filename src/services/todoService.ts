@@ -88,6 +88,17 @@ export const getTasksByType = async (type: string): Promise<Todo[]> => {
   );
 };
 
+// 根据关键词搜索任务
+export const searchTasks = async (keyword: string): Promise<Todo[]> => {
+  return request(
+    () => api.get<Todo[]>(`/todos/search?keyword=${encodeURIComponent(keyword)}`),
+    `搜索任务失败`,
+    {
+      cache: false, // 搜索结果不缓存，确保每次都获取最新数据
+    }
+  );
+};
+
 // 使用统一请求处理封装 - 删除待办事项（删除后清除相关缓存）
 export const deleteTodo = (id: string) => {
   return request(

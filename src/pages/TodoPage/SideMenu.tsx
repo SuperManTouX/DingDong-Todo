@@ -3,6 +3,7 @@ import type { MenuProps } from "antd";
 import type { SideMenuProps } from "@/types";
 import { useState } from "react";
 import { useTodoStore } from "@/store";
+import { useNavigate } from "react-router-dom";
 
 /**
  * 侧边菜单组件
@@ -10,6 +11,7 @@ import { useTodoStore } from "@/store";
  */
 export default function SideMenu({ menuItem }: SideMenuProps) {
   const { setActiveListId, loadTasksByType } = useTodoStore();
+  const navigate = useNavigate();
 
   // 默认选中菜单项
   const [selectedKeys, setSelectedKeys] = useState<string[]>(["a"]);
@@ -23,6 +25,12 @@ export default function SideMenu({ menuItem }: SideMenuProps) {
       setOpenKeys((prev) =>
         prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
       );
+    }
+
+    // 当点击搜索菜单项时，导航到搜索页面
+    if (key === "search") {
+      navigate("/search");
+      return;
     }
 
     // 加载任务数据（loadTasksByType现在会同时处理普通任务和置顶任务）

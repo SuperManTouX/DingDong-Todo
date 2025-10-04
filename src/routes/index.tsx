@@ -7,6 +7,7 @@ import StatsPage from "../pages/StatsPage";
 import SettingsPage from "../pages/SettingsPage";
 import Index from "../pages/TodoPage";
 import { Index as FocusPage } from "@/pages/FocusPage/index.tsx";
+import SearchResultPage from "../pages/SearchResultPage";
 
 const router = createBrowserRouter([
   {
@@ -44,6 +45,14 @@ const router = createBrowserRouter([
       {
         path: "settings",
         element: <SettingsPage />,
+      },
+      {
+        path: "search",
+        element: <SearchResultPage />,
+      },
+      {
+        path: "search/:keyword",
+        element: <SearchResultPage />,
       },
     ],
   },

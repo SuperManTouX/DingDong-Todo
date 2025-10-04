@@ -33,9 +33,11 @@ export default function Controller({
   const [selectedListId, setSelectedListId] = useState<string | null>(
     activeListId,
   );
+  const [showSelectedListIdTag, setShowSelectedListIdTag] =
+    useState<boolean>(false);
 
   // 存储当前选择的优先级
-  const [selectedPriority, setSelectedPriority] = useState<number | null>(null);
+  const [selectedPriority, setSelectedPriority] = useState<number>(0);
   // 存储当前选择的截止日期
   const [selectedDeadline, setSelectedDeadline] = useState<string | null>(null);
   // 控制Dropdown显示状态
@@ -93,6 +95,7 @@ export default function Controller({
   // 处理清单选择
   const handleListSelect = (listId: string) => {
     setSelectedListId(listId);
+    setShowSelectedListIdTag(true);
     // 查找选择的清单名称
     const selectedList = todoListData.find((list) => list.id === listId);
     message.info(`已选择清单: ${selectedList?.title || "未知清单"}`);
@@ -290,7 +293,7 @@ export default function Controller({
               prefix={
                 <>
                   {/* 显示选择的清单标题 */}
-                  {selectedListId && (
+                  {selectedListId && showSelectedListIdTag && (
                     <Tag color={token.colorPrimary}>^{activeListTitle}</Tag>
                   )}
                   {/* 显示选择的截止日期 */}

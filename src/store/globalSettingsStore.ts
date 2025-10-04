@@ -99,7 +99,7 @@ export const initializeResponsiveListener = () => {
   const checkScreenWidth = () => {
     const screenWidth = window.innerWidth;
     const isMobile = screenWidth <= MOBILE_BREAKPOINT;
-
+    console.log(isMobile);
     // 使用store的setIsMobile方法更新状态
     useGlobalSettingsStore.getState().setIsMobile(isMobile);
   };
