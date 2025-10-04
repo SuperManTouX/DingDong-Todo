@@ -28,20 +28,16 @@ import { ListColorNames, ListColors } from "@/constants";
 import TagManager from "./TagManager";
 import { message, modal } from "@/utils/antdStatic";
 
-interface ListGroupManagerProps {
-  onActiveGroupChange: (listId: string) => void;
-}
-
 /**
  * 清单组管理组件
  * 负责清单组的添加、编辑、删除等功能
  */
-export default function ListGroupManager({
-  onActiveGroupChange,
-}: ListGroupManagerProps) {
+export default function ListGroupManager() {
   // 从全局导入的 message 和 modal，无需单独创建
   // 从store获取数据和方法
-  const { todoListData, todoTags, dispatchList, dispatchTag } = useTodoStore();
+
+  const { todoListData, setActiveListId, todoTags, dispatchList, dispatchTag } =
+    useTodoStore();
   const { collapsed } = useGlobalSettingsStore();
   // 统一管理添加和编辑的状态
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -134,7 +130,7 @@ export default function ListGroupManager({
           if (todoListData.length > 0) {
             const remainingGroups = todoListData.filter((g) => g.id !== listId);
             if (remainingGroups.length > 0) {
-              onActiveGroupChange(remainingGroups[0].id);
+              setActiveListId(remainingGroups[0].id);
             }
           }
         } catch (error) {
@@ -210,7 +206,7 @@ export default function ListGroupManager({
           },
         ],
       };
-      
+
       // 创建基础菜单项对象
       const menuItem: MenuProps["items"][number] = {
         key: tg.id,
@@ -242,7 +238,7 @@ export default function ListGroupManager({
           </Row>
         ),
       };
-      
+
       // 当collapsed不为true时，添加icon属性
       if (!collapsed) {
         menuItem.icon = tg.emoji ? (
@@ -251,7 +247,7 @@ export default function ListGroupManager({
           <AppstoreOutlined />
         );
       }
-      
+
       return menuItem;
     });
   };
@@ -301,7 +297,7 @@ export default function ListGroupManager({
           },
         ],
       };
-      
+
       // 创建基础菜单项对象
       const menuItem: MenuProps["items"][number] = {
         key: tag.id,
@@ -333,16 +329,16 @@ export default function ListGroupManager({
           </Row>
         ),
         onTitleClick: () => {
-          onActiveGroupChange(tag.id);
+          setActiveListId(tag.id);
         },
         children: renderTagsList(tag.id),
       };
-      
+
       // 当collapsed不为true时，添加icon属性
       if (!collapsed) {
         menuItem.icon = <TagOutlined />;
       }
-      
+
       //菜单Tag列表推入（push）
       result.push(menuItem);
     });

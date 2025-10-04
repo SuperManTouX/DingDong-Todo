@@ -4,6 +4,7 @@ import type { Todo } from "@/types";
 import { PointerSensor, KeyboardSensor, useSensor } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { SpecialLists } from "@/constants";
+import { throttle } from "lodash";
 
 // 定义hook返回类型
 interface UseTodoHierarchyReturn {
@@ -23,7 +24,8 @@ export default function useTodoHierarchy(
   renderTodos: () => Todo[],
   renderOtherTodos: () => Todo[],
 ): UseTodoHierarchyReturn {
-  const { dispatchTodo, activeListId, pinnedTasks } = useTodoStore();
+  const { dispatchTodo, activeListId, pinnedTasks, updateTodoLocally } =
+    useTodoStore();
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({
     // 默认可以在这里设置一些任务的展开状态
   });
@@ -157,61 +159,95 @@ export default function useTodoHierarchy(
 
     return hierarchicalTasks;
   };
-  // 拖动时
-  const handleDragOver = (event: any) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const activeId = active.id as string;
-    const overId = over.id as string;
-    const overContainerId = over.data.current.sortable.containerId as string;
-    // 获取拖动和放置的任务
-    const draggedTask = tasks.find((item) => item.id === activeId);
-    const targetTask = tasks.find((item) => item.id === overId);
-    if (!draggedTask || !overContainerId) return;
-    console.log(activeListId, SpecialLists);
-    if (activeListId.indexOf("tag") !== -1) {
-      // 当激活的列表ID包含"tag"时，将draggedTask的listId更新为over的listId
-      console.log("tag", targetTask);
-      dispatchTodo({
-        type: "changed",
-        todo: {
-          ...draggedTask,
+
+  // 使用lodash的throttle函数创建节流处理函数
+  const throttledDragUpdate = useCallback(
+    throttle((active: any, over: any) => {
+      const activeId = active.id as string;
+      const overId = over.id as string;
+      const overContainerId = over.data.current.sortable.containerId as string;
+      // 获取拖动和放置的任务
+      const draggedTask = tasks.find((item) => item.id === activeId);
+      const targetTask = tasks.find((item) => item.id === overId);
+      if (!draggedTask || !overContainerId) return;
+
+      console.log(activeListId, SpecialLists);
+      
+      // 获取被拖动任务的所有子任务
+      const findSubtasks = (parentId: string): Todo[] => {
+        const directSubtasks = tasks.filter(
+          (task) => task.parentId === parentId,
+        );
+        let allSubtasks: Todo[] = [...directSubtasks];
+
+        // 递归查找所有嵌套子任务
+        directSubtasks.forEach((subtask) => {
+          allSubtasks = [...allSubtasks, ...findSubtasks(subtask.id)];
+        });
+
+        return allSubtasks;
+      };
+
+      const subtasks = findSubtasks(draggedTask.id);
+      
+      // 确定要更新的字段
+      let updateFields: Partial<Todo> = {};
+
+      if (activeListId.indexOf("tag") !== -1) {
+        // 当激活的列表ID包含"tag"时，将draggedTask的listId更新为over的listId
+        console.log("tag", targetTask);
+        updateFields = {
           listId: targetTask.listId,
           groupId: null,
-        },
-      });
-    } else if (activeListId in SpecialLists) {
-      dispatchTodo({
-        type: "changed",
-        todo: {
-          ...draggedTask,
+        };
+      } else if (activeListId in SpecialLists) {
+        updateFields = {
           // 如果有参考任务，则使用其deadline
-          // 根据目标分组更新groupId，确保任务在目标分组中可见
           deadline: targetTask.deadline
             ? targetTask.deadline
             : draggedTask.deadline,
-        },
-      });
-    } else {
-      dispatchTodo({
-        type: "changed",
-        todo: {
-          ...draggedTask,
+        };
+      } else {
+        updateFields = {
           // 使用确定的目标分组ID
           groupId: overContainerId,
-        },
+        };
+      }
+      
+      // 更新拖动的任务
+      updateTodoLocally({
+        ...draggedTask,
+        ...updateFields,
       });
-    }
-  };
+      
+      // 更新所有子任务
+      subtasks.forEach((subtask) => {
+        updateTodoLocally({
+          ...subtask,
+          ...updateFields,
+        });
+      });
+    }, 100), // 限制为每100ms最多执行一次
+    [tasks, updateTodoLocally, activeListId],
+  );
+
+  // 拖动时 - 使用useCallback包装并调用节流函数
+  const handleDragOver = useCallback(
+    (event: any) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+
+      // 使用节流来限制状态更新频率
+      throttledDragUpdate(active, over);
+    },
+    [throttledDragUpdate],
+  );
 
   // 拖动排序方法 - 使用@dnd-kit处理拖拽排序和层级转换
   const handleDragEnd = useCallback(
     async (event: any) => {
       const { active, over } = event;
-      // 如果拖拽被取消或没有有效的放置目标，清除临时状态
-      if (!over || active.id === over.id) {
-        return;
-      }
+      console.log(over);
 
       // 获取拖动任务和放置目标任务
       const activeId = active.id as string;
@@ -223,9 +259,6 @@ export default function useTodoHierarchy(
       if (!draggedTask || !overContainerId) {
         return;
       }
-
-      // 检查目标是否为FilterGroup
-      const isTargetFilterGroup = over.data?.current?.type === "FilterGroup";
 
       // 获取被拖动任务的所有子任务
       const findSubtasks = (parentId: string): Todo[] => {
