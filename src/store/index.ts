@@ -23,9 +23,9 @@ export const useTodoStore = create<TodoState>()(
         // 初始化状态
         todoListData: [],
         todoTags: [],
-        activeListId: "",
+        activeListId: "todolist-001",
         selectTodoId: null,
-        bin: [], // 初始化回收站数据
+        // bin: [], // 初始化回收站数据
         // 当前用户未置顶任务
         tasks: [],
         groups: [],
@@ -51,6 +51,8 @@ export const useTodoStore = create<TodoState>()(
 
         // 任务相关操作
         dispatchTodo: (action) => todoActions.dispatchTodo(action, set, get),
+        updateTodoLocally: (action) =>
+          todoActions.updateTodoLocally(action, set, get),
         dispatchList: (action) => listActions.dispatchList(action, set, get),
         dispatchTag: (action) => tagActions.dispatchTag(action, set, get),
 
@@ -90,12 +92,10 @@ export const useTodoStore = create<TodoState>()(
             ({} as any)
           );
         },
+        // 计算属性，返回当前状态中的任务（保持同步）
         getActiveListTasks: () => {
           const state = get();
-          return state.tasks.filter((todo) => {
-            if (state.activeListId in SpecialLists) return true;
-            return todo.listId === state.activeListId;
-          });
+          return state.tasks;
         },
 
         // 工具方法
@@ -110,16 +110,9 @@ export const useTodoStore = create<TodoState>()(
         loadTags: () => loadActions.loadTags(set, get),
         loadGroups: () => loadActions.loadGroups(set, get),
         loadBinItems: () => loadActions.loadBinItems(set, get),
-        loadPinnedTasks: (listId?: string) =>
-          loadActions.loadPinnedTasks(set, get, listId),
-        loadListPinnedTasks: async (listId: string) => {
-          try {
-            const pinnedTasks = await getListPinnedTodos(listId);
-            set({ pinnedTasks });
-          } catch (error) {
-            console.error(`加载清单 ${listId} 的置顶任务失败:`, error);
-          }
-        },
+        // 从loadActions注册的方法，用于加载指定类型的任务
+        loadTasksByType: (type: string) =>
+          loadActions.loadTasksByType(set, get, type),
       };
     },
     { name: "TodoStore" },

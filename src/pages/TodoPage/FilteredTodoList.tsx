@@ -1,10 +1,9 @@
-import React from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import "@/styles/FilteredTodoList.css";
 import Controller from "./Controller";
 import FilterGroup from "./FilterGroup";
 import TaskItemRenderer from "./TaskItemRenderer";
 import { DndContext, closestCenter } from "@dnd-kit/core";
-import { useState } from "react";
 import {
   EllipsisOutlined,
   MenuFoldOutlined,
@@ -17,6 +16,78 @@ import useTodoOperations from "../../hooks/useTodoOperations";
 import useTodoHierarchy from "../../hooks/useTodoHierarchy";
 import { getActiveListTasks, useTodoStore } from "@/store/todoStore";
 import { useGlobalSettingsStore } from "@/store/globalSettingsStore";
+import { isEqual } from 'lodash';
+
+// 虚拟滚动组件接口
+interface VirtualListProps {
+  items: any[];
+  itemHeight: number;
+  containerHeight: number;
+  renderItem: (item: any, index: number) => React.ReactNode;
+  keyExtractor: (item: any, index: number) => string;
+}
+
+// 虚拟滚动组件实现
+const VirtualList: React.FC<VirtualListProps> = ({ 
+  items, 
+  itemHeight, 
+  containerHeight, 
+  renderItem, 
+  keyExtractor 
+}) => {
+  const [scrollTop, setScrollTop] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  // 计算可见项的数量
+  const visibleCount = Math.ceil(containerHeight / itemHeight);
+  
+  // 计算起始索引和结束索引
+  const startIndex = Math.floor(scrollTop / itemHeight);
+  const endIndex = Math.min(startIndex + visibleCount + 1, items.length);
+  
+  // 获取可见项
+  const visibleItems = items.slice(startIndex, endIndex);
+  
+  // 计算偏移量
+  const offsetY = startIndex * itemHeight;
+  
+  // 处理滚动事件
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    setScrollTop(e.currentTarget.scrollTop);
+  }, []);
+  
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        height: `${containerHeight}px`,
+        overflowY: 'auto',
+        position: 'relative',
+        width: '100%'
+      }}
+      onScroll={handleScroll}
+      className="custom-scrollbar"
+    >
+      <div style={{ height: `${items.length * itemHeight}px`, position: 'relative' }}>
+        <div 
+          style={{ 
+            transform: `translateY(${offsetY}px)`,
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%'
+          }}
+        >
+          {visibleItems.map((item, index) => (
+            <div key={keyExtractor(item, index + startIndex)} style={{ height: `${itemHeight}px` }}>
+              {renderItem(item, index + startIndex)}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function FilteredTodoList({
   groupName,
@@ -57,7 +128,7 @@ export default function FilteredTodoList({
         disabled: true,
       },
     ],
-    onClick: (e) => {
+    onClick: (e: any) => {
       switch (e.key) {
         case "detail":
           toggleShowTaskDetails();
@@ -95,6 +166,46 @@ export default function FilteredTodoList({
     handleDragOver,
     handleDragEnd,
   } = useTodoHierarchy(tasks, renderTodos, renderOtherTodos);
+
+  // 使用useMemo缓存渲染的任务数据，避免不必要的重渲染
+  const hierarchicalTasks = useMemo(() => {
+    return getHierarchicalTasks();
+  }, [getHierarchicalTasks, expandedTasks, tasks]);
+
+  // 使用useMemo缓存置顶任务的层次结构
+  const pinnedTasksHierarchical = useMemo(() => {
+    return getHierarchicalTasksForGroup(pinnedTasks);
+  }, [getHierarchicalTasksForGroup, pinnedTasks, expandedTasks]);
+
+  // 使用useMemo缓存其他任务
+  const otherTodos = useMemo(() => {
+    return renderOtherTodos();
+  }, [renderOtherTodos, tasks]);
+
+  // 使用React.memo包装TaskItemRenderer以避免不必要的重渲染
+  const MemoizedTaskItemRenderer = React.memo(TaskItemRenderer, (prevProps, nextProps) => {
+    // 深度比较props以确定是否需要重新渲染
+    return isEqual(prevProps, nextProps);
+  });
+
+  // 渲染任务项
+  const renderTaskItem = useCallback((item: any) => (
+    <MemoizedTaskItemRenderer
+      key={
+        typeof item === "object" && "id" in item
+          ? item.id
+          : `group-${Math.random()}`
+      }
+      item={item}
+      expandedTasks={expandedTasks}
+      hasSubTasks={hasSubTasks}
+      toggleTaskExpand={toggleTaskExpand}
+    />
+  ), [expandedTasks, hasSubTasks, toggleTaskExpand]);
+
+  // 判断是否需要使用虚拟滚动（任务数量超过50个时启用）
+  const shouldUseVirtualScroll = tasks.length > 50;
+
   return (
     <>
       {/*标题栏*/}
@@ -130,7 +241,7 @@ export default function FilteredTodoList({
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
         >
-          <ul className="col p-2 pt-0">
+          <div className="col p-2 pt-0">
             <Space className="w-100" direction="vertical" size="small">
               {/*顶部控制器组件*/}
               {!(activeListId === "bin" || activeListId === "cp") && (
@@ -144,98 +255,81 @@ export default function FilteredTodoList({
                 />
               )}
 
-              {/*已置顶分组*/}
+              {/*已置顶分组 - 不使用虚拟滚动，因为置顶任务通常较少*/}
               {pinnedTasks.length > 0 && (
                 <FilterGroup
                   key={"pinned"}
                   title={"⭐已置顶"}
                   tasks={pinnedTasks}
                 >
-                  {
-                    // 已置顶分组元素
-                    getHierarchicalTasksForGroup(pinnedTasks).map((item) => (
-                      <TaskItemRenderer
-                        key={
-                          typeof item === "object" && "id" in item
-                            ? item.id
-                            : `group-${Math.random()}`
-                        }
-                        item={item}
-                        expandedTasks={expandedTasks}
-                        hasSubTasks={hasSubTasks}
-                        toggleTaskExpand={toggleTaskExpand}
-                      />
-                    ))
-                  }
+                  {pinnedTasksHierarchical.map(renderTaskItem)}
                 </FilterGroup>
               )}
 
               {/*根据分组模式渲染任务列表*/}
-              {groupMode === "none" &&
-                // 未分组模式
-                getHierarchicalTasks().map((item) => (
-                  <TaskItemRenderer
-                    key={
+              {groupMode === "none" && hierarchicalTasks.length > 0 && (
+                shouldUseVirtualScroll ? (
+                  // 使用虚拟滚动优化长列表
+                  <VirtualList
+                    items={hierarchicalTasks}
+                    itemHeight={60} // 假设每个任务项的高度为60px
+                    containerHeight={400} // 设置虚拟滚动容器高度
+                    renderItem={(item) => (
+                      <div className="py-1">{renderTaskItem(item)}</div>
+                    )}
+                    keyExtractor={(item) => 
                       typeof item === "object" && "id" in item
                         ? item.id
-                        : `group-${Math.random()}`
+                        : `item-${Math.random()}`
                     }
-                    item={item}
-                    expandedTasks={expandedTasks}
-                    hasSubTasks={hasSubTasks}
-                    toggleTaskExpand={toggleTaskExpand}
                   />
-                ))}
+                ) : (
+                  // 普通渲染模式
+                  hierarchicalTasks.map(renderTaskItem)
+                )
+              )}
 
-              {groupMode !== "none" &&
-                displayGroups.map((group) => (
-                  <FilterGroup
-                    key={group.title}
-                    title={group.title}
-                    tasks={group.tasks}
-                    isUngrouped={group.type === "ungrouped"}
-                  >
-                    {getHierarchicalTasksForGroup(group.tasks).map((item) => (
-                      <TaskItemRenderer
-                        key={
-                          typeof item === "object" && "id" in item
-                            ? item.id
-                            : `group-${Math.random()}`
-                        }
-                        item={item}
-                        expandedTasks={expandedTasks}
-                        hasSubTasks={hasSubTasks}
-                        toggleTaskExpand={toggleTaskExpand}
-                      />
-                    ))}
-                  </FilterGroup>
-                ))}
-              {/*虚化显示其他任务（根据showType过滤掉的任务）*/}
-              {/*隐藏已完成任务，但是在“已完成”清单或“回收站”清单时依然显示*/}
-              {renderOtherTodos().length > 0 &&
+              {groupMode !== "none" && displayGroups.length > 0 && displayGroups.map((group) => (
+                <FilterGroup
+                  key={group.title}
+                  title={group.title}
+                  tasks={group.tasks}
+                  isUngrouped={group.type === "ungrouped"}
+                >
+                  {group.tasks.length > 30 ? (
+                    // 每个分组内的任务超过30个时使用虚拟滚动
+                    <VirtualList
+                      items={getHierarchicalTasksForGroup(group.tasks)}
+                      itemHeight={60}
+                      containerHeight={300}
+                      renderItem={(item) => (
+                        <div className="py-1">{renderTaskItem(item)}</div>
+                      )}
+                      keyExtractor={(item) => 
+                        typeof item === "object" && "id" in item
+                          ? item.id
+                          : `group-item-${Math.random()}`
+                      }
+                    />
+                  ) : (
+                    getHierarchicalTasksForGroup(group.tasks).map(renderTaskItem)
+                  )}
+                </FilterGroup>
+              ))}
+              
+              {/*虚化显示其他任务 - 通常数量不多，不使用虚拟滚动*/}
+              {otherTodos.length > 0 &&
                 (activeListId === "cp" ||
                   activeListId === "bin" ||
                   !hideCompletedTasks) && (
-                  <FilterGroup title="已完成" tasks={renderOtherTodos()}>
+                  <FilterGroup title="已完成" tasks={otherTodos}>
                     <div style={{ opacity: `.3` }}>
-                      {renderOtherTodos().map((item) => (
-                        <TaskItemRenderer
-                          key={
-                            typeof item === "object" && "id" in item
-                              ? item.id
-                              : `group-${Math.random()}`
-                          }
-                          item={item}
-                          expandedTasks={expandedTasks}
-                          hasSubTasks={hasSubTasks}
-                          toggleTaskExpand={toggleTaskExpand}
-                        />
-                      ))}
+                      {otherTodos.map(renderTaskItem)}
                     </div>
                   </FilterGroup>
                 )}
             </Space>
-          </ul>
+          </div>
         </DndContext>
       </Content>
 

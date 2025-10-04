@@ -1,10 +1,14 @@
-import { getAllTodos } from "@/services/todoService";
+import {
+  getAllTodos,
+  getListPinnedTodos,
+  getTasksByType,
+} from "@/services/todoService";
 import type { TodoState } from "../types";
 import { getAllTags } from "@/services/tagService";
 import { getAllGroups } from "@/services/groupService";
 import { getBinItems } from "@/services/binService";
 import { getAllTodoLists } from "@/services/listService";
-import { getListPinnedTodos } from "@/services/todoService";
+import { activeListId } from "@/store/todoStore";
 
 export const loadActions = {
   // 加载所有数据
@@ -21,7 +25,7 @@ export const loadActions = {
 
       // 并行加载所有数据
       const [todos, lists, tags, groups, binItems] = await Promise.all([
-        getAllTodos(),
+        get().loadTasksByType(),
         getAllTodoLists(),
         getAllTags(),
         getAllGroups(),
@@ -51,7 +55,10 @@ export const loadActions = {
           const pinnedTasks = await getListPinnedTodos(currentActiveListId);
           set({ pinnedTasks });
         } catch (error) {
-          console.error(`加载清单 ${currentActiveListId} 的置顶任务失败:`, error);
+          console.error(
+            `加载清单 ${currentActiveListId} 的置顶任务失败:`,
+            error,
+          );
           // 设置为空数组而不是保持可能的旧数据
           set({ pinnedTasks: [] });
         }
@@ -91,7 +98,7 @@ export const loadActions = {
       throw error;
     }
   },
-  
+
   // 加载所有任务数据并更新到state
   loadTodos: async (set: any, get: () => TodoState): Promise<void> => {
     try {
@@ -144,13 +151,16 @@ export const loadActions = {
       if (!currentActiveListId && lists && lists.length > 0) {
         currentActiveListId = lists[0].id;
         set({ activeListId: currentActiveListId });
-        
+
         // 加载该列表的置顶任务
         try {
           const pinnedTasks = await getListPinnedTodos(currentActiveListId);
           set({ pinnedTasks });
         } catch (error) {
-          console.error(`加载清单 ${currentActiveListId} 的置顶任务失败:`, error);
+          console.error(
+            `加载清单 ${currentActiveListId} 的置顶任务失败:`,
+            error,
+          );
           set({ pinnedTasks: [] });
         }
       }
@@ -215,42 +225,54 @@ export const loadActions = {
       throw error;
     }
   },
-  
-  // 加载置顶任务数据并更新到state
-  loadPinnedTasks: async (set: any, get: () => TodoState, listId?: string): Promise<void> => {
+
+  // 加载指定类型的任务数据并更新到state，同时加载置顶任务
+  loadTasksByType: async (
+    set: any,
+    get: () => TodoState,
+    type: string = get().activeListId,
+  ): Promise<any[]> => {
     try {
-      const authState =
+      const authState = 
         get().userId ||
         (await import("@/store/authStore")).useAuthStore.getState().userId;
 
       if (!authState) {
-        console.warn("用户未登录，无法加载置顶任务数据");
-        return;
+        console.warn("用户未登录，无法加载任务数据");
+        return [];
       }
 
-      // 如果没有提供listId，则使用当前激活的列表ID
-      const targetListId = listId || get().activeListId;
+      // 调用getTasksByType获取指定类型的任务
+      const tasks = await getTasksByType(type);
       
-      if (!targetListId || !targetListId.includes("todolist-")) {
-        console.warn("无效的列表ID，无法加载置顶任务");
+      // 同时加载置顶任务（仅对todolist类型）
+      if (type && type.includes("todolist-")) {
+        try {
+          const pinnedTasks = await getListPinnedTodos(type);
+          set({
+            pinnedTasks: pinnedTasks || [],
+          });
+          console.log(`清单 ${type} 的置顶任务加载成功`);
+        } catch (pinnedError) {
+          console.error("加载置顶任务数据失败:", pinnedError);
+          set({ pinnedTasks: [] });
+        }
+      } else if (type) {
+        // 非todolist类型时清空置顶任务
         set({ pinnedTasks: [] });
-        return;
       }
 
-      // 调用getListPinnedTodos获取置顶任务
-      const pinnedTasks = await getListPinnedTodos(targetListId);
-
-      // 更新本地置顶任务状态
+      // 更新本地任务状态
       set({
-        pinnedTasks: pinnedTasks || [],
+        tasks: tasks || [],
       });
 
-      console.log(`清单 ${targetListId} 的置顶任务加载成功`);
+      console.log(`${type}类型的任务数据加载成功`);
+      return tasks || [];
     } catch (error) {
-      console.error("加载置顶任务数据失败:", error);
-      // 设置为空数组而不是保持可能的旧数据
-      set({ pinnedTasks: [] });
-      throw error;
+      console.error(`加载${type}类型任务数据失败:`, error);
+      set({ pinnedTasks: [] }); // 出错时也清空置顶任务
+      return [];
     }
   },
 };

@@ -4,6 +4,7 @@ import { useAuthStore } from "@/store/authStore";
 import { createTodo, updateTodo, deleteTodo } from "@/services/todoService";
 import type { TodoActionExtended } from "@/types";
 import type { TodoState } from "../types";
+import type { Todo } from "@/types";
 
 export const todoActions = {
   dispatchTodo: async (
@@ -162,5 +163,30 @@ export const todoActions = {
       // 可以在这里添加用户友好的错误提示
       throw error; // 重新抛出错误以便调用者可以处理
     }
+  },
+
+  // 本地更新todo的方法 - 只更新本地状态，不发送API请求
+  // 用于拖拽等频繁操作场景，提高性能和用户体验
+  updateTodoLocally: (todo: Todo, set: any, get: () => TodoState): void => {
+    // 直接更新本地状态，不发送API请求
+    set(
+      produce((draftState: TodoState) => {
+        const todoIndex = draftState.tasks.findIndex(
+          (task) => task.id === todo.id,
+        );
+        console.log(todo);
+        if (todoIndex !== -1) {
+          // 更新任务信息，但保留createdAt和updatedAt等自动生成的字段
+          const existingTask = draftState.tasks[todoIndex];
+          draftState.tasks[todoIndex] = {
+            ...existingTask,
+            ...todo,
+            // 不覆盖系统字段
+            createdAt: existingTask.createdAt,
+            updatedAt: existingTask.updatedAt,
+          };
+        }
+      }),
+    );
   },
 };

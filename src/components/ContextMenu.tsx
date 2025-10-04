@@ -104,9 +104,8 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
           await togglePinTask(todo.id, newIsPinned);
 
           // 重新加载数据以反映子任务的变化
-          const { loadPinnedTasks, loadTodos } = useTodoStore.getState();
-          await loadPinnedTasks(activeListId);
-          await loadTodos();
+          const { loadTasksByType } = useTodoStore.getState();
+          await loadTasksByType(activeListId);
 
           message.success(MESSAGES.SUCCESS.TASK_PINNED);
         } catch (error) {

@@ -49,5 +49,5 @@ export interface TodoState {
   // API加载数据方法
   loadDataAll: () => Promise<void>;
   loadTags: () => Promise<void>;
-  loadListPinnedTasks: (listId: string) => Promise<void>; // 加载指定清单的置顶任务
+  loadTasksByType: (taskId: string) => Promise<void>;
 }

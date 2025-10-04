@@ -1,9 +1,10 @@
-import React from "react";
+import React, { memo, useCallback, useState } from "react";
 import { message } from "@/utils/antdStatic";
 import { formatMessage, MESSAGES } from "@/constants/messages";
 import { Priority } from "@/constants";
 import { theme } from "antd";
 import { RollbackOutlined } from "@ant-design/icons";
+import { isEqual } from 'lodash';
 
 interface TodoCheckboxProps {
   completed: boolean;
@@ -12,16 +13,72 @@ interface TodoCheckboxProps {
   onChange: (checked: boolean) => void;
 }
 
-const TodoCheckbox: React.FC<TodoCheckboxProps> = ({
+// 创建样式CSS类名（实际项目中应放在单独的CSS文件中）
+const todoCheckboxStyles = `
+  .todo-checkbox-container {
+    width: 20px;
+    height: 20px;
+    position: relative;
+    display: inline-block;
+  }
+  
+  .todo-checkbox {
+    position: absolute;
+    left: 4px;
+    top: 6px;
+    appearance: none;
+    WebkitAppearance: none;
+    MozAppearance: none;
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    verticalAlign: middle;
+    cursor: pointer;
+    border: 1px solid;
+    border-radius: 4px;
+    background-color: #fff;
+    outline: none;
+    transition: border-width 0.2s ease;
+  }
+  
+  .todo-checkbox.hovered {
+    border-width: 2px;
+  }
+  
+  .todo-checkbox:focus {
+    outline: 1px solid;
+    outline-offset: 1px;
+  }
+  
+  .todo-checkbox.checked {
+    background-color: currentColor;
+    border-color: currentColor;
+  }
+  
+  .todo-checkbox-checkmark {
+    position: absolute;
+    left: 8px;
+    top: 7px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    pointer-events: none;
+  }
+`;
+
+const TodoCheckbox: React.FC<TodoCheckboxProps> = memo(({
   completed,
   priority,
   title,
   onChange,
 }) => {
   const { token } = theme.useToken();
+  const [isHovered, setIsHovered] = useState(false);
 
-  // 获取优先级对应的颜色
-  const getPriorityColor = () => {
+  // 使用useCallback包装事件处理函数
+  const getPriorityColor = useCallback(() => {
     switch (priority) {
       case Priority.High:
         return "#ff4d4f"; // 红色
@@ -32,34 +89,9 @@ const TodoCheckbox: React.FC<TodoCheckboxProps> = ({
       default:
         return "#909399"; // 灰色
     }
-  };
+  }, [priority]);
 
-  // 创建自定义复选框样式
-  const customCheckboxStyle: React.CSSProperties = {
-    position: "absolute",
-    left: "4px",
-    top: "6px",
-    appearance: "none",
-    WebkitAppearance: "none",
-    MozAppearance: "none",
-    width: "1rem",
-    height: "1rem",
-    margin: "0",
-    verticalAlign: "middle",
-    cursor: "pointer",
-    border: `1px solid ${getPriorityColor()}`,
-    borderRadius: "4px",
-    backgroundColor: token.colorBgBase,
-    outline: "none",
-  };
-
-  const customCheckboxCheckedStyle: React.CSSProperties = {
-    ...customCheckboxStyle,
-    backgroundColor: getPriorityColor(),
-    borderColor: getPriorityColor(),
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const checked = e.currentTarget.checked;
     onChange(checked);
     if (checked) {
@@ -83,66 +115,43 @@ const TodoCheckbox: React.FC<TodoCheckboxProps> = ({
         duration: 3, // 消息显示3秒
       });
     }
-  };
+  }, [onChange, title]);
 
-  const handleMouseEnter = (e: React.MouseEvent<HTMLInputElement>) => {
-    if (!e.currentTarget.checked) {
-      e.currentTarget.style.border = `2px solid ${getPriorityColor()}`;
-    }
-  };
+  const handleMouseEnter = useCallback(() => {
+    setIsHovered(true);
+  }, []);
 
-  const handleMouseLeave = (e: React.MouseEvent<HTMLInputElement>) => {
-    if (!e.currentTarget.checked) {
-      e.currentTarget.style.border = `1px solid ${getPriorityColor()}`;
-    }
-  };
+  const handleMouseLeave = useCallback(() => {
+    setIsHovered(false);
+  }, []);
 
-  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    e.currentTarget.style.outline = `1px solid ${getPriorityColor()}`;
-    e.currentTarget.style.outlineOffset = "1px";
-  };
-
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    e.currentTarget.style.outline = "none";
-  };
+  const checkboxClasses = `todo-checkbox me-2 ${completed ? 'checked' : ''} ${!completed && isHovered ? 'hovered' : ''}`;
+  const priorityColor = getPriorityColor();
 
   return (
-    <div
-      style={{
-        width: "20px",
-        height: "20px",
-        position: "relative",
-        display: "inline-block",
-      }}
-    >
-      <input
-        type="checkbox"
-        className={"me-2"}
-        style={completed ? customCheckboxCheckedStyle : customCheckboxStyle}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        checked={completed}
-        onChange={handleChange}
-      />
-      {completed && (
-        <div
+    <>
+      <style>{todoCheckboxStyles}</style>
+      <div className="todo-checkbox-container">
+        <input
+          type="checkbox"
+          className={checkboxClasses}
           style={{
-            position: "absolute",
-            left: "8px",
-            top: "7px",
-            width: "5px",
-            height: "10px",
-            border: "solid white",
-            borderWidth: "0 2px 2px 0",
-            transform: "rotate(45deg)",
-            pointerEvents: "none",
+            borderColor: priorityColor,
+            color: priorityColor,
+            backgroundColor: completed ? priorityColor : token.colorBgBase,
           }}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          checked={completed}
+          onChange={handleChange}
         />
-      )}
-    </div>
+        {completed && <div className="todo-checkbox-checkmark" />}
+      </div>
+    </>
   );
-};
+}, (prevProps, nextProps) => {
+  // 使用lodash的isEqual进行深度比较
+  return isEqual(prevProps, nextProps);
+});
 
 export default TodoCheckbox;

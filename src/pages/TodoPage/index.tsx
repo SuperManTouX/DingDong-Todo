@@ -18,7 +18,7 @@ import { useTodoDataLoader } from "@/hooks/useTodoDataLoader";
  * 显示主待办事项列表和编辑功能
  */
 const Index: React.FC = () => {
-  const { setActiveListId, activeListId, todoTags } = useTodoStore();
+  const { activeListId, todoTags } = useTodoStore();
   const {
     isTodoDrawerOpen,
     setIsTodoDrawerOpen,
@@ -66,9 +66,7 @@ const Index: React.FC = () => {
     }
   }
   // 使用ListGroupManager组件管理清单组
-  const listGroupManager = ListGroupManager({
-    onActiveGroupChange: setActiveListId,
-  });
+  const listGroupManager = ListGroupManager();
 
   // 直接使用listGroupManager.menuItem作为第一层菜单
   const menuItem: MenuProps["items"] = listGroupManager.menuItem;
@@ -76,11 +74,7 @@ const Index: React.FC = () => {
   return (
     <>
       <Sider width={250} collapsedWidth={80} collapsed={collapsed}>
-        <SideMenu
-          menuItem={menuItem}
-          onActiveGroupChange={setActiveListId}
-          collapsed={collapsed}
-        />
+        <SideMenu menuItem={menuItem} />
       </Sider>
       <Layout className={"theme-color border-0"}>
         <FilteredTodoList
