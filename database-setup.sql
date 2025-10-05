@@ -81,6 +81,8 @@ CREATE TABLE IF NOT EXISTS task (
   pinned_at DATETIME NULL,
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
+  time_order_index INT DEFAULT 0,   -- 时间分组内排序索引
+  group_order_index INT DEFAULT 0,  -- 分组内排序索引
   FOREIGN KEY (list_id) REFERENCES todo_list(id) ON DELETE CASCADE,
   FOREIGN KEY (group_id) REFERENCES task_group(id) ON DELETE SET NULL,
   FOREIGN KEY (parent_id) REFERENCES task(id) ON DELETE CASCADE
@@ -90,6 +92,11 @@ CREATE TABLE IF NOT EXISTS task (
 CREATE INDEX idx_task_is_pinned ON task(is_pinned);
 CREATE INDEX idx_task_pinned_at ON task(pinned_at);
 CREATE INDEX idx_task_user_pinned ON task(user_id, is_pinned, pinned_at);
+
+-- 为排序相关字段创建索引
+CREATE INDEX idx_task_time_order ON task(list_id, deadline, time_order_index);
+CREATE INDEX idx_task_group_order ON task(list_id, group_id, group_order_index);
+CREATE INDEX idx_task_pinned ON task(list_id, is_pinned DESC, updated_at DESC);
 
 -- 7. 创建任务标签关联表
 CREATE TABLE IF NOT EXISTS task_tag (
@@ -120,6 +127,8 @@ CREATE TABLE IF NOT EXISTS bin (
   user_id VARCHAR(36) NOT NULL,
   is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
   pinned_at DATETIME NULL,
+	time_order_index INT DEFAULT 0,
+	group_order_index INT DEFAULT 0,
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   deleted_at DATETIME NOT NULL
@@ -181,79 +190,141 @@ VALUES
 
 
 -- 12. 插入任务数据 (标准化ID格式: task-xxx)
-INSERT INTO task (id, title, text, completed, priority, datetime_local, deadline, parent_id, depth, list_id, group_id, user_id, created_at, updated_at)
+-- 已完成的 INSERT 语句（仅展示核心字段，其余字段与之前保持一致）
+INSERT INTO task (id, title, text, completed, priority, deadline, user_id, group_id, list_id, depth, parent_id, group_order_index, time_order_index, created_at, updated_at)
 VALUES
-  -- 用户1的学习相关任务
-  ('task-001', '学习 React', '学习React基础和进阶内容，包括组件、状态管理等', false, 2, '2025-09-16T12:00:00.000Z', '2025-09-22T00:00:00.000Z', NULL, 0, 'todolist-001', 'group-001', 'user-001', NOW(), NOW()),
-  ('task-002', 'Sub 学习 React1', 'React组件生命周期和Hooks学习', false, 2, '2025-09-16T12:00:00.000Z', '2025-09-30T00:00:00.000Z', 'task-001', 1, 'todolist-001', 'group-001', 'user-001', NOW(), NOW()),
-  ('task-003', 'Sub 学习 React2', 'React路由和状态管理学习', false, 2, '2025-09-16T12:00:00.000Z', '2025-09-18T00:00:00.000Z', 'task-001', 1, 'todolist-001', 'group-001', 'user-001', NOW(), NOW()),
-  ('task-004', 'Sub 学习 React3', 'React性能优化和最佳实践', false, 2, '2025-09-16T12:00:00.000Z', '2025-09-18T00:00:00.000Z', 'task-001', 1, 'todolist-001', 'group-001', 'user-001', NOW(), NOW()),
-  ('task-005', '刷完《React 进阶实战》视频课', '完成10小时的React进阶实战视频课程', false, 2, '2025-09-16T12:00:00.000Z', '2025-09-20T00:00:00.000Z', NULL, 0, 'todolist-001', 'group-002', 'user-001', NOW(), NOW()),
-  ('task-006', '整理个人知识库', '将学习资料分类整理，建立知识体系', false, 1, '2025-09-16T12:00:00.000Z', '2025-09-25T00:00:00.000Z', NULL, 0, 'todolist-001', 'group-002', 'user-001', NOW(), NOW()),
-  ('task-007', '学习 TypeScript 高级特性', '学习泛型、类型守卫、装饰器等高级特性', false, 3, '2025-09-16T14:00:00.000Z', '2025-09-28T00:00:00.000Z', NULL, 0, 'todolist-001', 'group-001', 'user-001', NOW(), NOW()),
-  
-  -- 用户1的工作相关任务
-  ('task-008', '完成需求评审', '与团队讨论并确定项目需求和范围', true, 1, '2025-09-16T12:05:00.000Z', '2025-09-14T00:00:00.000Z', NULL, 0, 'todolist-002', 'group-003', 'user-001', NOW(), NOW()),
-  ('task-009', '编写API文档', '使用Swagger为后端API编写详细文档', false, 2, '2025-09-17T10:00:00.000Z', '2025-09-20T00:00:00.000Z', NULL, 0, 'todolist-002', 'group-003', 'user-001', NOW(), NOW()),
-  ('task-010', '准备周会材料', '收集项目进度，准备周会汇报内容', false, 1, '2025-09-17T15:00:00.000Z', '2025-09-18T00:00:00.000Z', NULL, 0, 'todolist-002', 'group-004', 'user-001', NOW(), NOW()),
-  ('task-011', '代码审查', '审查团队成员提交的代码，确保质量', false, 2, '2025-09-18T09:00:00.000Z', '2025-09-19T00:00:00.000Z', NULL, 0, 'todolist-002', 'group-004', 'user-001', NOW(), NOW()),
-  ('task-012', '团队培训会议', '组织技术分享会，提升团队技能', false, 1, '2025-09-20T14:00:00.000Z', '2025-09-20T00:00:00.000Z', NULL, 0, 'todolist-002', 'group-003', 'user-001', NOW(), NOW()),
-  
-  -- 用户2的任务
-  ('task-013', '购买生日礼物', '为朋友挑选生日礼物并包装', true, 1, '2025-09-15T18:00:00.000Z', '2025-09-15T00:00:00.000Z', NULL, 0, 'todolist-003', 'group-005', 'user-002', NOW(), NOW()),
-  ('task-014', '打扫房间', '打扫客厅、卧室和厨房，保持整洁', false, 2, '2025-09-17T10:00:00.000Z', '2025-09-17T00:00:00.000Z', NULL, 0, 'todolist-003', NULL, 'user-002', NOW(), NOW()),
-  ('task-015', '读完《代码整洁之道》', '阅读并理解代码整洁之道的核心原则', false, 3, '2025-09-16T09:00:00.000Z', '2025-09-30T00:00:00.000Z', NULL, 0, 'todolist-004', 'group-006', 'user-002', NOW(), NOW()),
-  ('task-016', '做读书笔记', '整理《代码整洁之道》的关键知识点和感悟', false, 2, '2025-09-19T15:00:00.000Z', '2025-09-25T00:00:00.000Z', 'task-015', 1, 'todolist-004', 'group-006', 'user-002', NOW(), NOW()),
-  ('task-017', '计划下本月阅读书单', '根据兴趣和需求，制定下个月的阅读计划', false, 1, '2025-09-25T10:00:00.000Z', '2025-09-28T00:00:00.000Z', NULL, 0, 'todolist-004', 'group-006', 'user-002', NOW(), NOW()),
-  
-  -- 用户3的任务
-  ('task-018', '跑步5公里', '在公园完成5公里跑步锻炼', false, 2, '2025-09-17T07:00:00.000Z', '2025-09-17T00:00:00.000Z', NULL, 0, 'todolist-005', 'group-007', 'user-003', NOW(), NOW()),
-  ('task-019', '健身训练', '进行力量训练，重点锻炼上肢', false, 3, '2025-09-18T18:00:00.000Z', '2025-09-18T00:00:00.000Z', NULL, 0, 'todolist-005', 'group-007', 'user-003', NOW(), NOW()),
-  
-  -- 用户1的旅行计划任务
-  ('task-020', '预订机票', '查询并预订往返机票，比较价格和时间', false, 2, '2025-09-20T10:00:00.000Z', '2025-09-25T00:00:00.000Z', NULL, 0, 'todolist-006', 'group-008', 'user-001', NOW(), NOW()),
-  ('task-021', '预订酒店', '根据行程安排预订合适的酒店住宿', false, 2, '2025-09-22T10:00:00.000Z', '2025-09-27T00:00:00.000Z', NULL, 0, 'todolist-006', 'group-008', 'user-001', NOW(), NOW()),
-  ('task-022', '制定行程计划', '详细规划每天的行程安排和景点游览', false, 1, '2025-09-24T14:00:00.000Z', '2025-09-30T00:00:00.000Z', NULL, 0, 'todolist-006', 'group-008', 'user-001', NOW(), NOW()),
-  
-  -- 新增30条多层级任务数据（从task-023开始）
-  -- 项目开发任务树（用户1）
-  ('task-023', '前端项目重构', '对现有前端项目进行全面重构，提升性能', false, 3, '2025-10-01T10:00:00.000Z', '2025-10-20T00:00:00.000Z', NULL, 0, 'todolist-002', 'group-003', 'user-001', NOW(), NOW()),
-  ('task-024', '技术栈选型', '评估并选择合适的前端技术栈和框架', false, 3, '2025-10-01T14:00:00.000Z', '2025-10-03T00:00:00.000Z', 'task-023', 1, 'todolist-002', 'group-003', 'user-001', NOW(), NOW()),
-  ('task-025', '框架对比分析', '对React、Vue和Angular进行详细对比分析', false, 2, '2025-10-02T10:00:00.000Z', '2025-10-03T00:00:00.000Z', 'task-024', 2, 'todolist-002', 'group-003', 'user-001', NOW(), NOW()),
-  ('task-026', '组件库评估', '评估多个UI组件库的适用性和功能', false, 2, '2025-10-02T14:00:00.000Z', '2025-10-04T00:00:00.000Z', 'task-024', 2, 'todolist-002', 'group-003', 'user-001', NOW(), NOW()),
-  ('task-027', '架构设计', '设计前端项目的整体架构和模块划分', false, 3, '2025-10-04T10:00:00.000Z', '2025-10-08T00:00:00.000Z', 'task-023', 1, 'todolist-002', 'group-003', 'user-001', NOW(), NOW()),
-  ('task-028', '目录结构规划', '规划项目的文件目录结构和命名规范', false, 2, '2025-10-04T14:00:00.000Z', '2025-10-05T00:00:00.000Z', 'task-027', 2, 'todolist-002', 'group-003', 'user-001', NOW(), NOW()),
-  ('task-029', '状态管理方案', '选择并实现适合项目的状态管理方案', false, 2, '2025-10-05T10:00:00.000Z', '2025-10-07T00:00:00.000Z', 'task-027', 2, 'todolist-002', 'group-003', 'user-001', NOW(), NOW()),
-  ('task-030', 'API接口设计', '设计前后端交互的API接口规范', false, 2, '2025-10-05T14:00:00.000Z', '2025-10-08T00:00:00.000Z', 'task-027', 2, 'todolist-002', 'group-003', 'user-001', NOW(), NOW()),
-  ('task-031', '代码实现', '根据设计文档进行具体的代码实现', false, 2, '2025-10-09T09:00:00.000Z', '2025-10-18T00:00:00.000Z', 'task-023', 1, 'todolist-002', 'group-004', 'user-001', NOW(), NOW()),
-  ('task-032', '核心组件开发', '开发项目所需的核心UI组件和业务组件', false, 2, '2025-10-09T10:00:00.000Z', '2025-10-15T00:00:00.000Z', 'task-031', 2, 'todolist-002', 'group-004', 'user-001', NOW(), NOW()),
-  ('task-033', '用户界面实现', '根据设计稿实现用户界面和交互效果', false, 2, '2025-10-12T10:00:00.000Z', '2025-10-17T00:00:00.000Z', 'task-031', 2, 'todolist-002', 'group-004', 'user-001', NOW(), NOW()),
-  ('task-034', '数据层对接', '实现前端与后端API的数据交互逻辑', false, 2, '2025-10-14T14:00:00.000Z', '2025-10-18T00:00:00.000Z', 'task-031', 2, 'todolist-002', 'group-004', 'user-001', NOW(), NOW()),
-  ('task-035', '测试与优化', '对项目进行全面测试和性能优化', false, 3, '2025-10-19T10:00:00.000Z', '2025-10-20T00:00:00.000Z', 'task-023', 1, 'todolist-002', 'group-003', 'user-001', NOW(), NOW()),
-  
-  -- 学习计划任务树（用户1）
-  ('task-036', '学习前端新技术', '了解和学习最新的前端技术和趋势', false, 2, '2025-10-01T09:00:00.000Z', '2025-10-30T00:00:00.000Z', NULL, 0, 'todolist-001', 'group-001', 'user-001', NOW(), NOW()),
-  ('task-037', '学习Vue 3', '系统学习Vue 3框架的核心概念和用法', false, 2, '2025-10-02T10:00:00.000Z', '2025-10-15T00:00:00.000Z', 'task-036', 1, 'todolist-001', 'group-001', 'user-001', NOW(), NOW()),
-  ('task-038', '安装开发环境', '搭建Vue 3的开发环境和项目脚手架', false, 1, '2025-10-02T14:00:00.000Z', '2025-10-03T00:00:00.000Z', 'task-037', 2, 'todolist-001', 'group-001', 'user-001', NOW(), NOW()),
-  ('task-039', '基础语法学习', '学习Vue 3的模板语法、组件基础等', false, 2, '2025-10-03T10:00:00.000Z', '2025-10-07T00:00:00.000Z', 'task-037', 2, 'todolist-001', 'group-001', 'user-001', NOW(), NOW()),
-  ('task-040', '组合式API实践', '深入学习和实践Vue 3的组合式API', false, 2, '2025-10-08T10:00:00.000Z', '2025-10-12T00:00:00.000Z', 'task-037', 2, 'todolist-001', 'group-001', 'user-001', NOW(), NOW()),
-  ('task-041', '创建示例项目', '使用Vue 3创建一个完整的示例项目', false, 3, '2025-10-13T10:00:00.000Z', '2025-10-15T00:00:00.000Z', 'task-037', 2, 'todolist-001', 'group-001', 'user-001', NOW(), NOW()),
-  ('task-042', '学习WebAssembly', '了解WebAssembly的基本概念和应用场景', false, 2, '2025-10-16T10:00:00.000Z', '2025-10-25T00:00:00.000Z', 'task-036', 1, 'todolist-001', 'group-001', 'user-001', NOW(), NOW()),
-  ('task-043', '理论学习', '学习WebAssembly的工作原理和编译过程', false, 2, '2025-10-16T14:00:00.000Z', '2025-10-20T00:00:00.000Z', 'task-042', 2, 'todolist-001', 'group-001', 'user-001', NOW(), NOW()),
-  ('task-044', '简单应用开发', '使用WebAssembly开发一个简单的应用实例', false, 3, '2025-10-21T10:00:00.000Z', '2025-10-25T00:00:00.000Z', 'task-042', 2, 'todolist-001', 'group-001', 'user-001', NOW(), NOW()),
-  
-  -- 生活任务树（用户2）
-  ('task-045', '家庭大扫除', '对整个家庭进行全面的清洁和整理', false, 2, '2025-10-05T09:00:00.000Z', '2025-10-05T00:00:00.000Z', NULL, 0, 'todolist-003', 'group-005', 'user-002', NOW(), NOW()),
-  ('task-046', '打扫客厅', '清洁客厅的地面、家具和窗户', false, 2, '2025-10-05T09:30:00.000Z', '2025-10-05T00:00:00.000Z', 'task-045', 1, 'todolist-003', 'group-005', 'user-002', NOW(), NOW()),
-  ('task-047', '扫地', '使用吸尘器清洁客厅的地毯和角落', false, 1, '2025-10-05T09:30:00.000Z', '2025-10-05T00:00:00.000Z', 'task-046', 2, 'todolist-003', 'group-005', 'user-002', NOW(), NOW()),
-  ('task-048', '拖地', '使用拖把清洁客厅的硬质地面', false, 1, '2025-10-05T10:30:00.000Z', '2025-10-05T00:00:00.000Z', 'task-046', 2, 'todolist-003', 'group-005', 'user-002', NOW(), NOW()),
-  ('task-049', '打扫卧室', '整理和清洁所有卧室空间', false, 2, '2025-10-05T11:30:00.000Z', '2025-10-05T00:00:00.000Z', 'task-045', 1, 'todolist-003', 'group-005', 'user-002', NOW(), NOW()),
-  ('task-050', '整理衣柜', '整理和分类衣柜中的衣物', false, 2, '2025-10-05T11:30:00.000Z', '2025-10-05T00:00:00.000Z', 'task-049', 2, 'todolist-003', 'group-005', 'user-002', NOW(), NOW()),
-  ('task-051', '更换床单', '更换所有卧室的床单和枕套', false, 1, '2025-10-05T12:30:00.000Z', '2025-10-05T00:00:00.000Z', 'task-049', 2, 'todolist-003', 'group-005', 'user-002', NOW(), NOW()),
-  ('task-052', '打扫厨房', '彻底清洁厨房的各个区域和电器', false, 3, '2025-10-05T13:30:00.000Z', '2025-10-05T00:00:00.000Z', 'task-045', 1, 'todolist-003', 'group-005', 'user-002', NOW(), NOW()),
-  ('task-053', '清洗油烟机', '拆卸并清洗厨房油烟机的滤网和部件', false, 3, '2025-10-05T13:30:00.000Z', '2025-10-05T00:00:00.000Z', 'task-052', 2, 'todolist-003', 'group-005', 'user-002', NOW(), NOW()),
-  ('task-054', '清洁灶台', '清洁厨房灶台和周围墙面', false, 2, '2025-10-05T14:30:00.000Z', '2025-10-05T00:00:00.000Z', 'task-052', 2, 'todolist-003', 'group-005', 'user-002', NOW(), NOW()),
-  ('task-055', '整理冰箱', '清理和整理冰箱内的食物和物品', false, 2, '2025-10-05T15:30:00.000Z', '2025-10-05T00:00:00.000Z', 'task-052', 2, 'todolist-003', 'group-005', 'user-002', NOW(), NOW());
+-- ========== 用户 1 ==========
+-- group-001 学习相关 未完成
+('task-001','学习 React','学习React框架的基础知识和高级特性，包括组件、状态管理等内容',0,2,'2025-09-18','user-001','group-001','todolist-001',0,NULL,0,0,NOW(),NOW()),
+('task-002','Sub 学习 React1','React组件基础学习，包括函数组件和类组件的使用方法',0,2,'2025-09-20','user-001','group-001','todolist-001',1,'task-001',1,1,NOW(),NOW()),
+('task-003','Sub 学习 React2','React状态管理学习，包括useState、useEffect等Hooks的使用',0,2,'2025-09-17','user-001','group-001','todolist-001',1,'task-001',2,2,NOW(),NOW()),
+('task-004','Sub 学习 React3','React路由配置和嵌套路由的使用方法',0,2,'2025-09-17','user-001','group-001','todolist-001',1,'task-001',3,3,NOW(),NOW()),
+('task-007','学习 TypeScript 高级特性','学习TypeScript的泛型、类型保护、装饰器等高级特性',0,3,'2025-09-19','user-001','group-001','todolist-001',0,NULL,4,4,NOW(),NOW()),
+
+-- group-002 学习相关 未完成
+('task-005','刷完《React 进阶实战》视频课','完成React进阶实战课程的全部章节学习',0,2,'2025-09-16','user-001','group-002','todolist-001',0,NULL,0,0,NOW(),NOW()),
+('task-006','整理个人知识库','将学习的知识系统化整理，形成个人知识体系',0,1,'2025-09-21','user-001','group-002','todolist-001',0,NULL,1,1,NOW(),NOW()),
+
+-- group-003 工作相关 未完成
+('task-009','编写API文档','为项目中的所有API接口编写详细的文档说明',0,2,'2025-09-16','user-001','group-003','todolist-002',0,NULL,0,0,NOW(),NOW()),
+('task-012','团队培训会议','组织团队成员进行技术培训和知识分享',0,1,'2025-09-16','user-001','group-003','todolist-002',0,NULL,1,1,NOW(),NOW()),
+
+-- group-003 工作相关 已完成
+('task-008','完成需求评审','参与产品需求评审会议并提出技术实现方案',1,1,'2025-09-14','user-001','group-003','todolist-002',0,NULL,0,NULL,NOW(),NOW()),
+
+-- group-004 工作相关 未完成
+('task-010','准备周会材料','整理本周工作进度和下周工作计划',0,1,'2025-09-15','user-001','group-004','todolist-002',0,NULL,0,0,NOW(),NOW()),
+('task-011','代码审查','审查团队成员提交的代码，确保代码质量',0,2,'2025-09-15','user-001','group-004','todolist-002',0,NULL,1,1,NOW(),NOW()),
+
+-- ========== 用户 2 ==========
+-- group-005 生活 未完成
+('task-014','打扫房间','打扫卧室和书房的卫生，保持整洁',0,2,'2025-09-17','user-002','group-005','todolist-003',0,NULL,0,0,NOW(),NOW()),
+('task-045','家庭大扫除','进行全屋深度清洁，包括厨房、卫生间等',0,2,'2025-09-19','user-002','group-005','todolist-003',0,NULL,1,1,NOW(),NOW()),
+('task-046','打扫客厅','清洁客厅的地面、沙发和家具表面',0,2,'2025-09-19','user-002','group-005','todolist-003',1,'task-045',2,2,NOW(),NOW()),
+('task-047','扫地','使用吸尘器清洁客厅地面',0,1,'2025-09-19','user-002','group-005','todolist-003',2,'task-046',3,3,NOW(),NOW()),
+('task-048','拖地','使用拖把清洁客厅地面，保持干燥',0,1,'2025-09-19','user-002','group-005','todolist-003',2,'task-046',4,4,NOW(),NOW()),
+
+-- group-005 生活 已完成
+('task-013','购买生日礼物','为朋友挑选合适的生日礼物并包装',1,1,'2025-09-13','user-002','group-005','todolist-003',0,NULL,0,NULL,NOW(),NOW()),
+
+-- group-006 阅读 未完成
+('task-015','读完《代码整洁之道》','阅读罗伯特·C·马丁的代码整洁之道，学习代码规范',0,3,'2025-09-22','user-002','group-006','todolist-004',0,NULL,0,0,NOW(),NOW()),
+('task-016','做读书笔记','整理《代码整洁之道》的读书笔记和心得体会',0,2,'2025-09-21','user-002','group-006','todolist-004',1,'task-015',1,1,NOW(),NOW()),
+('task-017','计划下本月阅读书单','规划下个月的阅读内容和书单',0,1,'2025-09-23','user-002','group-006','todolist-004',0,NULL,2,2,NOW(),NOW()),
+
+-- ========== 用户 3 ==========
+-- group-007 运动 未完成
+('task-018','跑步5公里','在公园或跑步机上完成5公里跑步锻炼',0,2,'2025-09-12','user-003','group-007','todolist-005',0,NULL,0,0,NOW(),NOW()),
+('task-019','健身训练','进行上肢和核心力量训练，每组12-15次',0,3,'2025-09-13','user-003','group-007','todolist-005',0,NULL,1,1,NOW(),NOW()),
+
+-- ========== 用户 1 旅行 ==========
+-- group-008 旅行 未完成
+('task-020','预订机票','查询并预订前往目的地的往返机票',0,2,'2025-09-10','user-001','group-008','todolist-006',0,NULL,0,0,NOW(),NOW()),
+('task-021','预订酒店','在目的地预订合适的酒店住宿',0,2,'2025-09-11','user-001','group-008','todolist-006',0,NULL,1,1,NOW(),NOW()),
+('task-022','制定行程计划','详细规划旅行期间的每日行程和景点安排',0,1,'2025-09-14','user-001','group-008','todolist-006',0,NULL,2,2,NOW(),NOW()),
+
+-- ========== 用户 1 新增任务 (60条，约一半有层级) ==========
+-- group-001 学习相关 新增任务（部分有层级）
+('task-100','学习 Vue.js 基础','学习Vue.js框架的基础知识，包括响应式系统和组件开发',0,2,'2025-09-15','user-001','group-001','todolist-001',0,NULL,5,5,NOW(),NOW()),
+('task-101','学习 Node.js','学习Node.js的基本概念和Express框架的使用',0,3,'2025-09-18','user-001','group-001','todolist-001',0,NULL,6,6,NOW(),NOW()),
+('task-102','Sub 安装 Vue CLI','使用npm安装Vue CLI并创建新项目',0,2,'2025-09-20','user-001','group-001','todolist-001',1,'task-100',7,7,NOW(),NOW()),
+('task-103','Sub 创建第一个 Vue 项目','使用Vue CLI创建第一个Vue.js项目并了解项目结构',0,2,'2025-09-16','user-001','group-001','todolist-001',1,'task-100',8,8,NOW(),NOW()),
+('task-104','学习 Docker','学习Docker容器技术的基本概念和使用方法',0,3,'2025-09-17','user-001','group-001','todolist-001',0,NULL,9,9,NOW(),NOW()),
+('task-105','Sub 学习 Git 分支管理','学习Git分支的创建、合并和管理',0,1,'2025-09-14','user-001','group-001','todolist-001',1,'task-104',10,10,NOW(),NOW()),
+('task-106','Sub 学习 Git 工作流','了解Git Flow和GitHub Flow等工作流程',0,2,'2025-09-19','user-001','group-001','todolist-001',1,'task-104',11,11,NOW(),NOW()),
+('task-107','Sub 配置 Webpack 开发环境','学习Webpack的基本配置和开发环境搭建',0,2,'2025-09-22','user-001','group-001','todolist-001',1,'task-101',12,12,NOW(),NOW()),
+('task-108','Sub 学习 CSS Grid 布局','学习CSS Grid布局系统的使用方法',0,1,'2025-09-13','user-001','group-001','todolist-001',1,'task-101',13,13,NOW(),NOW()),
+('task-109','学习 TypeScript 泛型','深入学习TypeScript泛型的使用场景和高级用法',0,3,'2025-09-21','user-001','group-001','todolist-001',0,NULL,14,14,NOW(),NOW()),
+
+-- group-002 学习相关 新增任务（部分有层级）
+('task-110','学习微服务架构','深入学习微服务架构的设计原则和实现方法',0,3,'2025-09-17','user-001','group-002','todolist-001',0,NULL,2,2,NOW(),NOW()),
+('task-111','学习算法与数据结构','复习和学习算法与数据结构的基础知识',0,2,'2025-09-18','user-001','group-002','todolist-001',0,NULL,3,3,NOW(),NOW()),
+('task-112','Sub 学习设计模式-创建型','学习工厂模式、单例模式等创建型设计模式',0,2,'2025-09-19','user-001','group-002','todolist-001',1,'task-111',4,4,NOW(),NOW()),
+('task-113','Sub 学习设计模式-结构型','学习适配器模式、装饰器模式等结构型设计模式',0,3,'2025-09-20','user-001','group-002','todolist-001',1,'task-111',5,5,NOW(),NOW()),
+('task-114','Sub 前端性能优化-资源加载','学习前端资源加载优化的方法和策略',0,2,'2025-09-15','user-001','group-002','todolist-001',1,'task-110',6,6,NOW(),NOW()),
+('task-115','Sub 前端性能优化-渲染优化','学习前端渲染性能优化的技术和方法',0,2,'2025-09-16','user-001','group-002','todolist-001',1,'task-110',7,7,NOW(),NOW()),
+('task-116','学习 RESTful API 设计','学习RESTful API的设计原则和最佳实践',0,1,'2025-09-14','user-001','group-002','todolist-001',0,NULL,8,8,NOW(),NOW()),
+('task-117','Sub 响应式设计-媒体查询','学习CSS媒体查询的使用方法和技巧',0,1,'2025-09-22','user-001','group-002','todolist-001',1,'task-116',9,9,NOW(),NOW()),
+
+-- group-003 工作相关 新增任务（部分有层级）
+('task-118','编写项目文档','编写项目的技术文档和使用说明',0,2,'2025-09-15','user-001','group-003','todolist-002',0,NULL,2,2,NOW(),NOW()),
+('task-119','优化数据库查询','优化项目中的数据库查询语句，提升性能',0,3,'2025-09-17','user-001','group-003','todolist-002',0,NULL,3,3,NOW(),NOW()),
+('task-120','Sub 修复登录页面bug','修复登录页面的表单验证和错误提示bug',0,3,'2025-09-16','user-001','group-003','todolist-002',1,'task-119',4,4,NOW(),NOW()),
+('task-121','Sub 修复数据保存bug','修复数据保存过程中的错误处理逻辑',0,2,'2025-09-18','user-001','group-003','todolist-002',1,'task-119',5,5,NOW(),NOW()),
+('task-122','Sub 准备技术分享PPT','为团队技术分享会议准备PPT演示文稿',0,1,'2025-09-20','user-001','group-003','todolist-002',1,'task-118',6,6,NOW(),NOW()),
+('task-123','Sub 准备技术分享内容','整理技术分享会议的具体内容和示例代码',0,2,'2025-09-19','user-001','group-003','todolist-002',1,'task-118',7,7,NOW(),NOW()),
+('task-124','性能测试','对项目进行性能测试并生成测试报告',0,2,'2025-09-21','user-001','group-003','todolist-002',0,NULL,8,8,NOW(),NOW()),
+('task-125','Sub 编写单元测试用例','为核心功能编写详细的单元测试用例',0,1,'2025-09-14','user-001','group-003','todolist-002',1,'task-124',9,9,NOW(),NOW()),
+('task-126','Sub 运行单元测试','执行单元测试并分析测试结果',0,2,'2025-09-13','user-001','group-003','todolist-002',1,'task-124',10,10,NOW(),NOW()),
+('task-127','配置CI/CD流程','配置持续集成和持续部署的自动化流程',0,3,'2025-09-22','user-001','group-003','todolist-002',0,NULL,11,11,NOW(),NOW()),
+
+-- group-004 工作相关 新增任务（部分有层级）
+('task-128','参加产品规划会议','参加产品规划会议并记录讨论要点',0,1,'2025-09-17','user-001','group-004','todolist-002',0,NULL,2,2,NOW(),NOW()),
+('task-129','评审UI设计稿','评审新功能的UI设计稿并提供反馈',0,2,'2025-09-18','user-001','group-004','todolist-002',0,NULL,3,3,NOW(),NOW()),
+('task-130','Sub 制定前端开发计划','制定前端功能开发的详细计划和时间表',0,2,'2025-09-16','user-001','group-004','todolist-002',1,'task-129',4,4,NOW(),NOW()),
+('task-131','Sub 制定后端开发计划','制定后端API开发的详细计划和时间表',0,1,'2025-09-19','user-001','group-004','todolist-002',1,'task-129',5,5,NOW(),NOW()),
+('task-132','Sub 编写用户故事-登录功能','编写登录功能的详细用户故事和验收标准',0,2,'2025-09-15','user-001','group-004','todolist-002',1,'task-128',6,6,NOW(),NOW()),
+('task-133','Sub 编写用户故事-数据展示','编写数据展示功能的详细用户故事和验收标准',0,2,'2025-09-20','user-001','group-004','todolist-002',1,'task-128',7,7,NOW(),NOW()),
+('task-134','安排团队任务','将开发任务分配给团队成员并设定截止日期',0,1,'2025-09-14','user-001','group-004','todolist-002',0,NULL,8,8,NOW(),NOW()),
+('task-135','Sub 准备项目进度周报','整理本周项目进度并准备周报文档',0,2,'2025-09-21','user-001','group-004','todolist-002',1,'task-134',9,9,NOW(),NOW()),
+
+-- group-008 旅行相关 新增任务（部分有层级）
+('task-136','购买旅行保险','选择合适的旅行保险套餐并完成购买',0,2,'2025-09-15','user-001','group-008','todolist-006',0,NULL,3,3,NOW(),NOW()),
+('task-137','Sub 兑换美元','在银行或兑换点兑换旅行所需的美元现金',0,1,'2025-09-16','user-001','group-008','todolist-006',1,'task-136',4,4,NOW(),NOW()),
+('task-138','Sub 兑换当地货币','在银行或兑换点兑换旅行目的地的当地货币',0,1,'2025-09-17','user-001','group-008','todolist-006',1,'task-136',5,5,NOW(),NOW()),
+('task-139','Sub 研究历史景点','收集和研究旅行目的地的历史景点信息',0,1,'2025-09-18','user-001','group-008','todolist-006',1,'task-022',6,6,NOW(),NOW()),
+('task-140','Sub 研究自然景点','收集和研究旅行目的地的自然景点信息',0,2,'2025-09-19','user-001','group-008','todolist-006',1,'task-022',7,7,NOW(),NOW()),
+('task-141','查找当地餐厅','搜索并记录旅行目的地的推荐餐厅',0,1,'2025-09-20','user-001','group-008','todolist-006',0,NULL,8,8,NOW(),NOW()),
+('task-142','Sub 下载离线地图-市区','下载旅行目的地市区的离线地图',0,1,'2025-09-21','user-001','group-008','todolist-006',1,'task-141',9,9,NOW(),NOW()),
+
+-- 新增日常任务组任务（部分有层级）
+('task-143','完成日报','编写并提交每日工作进度报告',0,1,'2025-09-15','user-001','group-001','todolist-001',0,NULL,15,15,NOW(),NOW()),
+('task-144','健身锻炼','进行日常健身锻炼，保持身体健康',0,2,'2025-09-16','user-001','group-001','todolist-001',0,NULL,16,16,NOW(),NOW()),
+('task-145','Sub 阅读前端技术文章','阅读和学习最新的前端技术文章',0,1,'2025-09-17','user-001','group-001','todolist-001',1,'task-143',17,17,NOW(),NOW()),
+('task-146','Sub 阅读后端技术文章','阅读和学习最新的后端技术文章',0,1,'2025-09-18','user-001','group-001','todolist-001',1,'task-143',18,18,NOW(),NOW()),
+('task-147','Sub 备份项目代码','对项目代码进行定期备份',0,2,'2025-09-19','user-001','group-001','todolist-001',1,'task-144',19,19,NOW(),NOW()),
+('task-148','Sub 备份数据库','对项目数据库进行定期备份',0,2,'2025-09-20','user-001','group-001','todolist-001',1,'task-144',20,20,NOW(),NOW()),
+('task-149','回复重要邮件','回复积压的重要工作邮件',0,2,'2025-09-14','user-001','group-003','todolist-002',0,NULL,13,13,NOW(),NOW()),
+('task-150','更新个人简历','根据最新技能和项目经验更新个人简历',0,1,'2025-09-21','user-001','group-002','todolist-001',0,NULL,11,11,NOW(),NOW()),
+('task-151','Sub 准备学习笔记-React','整理React学习的笔记和重点',0,1,'2025-09-13','user-001','group-002','todolist-001',1,'task-150',12,12,NOW(),NOW()),
+('task-152','Sub 准备学习笔记-TypeScript','整理TypeScript学习的笔记和重点',0,2,'2025-09-22','user-001','group-002','todolist-001',1,'task-150',13,13,NOW(),NOW()),
+('task-153','编写技术博客','编写一篇技术博客分享开发经验',0,3,'2025-09-16','user-001','group-004','todolist-002',0,NULL,11,11,NOW(),NOW()),
+('task-154','Sub 代码复审-前端部分','对前端代码进行详细的代码复审',0,2,'2025-09-17','user-001','group-004','todolist-002',1,'task-153',12,12,NOW(),NOW()),
+('task-155','Sub 代码复审-后端部分','对后端代码进行详细的代码复审',0,2,'2025-09-18','user-001','group-004','todolist-002',1,'task-153',13,13,NOW(),NOW()),
+('task-156','研究新技术','研究和学习项目可能用到的新技术',0,3,'2025-09-19','user-001','group-001','todolist-001',0,NULL,19,19,NOW(),NOW()),
+('task-157','Sub 准备会议材料-PPT','制作会议所需的PPT演示文稿',0,2,'2025-09-20','user-001','group-001','todolist-001',1,'task-156',21,21,NOW(),NOW()),
+('task-158','Sub 准备会议材料-文档','准备会议所需的详细文档资料',0,1,'2025-09-14','user-001','group-001','todolist-001',1,'task-156',22,22,NOW(),NOW()),
+('task-159','制定下周计划','制定下周的工作计划和学习计划',0,2,'2025-09-15','user-001','group-004','todolist-002',0,NULL,13,13,NOW(),NOW()),
+('task-160','Sub 总结工作进度-前端','总结前端部分的工作进度和问题',0,1,'2025-09-16','user-001','group-004','todolist-002',1,'task-159',14,14,NOW(),NOW()),
+('task-161','Sub 总结工作进度-后端','总结后端部分的工作进度和问题',0,1,'2025-09-17','user-001','group-004','todolist-002',1,'task-159',15,15,NOW(),NOW()),
+('task-162','优化工作流程','分析并优化团队的工作流程',0,2,'2025-09-18','user-001','group-003','todolist-002',0,NULL,17,17,NOW(),NOW()),
+('task-163','Sub 学习产品知识-用户研究','学习用户研究的方法和技巧',0,1,'2025-09-19','user-001','group-003','todolist-002',1,'task-162',18,18,NOW(),NOW()),
+('task-164','Sub 学习产品知识-需求分析','学习需求分析的方法和技巧',0,1,'2025-09-20','user-001','group-003','todolist-002',1,'task-162',19,19,NOW(),NOW()),
+('task-165','更新技术栈','更新项目使用的技术栈到最新版本',0,3,'2025-09-14','user-001','group-001','todolist-001',0,NULL,20,20,NOW(),NOW()),
+('task-166','Sub 准备演示文稿-内容','准备技术分享演示文稿的具体内容',0,2,'2025-09-15','user-001','group-001','todolist-001',1,'task-165',23,23,NOW(),NOW()),
+('task-167','Sub 准备演示文稿-样式','美化技术分享演示文稿的样式设计',0,2,'2025-09-16','user-001','group-001','todolist-001',1,'task-165',24,24,NOW(),NOW()),
+('task-168','Sub 分析用户反馈-正面','分析和总结用户的正面反馈',0,1,'2025-09-17','user-001','group-003','todolist-002',1,'task-164',20,20,NOW(),NOW()),
+('task-169','Sub 分析用户反馈-负面','分析和总结用户的负面反馈并提出改进方案',0,3,'2025-09-18','user-001','group-003','todolist-002',1,'task-164',21,21,NOW(),NOW());
 
 -- 13. 插入任务标签关联数据
 INSERT INTO task_tag (task_id, tag_id, created_at)
@@ -355,79 +426,9 @@ VALUES
   -- 旅行相关任务额外标签
   ('task-020', 'tag-006', NOW()),
   ('task-021', 'tag-006', NOW()),
-  ('task-022', 'tag-009', NOW()),
+  ('task-022', 'tag-009', NOW());
   
-  -- 新项目开发任务树的标签
-  ('task-023', 'tag-006', NOW()),
-  ('task-023', 'tag-009', NOW()),
-  ('task-023', 'tag-010', NOW()),
-  ('task-024', 'tag-006', NOW()),
-  ('task-024', 'tag-009', NOW()),
-  ('task-025', 'tag-001', NOW()),
-  ('task-025', 'tag-002', NOW()),
-  ('task-026', 'tag-001', NOW()),
-  ('task-026', 'tag-002', NOW()),
-  ('task-027', 'tag-006', NOW()),
-  ('task-027', 'tag-009', NOW()),
-  ('task-028', 'tag-006', NOW()),
-  ('task-028', 'tag-010', NOW()),
-  ('task-029', 'tag-001', NOW()),
-  ('task-029', 'tag-002', NOW()),
-  ('task-030', 'tag-001', NOW()),
-  ('task-030', 'tag-004', NOW()),
-  ('task-031', 'tag-006', NOW()),
-  ('task-031', 'tag-010', NOW()),
-  ('task-032', 'tag-001', NOW()),
-  ('task-032', 'tag-002', NOW()),
-  ('task-033', 'tag-001', NOW()),
-  ('task-033', 'tag-002', NOW()),
-  ('task-034', 'tag-001', NOW()),
-  ('task-034', 'tag-004', NOW()),
-  ('task-035', 'tag-006', NOW()),
-  ('task-035', 'tag-010', NOW()),
-  
-  -- 新学习计划任务树的标签
-  ('task-036', 'tag-001', NOW()),
-  ('task-036', 'tag-003', NOW()),
-  ('task-037', 'tag-001', NOW()),
-  ('task-037', 'tag-002', NOW()),
-  ('task-037', 'tag-003', NOW()),
-  ('task-038', 'tag-001', NOW()),
-  ('task-038', 'tag-003', NOW()),
-  ('task-039', 'tag-001', NOW()),
-  ('task-039', 'tag-002', NOW()),
-  ('task-039', 'tag-003', NOW()),
-  ('task-040', 'tag-001', NOW()),
-  ('task-040', 'tag-002', NOW()),
-  ('task-040', 'tag-003', NOW()),
-  ('task-041', 'tag-001', NOW()),
-  ('task-041', 'tag-002', NOW()),
-  ('task-041', 'tag-003', NOW()),
-  ('task-042', 'tag-001', NOW()),
-  ('task-042', 'tag-004', NOW()),
-  ('task-043', 'tag-001', NOW()),
-  ('task-043', 'tag-003', NOW()),
-  ('task-044', 'tag-001', NOW()),
-  ('task-044', 'tag-004', NOW()),
-  
-  -- 新生活任务树的标签
-  ('task-045', 'tag-012', NOW()),
-  ('task-046', 'tag-012', NOW()),
-  ('task-047', 'tag-012', NOW()),
-  ('task-047', 'tag-014', NOW()),
-  ('task-048', 'tag-012', NOW()),
-  ('task-048', 'tag-014', NOW()),
-  ('task-049', 'tag-012', NOW()),
-  ('task-050', 'tag-012', NOW()),
-  ('task-051', 'tag-012', NOW()),
-  ('task-052', 'tag-012', NOW()),
-  ('task-052', 'tag-014', NOW()),
-  ('task-053', 'tag-012', NOW()),
-  ('task-053', 'tag-014', NOW()),
-  ('task-054', 'tag-012', NOW()),
-  ('task-054', 'tag-014', NOW()),
-  ('task-055', 'tag-012', NOW()),
-  ('task-055', 'tag-014', NOW());
+
 
 -- 14. 插入回收站数据 (标准化ID格式: bin-xxx)
 INSERT INTO bin (id, title, text, completed, priority, datetime_local, deadline, parent_id, depth, list_id, group_id, user_id, created_at, updated_at, deleted_at)

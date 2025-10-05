@@ -54,6 +54,12 @@ export class Task {
   @Column({ name: 'is_reminded', default: false })
   is_reminded: boolean;
 
+  @Column({ type: 'int', default: 0, name: 'time_order_index' })
+  timeOrderIndex: number;
+
+  @Column({ type: 'int', default: 0, name: 'group_order_index' })
+  groupOrderIndex: number;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
