@@ -2,6 +2,7 @@ import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Req, HttpSt
 import { TaskService } from './todo.service';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { BatchUpdateOrderDto } from './dto/batch-update-order.dto';
 @ApiTags('任务管理')
 @Controller('todos')
 export class TodoController {
@@ -74,6 +75,7 @@ export class TodoController {
   })
   @ApiResponse({ status: 201, description: '创建成功' })
   @Post('demo')
+  @HttpCode(HttpStatus.CREATED)
   async createDemo() {
     return this.todoService.createDemo();
   }
@@ -128,6 +130,7 @@ export class TodoController {
   @ApiResponse({ status: 401, description: '未授权' })
   @UseGuards(AuthGuard('jwt'))
   @Post()
+  @HttpCode(HttpStatus.CREATED)
   async create(@Body() todoData: any, @Req() req) {
     // 确保用户ID是当前登录用户的ID
     todoData.userId = req.user.id;
@@ -186,6 +189,21 @@ export class TodoController {
   @Patch(':id/pin')
   async togglePin(@Param('id') id: string, @Req() req) {
     return this.todoService.togglePin(id, req.user.id);
+  }
+
+  // 批量更新任务排序
+  @ApiOperation({
+    summary: '批量更新任务排序',
+    description: '批量更新任务的排序索引',
+  })
+  @ApiBearerAuth()
+  @ApiResponse({ status: 201, description: '更新成功' })
+  @ApiResponse({ status: 401, description: '未授权' })
+  @UseGuards(AuthGuard('jwt'))
+  @Post('batch-update-order')
+  @HttpCode(HttpStatus.CREATED)
+  async batchUpdateOrder(@Body() dto: BatchUpdateOrderDto, @Req() req) {
+    return this.todoService.batchUpdateOrder(dto, req.user.id);
   }
 
   // 删除任务

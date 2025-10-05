@@ -742,6 +742,40 @@
         ]
       }
     },
+    "/todos/batch-update-order": {
+      "post": {
+        "description": "批量更新任务的排序索引",
+        "operationId": "TodoController_batchUpdateOrder",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchUpdateOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "更新成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "批量更新任务排序",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
     "/todo": {
       "get": {
         "description": "与/todos相同的功能，用于兼容性支持",
@@ -1799,6 +1833,11 @@
         "in": "header"
       }
     },
-    "schemas": {}
+    "schemas": {
+      "BatchUpdateOrderDto": {
+        "type": "object",
+        "properties": {}
+      }
+    }
   }
 }
