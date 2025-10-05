@@ -1,4 +1,10 @@
-import React, { useState, useRef, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useRef,
+  useCallback,
+  useMemo,
+  useEffect,
+} from "react";
 import "@/styles/FilteredTodoList.css";
 import Controller from "./Controller";
 import FilterGroup from "./FilterGroup";
@@ -9,14 +15,16 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
 } from "@ant-design/icons";
-import { Button, Col, Dropdown, Row, Space, Typography } from "antd";
+import { Button, Col, Dropdown, Row, Space, Typography, message } from "antd";
 import { Header, Content, Footer } from "antd/es/layout/layout";
-import useTodoGrouping from "../../hooks/useTodoGrouping";
+import useTodoGrouping from "@/hooks/useTodoGrouping";
 import useTodoOperations from "../../hooks/useTodoOperations";
 import useTodoHierarchy from "../../hooks/useTodoHierarchy";
 import { getActiveListTasks, useTodoStore } from "@/store/todoStore";
 import { useGlobalSettingsStore } from "@/store/globalSettingsStore";
 import { isEqual } from "lodash";
+import api from "@/services/api";
+import { SpecialLists } from "@/constants";
 
 // 虚拟滚动组件接口
 interface VirtualListProps {
@@ -237,11 +245,13 @@ export default function FilteredTodoList({
             </Typography.Title>
           </Col>
           <Col>
-            <Dropdown menu={menuProps} trigger={["click"]}>
-              <EllipsisOutlined
-                style={{ cursor: "pointer", fontSize: "18px" }}
-              />
-            </Dropdown>
+            <Space>
+              <Dropdown menu={menuProps} trigger={["click"]}>
+                <EllipsisOutlined
+                  style={{ cursor: "pointer", fontSize: "18px" }}
+                />
+              </Dropdown>
+            </Space>
           </Col>
         </Row>
       </Header>

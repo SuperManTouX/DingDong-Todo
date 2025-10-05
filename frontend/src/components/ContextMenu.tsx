@@ -18,16 +18,20 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
   // 添加子任务
   function handleAddSubTask(todo: Todo): void {
     const { activeListId } = useTodoStore.getState();
-    dispatchTodo({
+    const action: any = {
       type: "added",
       title: "",
       completed: false,
-      parentId: todo.parentId,
+      parentId: todo.id,
       depth: todo.depth + 1,
       groupId: todo.groupId,
       isPinned: todo.isPinned,
-      listId: activeListId,
-    });
+      listId: todo.listId,
+    };
+    if (activeListId === "today" || activeListId === "nearlyWeek") {
+      action.deadline = todo.deadline;
+    }
+    dispatchTodo(action);
   }
 
   // 处理标签变化

@@ -69,7 +69,7 @@ export const redTheme: ThemeConfig = {
   textColor: "#374151", // 文本色 - 深灰色
   hoverColor: "#ec489920", // 主色调的更浅色版本
   menuBgColor: "rgb(228,233,223)", // 主色调的更浅色透明版本
-  menuHoverColor: "rgb(217,224,211)", // 主色调的更浅色透明版本
+  menuHoverColor: "rgb(254,208,218)", // 主色调的更浅色透明版本
   dateColor: "#60a5fa", // 使用主色调
   gradientColor:
     "linear-gradient(to bottom, rgb(255,121,164), rgb(255,175,166))", // 粉色渐变
