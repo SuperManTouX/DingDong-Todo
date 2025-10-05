@@ -5,6 +5,7 @@ import { createTodo, updateTodo, deleteTodo } from "@/services/todoService";
 import type { TodoActionExtended } from "@/types";
 import type { TodoState } from "../types";
 import type { Todo } from "@/types";
+import { produce } from "immer";
 
 export const todoActions = {
   dispatchTodo: async (
@@ -165,6 +166,29 @@ export const todoActions = {
     }
   },
 
+  // 交换两个任务在数组中的位置
+  swapTasksPositions: (draggedTask: Todo, targetTask: Todo, set: any, get: () => TodoState): void => {
+    set(
+      produce((draftState: TodoState) => {
+        // 查找两个任务在tasks数组中的索引
+        const draggedIndex = draftState.tasks.findIndex(task => task.id === draggedTask.id);
+        const targetIndex = draftState.tasks.findIndex(task => task.id === targetTask.id);
+
+        // 确保两个任务都存在于数组中
+        if (draggedIndex !== -1 && targetIndex !== -1) {
+          // 交换任务位置
+          const temp = draftState.tasks[draggedIndex];
+          draftState.tasks[draggedIndex] = draftState.tasks[targetIndex];
+          draftState.tasks[targetIndex] = temp;
+          
+          console.log(`已成功交换任务位置: draggedTask (${draggedTask.id}) 与 targetTask (${targetTask.id})`);
+        } else {
+          console.error('交换任务失败: 未找到指定的任务');
+        }
+      }),
+    );
+  },
+
   // 本地更新todo的方法 - 只更新本地状态，不发送API请求
   // 用于拖拽等频繁操作场景，提高性能和用户体验
   updateTodoLocally: (todo: Todo, set: any, get: () => TodoState): void => {
@@ -174,7 +198,6 @@ export const todoActions = {
         const todoIndex = draftState.tasks.findIndex(
           (task) => task.id === todo.id,
         );
-        console.log(todo);
         if (todoIndex !== -1) {
           // 更新任务信息，但保留createdAt和updatedAt等自动生成的字段
           const existingTask = draftState.tasks[todoIndex];
@@ -188,5 +211,5 @@ export const todoActions = {
         }
       }),
     );
-  },
+  }
 };

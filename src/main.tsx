@@ -58,6 +58,6 @@ createRoot(document.getElementById("root")!).render(
     <HotkeysProvider>
       <AppWithTheme />
     </HotkeysProvider>
-    {/*<A></A>*/}
+    <A></A>
   </StrictMode>,
 );

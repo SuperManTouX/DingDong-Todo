@@ -1,21 +1,15 @@
-import { Priority } from "@/constants";
 import { Col, Input, Row, Tag, Typography, theme } from "antd";
-import { message } from "@/utils/antdStatic";
 import dayjs from "dayjs";
 import { useGlobalSettingsStore } from "@/store/globalSettingsStore";
 import type { TodoItemProps } from "@/types";
-import { formatMessage, MESSAGES } from "@/constants/messages";
 import isoWeek from "dayjs/plugin/isoWeek";
 import { useTodoStore } from "@/store/todoStore";
 import TimeCountDownNode from "./TimeCountDownNode";
 import TodoCheckbox from "@/components/TodoCheckbox";
+import { debounce } from "lodash";
 import "@/styles/TodoTask.css";
-import {
-  BellOutlined,
-  ClockCircleOutlined,
-  RightOutlined,
-} from "@ant-design/icons";
-import { login } from "@/services/authService";
+import { BellOutlined, RightOutlined } from "@ant-design/icons";
+import React, { useCallback, useEffect, useRef } from "react";
 
 dayjs.extend(isoWeek);
 export default function TodoTask({
@@ -25,10 +19,18 @@ export default function TodoTask({
   isExpanded = false,
   onToggleExpand,
 }: TodoItemProps) {
-  const { dispatchTodo, setSelectTodoId, selectTodoId } = useTodoStore();
+  const { dispatchTodo, setSelectTodoId, selectTodoId, todoTags } =
+    useTodoStore();
   const { showTaskDetails, setIsTodoDrawerOpen, isMobile } =
     useGlobalSettingsStore();
   const { token } = theme.useToken(); // 获取主题令牌
+
+  // 使用ref存储输入框引用
+  const inputRef = useRef<HTMLInputElement>(null);
+  // 使用ref存储本地状态，避免因状态更新导致的组件重新渲染
+  const localTitleRef = useRef<string>(todo.title);
+  // 使用ref存储正在编辑的状态
+  const isEditingRef = useRef<boolean>(false);
 
   // 列表项悬停效果样式
   const todoItemHoverStyle: React.CSSProperties = {
@@ -37,22 +39,102 @@ export default function TodoTask({
     },
   };
 
+  // 使用useCallback创建防抖函数，只依赖dispatchTodo
+  const debouncedTitleUpdate = useCallback(
+    debounce((newTitle: string, currentTodoId: string) => {
+      // 只有当标题确实改变时才更新
+      if (newTitle !== todo.title) {
+        dispatchTodo({
+          type: "changed",
+          todo: {
+            id: currentTodoId,
+            title: newTitle,
+          },
+        });
+      }
+    }, 500), // 增加防抖延迟，减少更新频率
+    [dispatchTodo],
+  );
+
+  // 当todo.title变化时（例如从服务器更新），更新本地引用
+  useEffect(() => {
+    // 只有当不在编辑状态时才更新本地引用
+    if (!isEditingRef.current) {
+      localTitleRef.current = todo.title;
+      // 如果输入框存在，更新其值
+      if (inputRef.current) {
+        inputRef.current.value = todo.title;
+      }
+    }
+  }, [todo.title]);
+
+  // 处理输入变化，但不触发组件重新渲染
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newTitle = e.target.value;
+      localTitleRef.current = newTitle;
+      // 调用防抖函数更新全局状态，但不触发本地重渲染
+      debouncedTitleUpdate(newTitle, todo.id);
+    },
+    [debouncedTitleUpdate, todo.id],
+  );
+
+  // 处理输入框聚焦
+  const handleInputFocus = useCallback(
+    (e: React.FocusEvent<HTMLInputElement>) => {
+      e.stopPropagation();
+      isEditingRef.current = true;
+    },
+    [],
+  );
+
+  // 处理输入框失焦
+  const handleInputBlur = useCallback(() => {
+    isEditingRef.current = false;
+    // 确保最终值同步到全局状态
+    debouncedTitleUpdate.cancel(); // 取消可能的延迟更新
+    if (localTitleRef.current !== todo.title) {
+      dispatchTodo({
+        type: "changed",
+        todo: {
+          id: todo.id,
+          title: localTitleRef.current,
+        },
+      });
+    }
+  }, [debouncedTitleUpdate, dispatchTodo, todo.id, todo.title]);
+
+  // 处理输入框点击
+  const handleInputClick = useCallback(
+    (e: React.MouseEvent<HTMLInputElement>) => {
+      e.stopPropagation();
+    },
+    [],
+  );
+
+  // 根据tagId获取标签名称
+  const getTagName = useCallback(
+    (tagId: string) => {
+      // 从tags数组中查找对应的标签
+      const tag = todoTags?.find((t) => t.id === tagId);
+      // 如果找到标签，返回其名称，否则返回标签ID作为回退
+      return tag?.name || tagId;
+    },
+    [todoTags],
+  );
+
   // 渲染编辑输入框
   function renderEditInput() {
     return (
-      <Input
-        value={todo.title}
-        onChange={(e) => {
-          if (todo) {
-            dispatchTodo({
-              type: "changed",
-              todo: {
-                ...todo,
-                title: e.target.value,
-              },
-            });
-          }
-        }}
+      <input
+        ref={inputRef}
+        key={`todo-input-${todo.id}`} // 添加key属性确保输入框稳定性
+        type="text"
+        defaultValue={localTitleRef.current} // 使用defaultValue避免受控组件问题
+        onChange={handleInputChange}
+        onClick={handleInputClick}
+        onFocus={handleInputFocus}
+        onBlur={handleInputBlur}
         style={{
           border: "none",
           backgroundColor: "transparent",
@@ -61,7 +143,7 @@ export default function TodoTask({
           padding: "0",
           boxShadow: "none",
         }}
-        className="border-none bg-transparent"
+        className="border-none bg-transparent focus:ring-0 focus:outline-none"
       />
     );
   }
@@ -73,8 +155,7 @@ export default function TodoTask({
       <li
         className={`cursor-pointer row d-flex justify-content-between highlight rounded pe-0 ps-0 pt-1 pb-1 ${selectTodoId === todo.id ? "selected-task" : ""}  ${other ? "opacity-25" : ""}`}
         onClick={() => {
-          if (setSelectTodoId) {
-            console.log("TodoTask", todo.id);
+          if (setSelectTodoId && selectTodoId !== todo.id) {
             setSelectTodoId(todo.id);
             if (isMobile) {
               // 直接调用store中的方法打开Drawer
@@ -137,12 +218,10 @@ export default function TodoTask({
               >
                 {/*判断是否有Tag数组并且是否长度大于0*/}
                 {/*// @ts-ignore*/}
-                {todo.tags?.length > 0 && (
+                {todo.tags?.length > 0 && !showTaskDetails && (
                   <Tag color="magenta">+{todo.tags?.length}</Tag>
                 )}
-                {/*{todo.tags?.map((tag, i) => (
-                  <Tag color="magenta">{tag}</Tag>
-                ))}*/}
+                {/*提醒图标*/}
                 {todo.reminder_at !== null && !todo.is_reminded && (
                   <BellOutlined className={"me-2"} />
                 )}
@@ -156,36 +235,47 @@ export default function TodoTask({
         </Row>
         {/*task详情 - 条件渲染基于全局设置*/}
         {showTaskDetails && (
-          <Row justify={"space-between"} align={"middle"} className="ps-0">
-            <Col offset={2} span={22}>
-              <Typography.Text type="secondary" style={{ fontSize: "12px" }}>
-                {(() => {
-                  try {
-                    // 尝试将text字段解析为JSON，处理富文本数据
-                    if (
-                      typeof todo.text === "string" &&
-                      todo.text.startsWith("{")
-                    ) {
-                      const parsed = JSON.parse(todo.text);
-                      // 如果解析后的数据包含text字段，则使用该字段作为纯文本
+          <>
+            <Row justify={"space-between"} align={"middle"} className="ps-0">
+              <Col offset={2} span={22}>
+                <Typography.Text type="secondary" style={{ fontSize: "12px" }}>
+                  {(() => {
+                    try {
+                      // 尝试将text字段解析为JSON，处理富文本数据
                       if (
-                        parsed &&
-                        typeof parsed === "object" &&
-                        "text" in parsed
+                        typeof todo.text === "string" &&
+                        todo.text.startsWith("{")
                       ) {
-                        return parsed.text;
+                        const parsed = JSON.parse(todo.text);
+                        // 如果解析后的数据包含text字段，则使用该字段作为纯文本
+                        if (
+                          parsed &&
+                          typeof parsed === "object" &&
+                          "text" in parsed
+                        ) {
+                          return parsed.text;
+                        }
                       }
+                      // 否则直接返回text字段
+                      return todo.text || "";
+                    } catch (error) {
+                      // 解析失败时，直接返回原始文本
+                      return todo.text || "";
                     }
-                    // 否则直接返回text字段
-                    return todo.text || "";
-                  } catch (error) {
-                    // 解析失败时，直接返回原始文本
-                    return todo.text || "";
-                  }
-                })()}
-              </Typography.Text>
-            </Col>
-          </Row>
+                  })()}
+                </Typography.Text>
+              </Col>
+            </Row>
+            <Row justify={"space-between"} align={"middle"} className="ps-0">
+              <Col offset={2} span={22}>
+                {todo.tags?.map((tagId, i) => (
+                  <Tag key={tagId} color="magenta">
+                    {getTagName(tagId)}
+                  </Tag>
+                ))}
+              </Col>
+            </Row>
+          </>
         )}
       </li>
     </>
