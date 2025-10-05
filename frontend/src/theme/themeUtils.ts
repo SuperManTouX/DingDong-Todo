@@ -1,4 +1,14 @@
 import type { ThemeConfig } from "@/types/theme";
+import { lightTheme, darkTheme, greenTheme, redTheme, yellowTheme } from "./themeConfig";
+
+// 主题映射
+const themeMap: Record<string, ThemeConfig> = {
+  light: lightTheme,
+  dark: darkTheme,
+  green: greenTheme,
+  red: redTheme,
+  yellow: yellowTheme,
+};
 
 /**
  * 将主题配置应用到HTML文档
@@ -6,20 +16,16 @@ import type { ThemeConfig } from "@/types/theme";
  */
 export const applyThemeToDocument = (theme: ThemeConfig): void => {
   const root = document.documentElement;
-
-  // 批量更新CSS变量，减少重排重绘次数
-  const cssVars: Record<string, string> = {};
+  
+  // 遍历主题的所有属性
   Object.entries(theme).forEach(([key, value]) => {
-    if (typeof value === "string" && key !== "key" && key !== "name") {
-      cssVars[`--theme-${key}`] = value;
+    // 跳过key, name等非颜色属性
+    if (key !== 'key' && key !== 'name') {
+      // 设置CSS变量
+      root.style.setProperty(`--theme-${key}`, String(value));
     }
   });
-
-  // 使用CSS变量的批量更新方法
-  Object.entries(cssVars).forEach(([name, value]) => {
-    root.style.setProperty(name, value);
-  });
-
+  
   // 设置data-theme属性，方便CSS选择器使用
   root.setAttribute("data-theme", theme.key);
 };
@@ -43,8 +49,8 @@ export const getSystemThemePreference = (): "dark" | "light" => {
  * @param callback 系统主题变化时的回调函数
  * @returns 清理函数，用于移除事件监听
  */
-export const setupSystemThemeListener = (
-  callback: (theme: "dark" | "light") => void,
+export const listenForThemeChanges = (
+  callback: (theme: "dark" | "light") => void
 ): (() => void) => {
   const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
 
@@ -66,17 +72,29 @@ export const setupSystemThemeListener = (
  * @returns Ant Design主题配置对象
  */
 export const convertToAntdTheme = (
-  theme: ThemeConfig,
-): Record<string, string> => {
+  themeConfig: ThemeConfig
+) => {
   return {
     token: {
-      colorPrimary: theme.primaryColor,
-      colorSuccess: theme.successColor,
-      colorWarning: theme.warningColor,
-      colorError: theme.errorColor,
-      colorInfo: theme.infoColor,
-      colorBgBase: theme.bgColor,
-      colorTextBase: theme.textColor,
+      colorPrimary: themeConfig.primaryColor,
+      colorSuccess: themeConfig.successColor,
+      colorWarning: themeConfig.warningColor,
+      colorError: themeConfig.errorColor,
+      colorInfo: themeConfig.infoColor,
+      colorBgBase: themeConfig.bgColor,
+      colorBgLayout: themeConfig.bgLayoutColor,
+      colorTextBase: themeConfig.textColor,
     },
   };
+};
+
+// 所有可用的主题
+export const allThemes = [lightTheme, darkTheme, greenTheme, redTheme, yellowTheme];
+
+// 导出主题配置
+export { lightTheme, darkTheme, greenTheme, redTheme, yellowTheme };
+
+// 根据主题ID获取主题配置
+export const getThemeConfig = (themeId: string): ThemeConfig | undefined => {
+  return themeMap[themeId];
 };

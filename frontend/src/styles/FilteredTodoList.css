@@ -9,14 +9,22 @@
 .theme-bgcColor-primaryColor {
     background-color: var(--theme-primaryColor);
 }
-.theme-bgcColor-menuColor {
-    background-color: var(--theme-menuBgColor);
+
+/* 黄色主题时使用渐变背景 */
+[data-theme="yellow"] .theme-bgcColor-primaryColor {
+    background: var(--theme-gradientColor);
 }
+
+/* 红色主题时使用渐变背景 */
+[data-theme="red"] .theme-bgcColor-primaryColor {
+    background: var(--theme-gradientColor);
+}
+
 .theme-textColor-dateColor {
     color: var(--theme-dateColor);
 }
 .theme-textColor-errorColor {
-    color: var(--theme-errorColor);
+    color: #f10a0a;
 }
 
 .vertical-align{

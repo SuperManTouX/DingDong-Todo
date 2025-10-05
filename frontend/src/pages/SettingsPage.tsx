@@ -45,6 +45,7 @@ const SettingsPage: React.FC = () => {
     { value: "dark", label: "深色主题" },
     { value: "green", label: "绿色主题" },
     { value: "red", label: "红色主题" },
+    { value: "yellow", label: "黄色主题" },
   ];
 
   // 自定义上传请求 - 使用统一的uploadAvatar函数

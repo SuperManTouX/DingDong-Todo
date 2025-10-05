@@ -1,14 +1,13 @@
 import React, { useState, useCallback } from "react";
-import { Modal, Input, Button, List, Empty, Spin, Typography } from "antd";
+import { Modal, Input, List, Empty, Spin, Typography } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { searchTasks as searchTasksApi } from "@/services/todoService";
-import { Todo } from "@/types";
+import type { Todo } from "@/types";
 import { message } from "@/utils/antdStatic";
-import { MESSAGES } from "@/constants/messages";
 import TodoTask from "@/pages/TodoPage/TodoTask";
 
-const { Title, Paragraph } = Typography;
+const { Paragraph } = Typography;
 const { Search } = Input;
 
 interface SearchModalProps {
@@ -17,11 +16,7 @@ interface SearchModalProps {
   onSelectTask?: (task: Todo) => void;
 }
 
-export default function SearchModal({
-  visible,
-  onCancel,
-  onSelectTask,
-}: SearchModalProps) {
+export default function SearchModal({ visible, onCancel }: SearchModalProps) {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<Todo[]>([]);
@@ -51,13 +46,6 @@ export default function SearchModal({
     if (e.key === "Enter" && searchTerm.trim()) {
       handleSearch(searchTerm);
     }
-  };
-
-  const handleTaskClick = (task: Todo) => {
-    if (onSelectTask) {
-      onSelectTask(task);
-    }
-    onCancel();
   };
 
   const handleCancel = () => {

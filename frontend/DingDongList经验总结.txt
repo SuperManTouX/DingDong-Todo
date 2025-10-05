@@ -36,3 +36,22 @@ DingDongList经验总结
               ),
               icon: <FileTextOutlined />,}  antd中如果SubMenuItems中有icon，且label中有两层结构。只会显示icon，label会消失。
               解决办法：children数组中的对象不返回icon属性；label返回字符串。
+
+
+11. 渐变色的主题色
+修改themeConfig.ts文件 ：
+
+- 为redTheme添加了gradientColor属性，设置为从#C46A9F到#E879B7的粉色渐变
+- 黄色主题的gradientColor属性已经存在（从rgb(243,194,104)到rgb(244,170,139)）
+- 2.
+修改CSS样式 ：
+
+- 在FilteredTodoList.css中添加了基于data-theme属性的条件样式
+- 当主题为"yellow"时，将.theme-bgcColor-primaryColor的背景设置为渐变
+- 当主题为"red"时，将.theme-bgcColor-primaryColor的背景设置为渐变
+- 从currentCSS.css中移除了重复的样式定义，避免冲突
+- 3.
+保留其他主题行为 ：
+
+- 浅色、深色和绿色主题的侧边栏导航仍然使用primaryColor作为背景色
+- 渐变效果仅应用于黄色和红色主题

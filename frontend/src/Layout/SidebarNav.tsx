@@ -14,7 +14,7 @@ import {
   SearchOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
-import { Todo } from "@/types";
+import type { Todo } from "@/types";
 import SearchModal from "@/components/SearchModal";
 
 /**
@@ -27,7 +27,7 @@ const SidebarNav: React.FC = () => {
   const [selectedKey, setSelectedKey] = React.useState("todos"); // 默认选中todos菜单项
 
   // 搜索Modal显示状态
-  const [searchModalVisible, setSearchModalVisible] = useState(true);
+  const [searchModalVisible, setSearchModalVisible] = useState(false);
   const menuItems: MenuProps["items"] = [
     {
       key: "todos",
@@ -63,10 +63,10 @@ const SidebarNav: React.FC = () => {
     console.log("Menu item clicked:", key);
     setSelectedKey(key); // 更新选中的菜单项
     // 当点击搜索菜单项时，显示搜索Modal
-    // if (key === "search") {
-    //   setSearchModalVisible(true);
-    //   return;
-    // }
+    if (key === "search") {
+      setSearchModalVisible(true);
+      return;
+    }
 
     // 路由跳转逻辑
     navigate(`/${key}`);
