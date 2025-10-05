@@ -278,7 +278,6 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
       });
     }
   }
-
   // 计算displayGroups中的任务总数
   const displayTasksCount = displayGroups.reduce((total, group) => {
     // 过滤掉占位任务

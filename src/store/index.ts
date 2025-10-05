@@ -53,6 +53,8 @@ export const useTodoStore = create<TodoState>()(
         dispatchTodo: (action) => todoActions.dispatchTodo(action, set, get),
         updateTodoLocally: (action) =>
           todoActions.updateTodoLocally(action, set, get),
+        swapTasksPositions: (draggedTask, targetTask) =>
+          todoActions.swapTasksPositions(draggedTask, targetTask, set, get),
         dispatchList: (action) => listActions.dispatchList(action, set, get),
         dispatchTag: (action) => tagActions.dispatchTag(action, set, get),
 

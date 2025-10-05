@@ -230,7 +230,6 @@ export default function EditTodo({
       {/*待办标题*/}
       <input
         type="text"
-        autoFocus
         className="w-100"
         value={selectTodo.title}
         onChange={(e) => {
