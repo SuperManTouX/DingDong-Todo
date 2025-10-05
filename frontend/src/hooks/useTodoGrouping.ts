@@ -35,12 +35,12 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
     // 当激活的列表ID包含"tag"时，按不同list分组
     groupMode = "normal";
     // 保持所有任务，不需要特殊过滤
-    filteredTasks = [...searchTasks];
+    filteredTasks = [...tasks];
   } else if (activeListId === "today") {
     // 只显示今天的任务
     groupMode = "time";
     const today = dayjs().format("YYYY-MM-DD");
-    filteredTasks = searchTasks.filter(
+    filteredTasks = tasks.filter(
       (task) =>
         task.deadline && dayjs(task.deadline).format("YYYY-MM-DD") === today,
     );
@@ -49,7 +49,7 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
     groupMode = "time";
     const today = dayjs();
     const sevenDaysFromNow = dayjs().add(7, "day");
-    filteredTasks = searchTasks.filter((task) => {
+    filteredTasks = tasks.filter((task) => {
       if (!task.deadline) return false;
       const taskDate = dayjs(task.deadline);
       return (
