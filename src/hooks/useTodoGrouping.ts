@@ -20,20 +20,13 @@ interface UseTodoGroupingReturn {
 }
 
 // 任务分组相关的hook
-export default function useTodoGrouping(
-  tasks: Todo[],
-  searchText: string,
-): UseTodoGroupingReturn {
+export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
   const { getGroupsByListId, todoListData } = useTodoStore();
 
   const { activeListId } = useTodoStore.getState();
-  const searchTasks =
-    searchText === ""
-      ? tasks
-      : tasks.filter((task) => task.title.indexOf(searchText) !== -1);
   // 根据activeListId确定分组模式和过滤逻辑
   let groupMode: "normal" | "time" | "list" = "normal";
-  let filteredTasks = [...searchTasks];
+  let filteredTasks = [...tasks];
 
   let isCompletedMode = false;
 

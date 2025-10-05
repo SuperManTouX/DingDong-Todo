@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { ThemeConfig, CustomThemeConfig } from "@/types/theme";
+import { theme } from "antd";
 import {
   AVAILABLE_THEMES,
   getThemeById,
@@ -23,7 +24,7 @@ interface ThemeStore {
   deleteCustomTheme: (themeKey: string) => void;
   exportThemeConfig: (themeKey: string) => string | null;
   importThemeConfig: (encodedConfig: string) => string | null;
-  
+
   // 将主题配置转换为Ant Design的theme格式
   getAntdTheme: () => { token: Record<string, string> };
 }
@@ -53,24 +54,22 @@ export const useThemeStore = create<ThemeStore>()(
           applyThemeToDocument(theme);
         }
       },
-      
+
       // 将当前主题配置转换为Ant Design的theme格式
       getAntdTheme: () => {
         const { currentTheme } = get();
         return {
           token: {
             colorPrimary: currentTheme.primaryColor,
-            colorSuccess: currentTheme.successColor,
-            colorWarning: currentTheme.warningColor,
-            colorError: currentTheme.errorColor,
             colorInfo: currentTheme.infoColor,
-            colorBgBase: currentTheme.bgColor,
             colorTextBase: currentTheme.textColor,
             // 可以根据需要添加更多的Ant Design主题token
-          }
+          },
+          algorithm:
+            currentTheme.key === "dark" ? theme.darkAlgorithm : undefined,
         };
       },
-      
+
       // 以下是已有的其他方法
 
       // 保存自定义主题

@@ -187,8 +187,6 @@ export default function TodoTask({
             </Col>
           </Row>
         )}
-        {/*子任务列表已移除，子任务现在在TodoList中直接渲染*/}
-        {/*编辑折叠框*/}
       </li>
     </>
   );

@@ -33,7 +33,7 @@ export default function EditTodo({
   const { token } = theme.useToken();
 
   // 如果没有选中的任务，返回null
-  if (!selectTodo) return <Layout className={"theme-color"}></Layout>;
+  if (!selectTodo) return <Layout></Layout>;
 
   // 确定优先级样式类
   let priClass = "";
@@ -110,7 +110,7 @@ export default function EditTodo({
         // 作为Drawer时，Header内容放在Drawer的title中
         <React.Fragment>
           <Content
-            className={"theme-color pt-0"}
+            className={" pt-0"}
             style={{
               padding: "16px 24px",
               color: currentTheme.textColor,
@@ -122,7 +122,7 @@ export default function EditTodo({
             </Row>
           </Content>
           <Footer
-            className={"theme-color"}
+            className={""}
             style={{
               color: currentTheme.textColor,
               borderTop: `1px solid ${token.colorBorder}`,
@@ -136,10 +136,10 @@ export default function EditTodo({
         // 作为普通组件时，使用完整的Layout结构
         <React.Fragment>
           <Header
-            className="theme-color"
             style={{
               borderBottom: `1px solid ${token.colorBorder}`,
               padding: "0 24px",
+              backgroundColor: "var(--theme--colorBgLayout)",
             }}
           >
             <Row className="h-100" justify="space-between" align="middle">
@@ -147,7 +147,7 @@ export default function EditTodo({
             </Row>
           </Header>
           <Content
-            className="theme-color"
+            className=""
             style={{
               padding: "16px 24px",
               color: currentTheme.textColor,
@@ -159,7 +159,7 @@ export default function EditTodo({
             </Row>
           </Content>
           <Footer
-            className="theme-color"
+            className=""
             style={{
               color: currentTheme.textColor,
               borderTop: `1px solid ${token.colorBorder}`,
@@ -373,7 +373,7 @@ export default function EditTodo({
         onClose={onClose}
         width={600}
         placement="right"
-        className="theme-color"
+        className=""
       >
         {renderContent()}
       </Drawer>

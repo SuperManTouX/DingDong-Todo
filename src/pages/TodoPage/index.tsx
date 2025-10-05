@@ -75,7 +75,7 @@ const Index: React.FC = () => {
       <Sider width={250} collapsedWidth={80} collapsed={collapsed}>
         <SideMenu menuItem={menuItem} />
       </Sider>
-      <Layout className={"theme-color border-0"}>
+      <Layout className={" border-0"}>
         <FilteredTodoList
           key={useTodoStore.getState().activeListId}
           groupName={activeListTitle}

@@ -66,6 +66,9 @@ button + button {
 #root {
     height: 100%;
 }
+:root{
+    --gradient-yellow: linear-gradient(to bottom, rgb(243,194,104), rgb(244,170,139))
+}
 
 /** 原子类 **/
 
@@ -522,8 +525,12 @@ button + button {
 .bgColor-transparent{
     background: transparent !important;
 }
+.sidebar-nav .ant-menu-item{
+    background: transparent !important;
+}
 
 .sideNav-icon{
+    font-size: 24px !important;
     opacity: .3 ;
     color: white  !important;
 }
@@ -538,10 +545,19 @@ button + button {
 }
 
 
-.sidebar-nav .ant-menu-item.ant-menu-item-selected,
-.sidebar-nav .ant-menu-item:hover {
-    background-color: transparent !important;
+/* 侧边栏菜单默认样式 - 使用主题主色 */
+
+
+/* 黄色主题时使用特定渐变背景 */
+[data-theme="yellow"] .theme-specific-menu {
+    background:var(--theme-listGradientColor);
 }
+
+/* 红色主题时使用渐变背景 */
+[data-theme="red"] .theme-specific-menu {
+    background: var(--theme-listGradientColor);
+}
+
 .ant-layout-header {
     height: 50px;
     padding: 0 25px;

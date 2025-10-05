@@ -20,8 +20,6 @@ export default function Controller({
   onCompleteAll,
   isAllDone,
   showType,
-  searchText,
-  setSearchText,
 }: ControllerProps) {
   const { todoTags, todoListData, dispatchTodo, activeListId } = useTodoStore();
   const [text, setText] = useState<string>("");
@@ -288,6 +286,7 @@ export default function Controller({
               width: "100%",
             }}
           >
+            {/*创建task*/}
             <Input
               value={text}
               prefix={
@@ -371,15 +370,6 @@ export default function Controller({
             />
           </div>
         </Row>
-      </Row>
-      <Row className={"w-100"} justify={"start"} align={"middle"}>
-        <Input
-          prefix={<SearchOutlined />}
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          placeholder="搜索任务（临时位置）"
-          style={{ width: "200px" }}
-        />
       </Row>
     </li>
   );

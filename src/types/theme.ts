@@ -3,18 +3,16 @@ export interface ThemeConfig {
   key: string;
   name: string;
   primaryColor: string;
-  secondaryColor: string; // 主色的浅色近似
-  tertiaryColor: string;  // 主色的深色近似
-  successColor: string;
-  warningColor: string;
-  errorColor: string;
   infoColor: string;
-  bgColor: string;
-  menuBgColor: string;
   textColor: string;
   hoverColor: string;
-  menuHoverColor: string; // 菜单悬停颜色
   dateColor: string; // 日期颜色
+  menuBgColor: string; // 菜单背景色
+  menuHoverColor: string; // 菜单背景色
+  bgLayoutColor: string; // 菜单背景色
+  gradientColor?: string; //特殊主题才有渐变色
+  listGradientColor?: string; //特殊主题才有渐变色
+  bgContainerColor?: string; //黑暗主题才有黑色
 }
 
 // 自定义主题配置接口
