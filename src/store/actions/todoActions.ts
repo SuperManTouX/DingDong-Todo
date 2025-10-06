@@ -5,6 +5,7 @@ import { createTodo, updateTodo, deleteTodo } from "@/services/todoService";
 import type { TodoActionExtended } from "@/types";
 import type { TodoState } from "../types";
 import type { Todo } from "@/types";
+import { produce } from "immer";
 
 export const todoActions = {
   dispatchTodo: async (
