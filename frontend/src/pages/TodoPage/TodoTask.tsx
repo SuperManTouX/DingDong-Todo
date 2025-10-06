@@ -104,14 +104,6 @@ export default function TodoTask({
     }
   }, [debouncedTitleUpdate, dispatchTodo, todo.id, todo.title]);
 
-  // 处理输入框点击
-  const handleInputClick = useCallback(
-    (e: React.MouseEvent<HTMLInputElement>) => {
-      e.stopPropagation();
-    },
-    [],
-  );
-
   // 根据tagId获取标签名称
   const getTagName = useCallback(
     (tagId: string) => {
@@ -132,7 +124,6 @@ export default function TodoTask({
         type="text"
         defaultValue={localTitleRef.current} // 使用defaultValue避免受控组件问题
         onChange={handleInputChange}
-        onClick={handleInputClick}
         onFocus={handleInputFocus}
         onBlur={handleInputBlur}
         style={{
@@ -145,6 +136,7 @@ export default function TodoTask({
         }}
         className="border-none bg-transparent focus:ring-0 focus:outline-none"
       />
+      // <span>123</span>
     );
   }
 
@@ -153,7 +145,7 @@ export default function TodoTask({
   return (
     <>
       <li
-        className={`cursor-pointer row d-flex justify-content-between highlight rounded pe-0 ps-0 pt-1 pb-1 ${selectTodoId === todo.id ? "selected-task" : ""}  ${other ? "opacity-25" : ""}`}
+        className={`cursor-pointer m-0 row d-flex justify-content-between highlight rounded pe-0 ps-0 pt-1 pb-1 ${selectTodoId === todo.id ? "selected-task" : ""}  ${other ? "opacity-25" : ""}`}
         onClick={() => {
           if (setSelectTodoId && selectTodoId !== todo.id) {
             setSelectTodoId(todo.id);
@@ -164,29 +156,13 @@ export default function TodoTask({
           }
         }}
       >
-        <Row justify={"space-between"} align={"middle"} className="ps-0">
+        <Row
+          justify={"space-between"}
+          align={"middle"}
+          className="w-100 ps-0 pe-0"
+        >
           <Col
-            span={1}
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleExpand();
-            }}
-          >
-            <Row justify={"end"} align={"middle"}>
-              {hasSubTasks && onToggleExpand && (
-                <RightOutlined
-                  style={{
-                    marginRight: "3px",
-                    fontSize: "8px",
-                    cursor: "pointer",
-                    transition: "transform 0.3s",
-                    transform: isExpanded ? "rotate(90deg)" : "rotate(0)",
-                  }}
-                />
-              )}
-            </Row>
-          </Col>
-          <Col
+            offset={1}
             span={23}
             className="d-flex lh-base align-items-center h-100 scursor-pointer"
             style={todoItemHoverStyle}

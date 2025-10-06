@@ -15,7 +15,6 @@ import type { FilterGroupProps, Group } from "@/types/group";
 import dayjs from "dayjs";
 import { message } from "@/utils/antdStatic";
 import { useTodoStore } from "@/store/todoStore";
-import { SortableList } from "../../components/SortableComponents";
 
 /**
  * FilterGroup组件 - 支持三种模式：分组模式、时间分组模式、未分组模式
@@ -211,36 +210,22 @@ export default function FilterGroup({
               style={{ minHeight: "2rem" }}
             >
               {children ? (
-                <SortableList
-                  items={getSortableTaskIds()}
-                  // @ts-ignore
-                  groupId={groupToUse?.id}
-                  type="FilterGroup"
-                >
-                  {children}
-                </SortableList>
+                children
               ) : (
-                <SortableList
-                  items={getSortableTaskIds()}
-                  // @ts-ignore
-                  groupId={groupToUse?.id}
-                  type="FilterGroup"
-                >
-                  <div className="task-list">
-                    {tasks.map((task) => (
-                      <ContextMenu key={task.id} todo={task}>
-                        <div style={{ cursor: "context-menu" }}>
-                          <TodoTask
-                            todo={task}
-                            hasSubTasks={hasSubTasks(task.id)}
-                            isExpanded={expandedTasks[task.id] || false}
-                            onToggleExpand={() => toggleTaskExpand(task.id)}
-                          />
-                        </div>
-                      </ContextMenu>
-                    ))}
-                  </div>
-                </SortableList>
+                <div className="task-list">
+                  {tasks.map((task) => (
+                    <ContextMenu key={task.id} todo={task}>
+                      <div style={{ cursor: "context-menu" }}>
+                        <TodoTask
+                          todo={task}
+                          hasSubTasks={hasSubTasks(task.id)}
+                          isExpanded={expandedTasks[task.id] || false}
+                          onToggleExpand={() => toggleTaskExpand(task.id)}
+                        />
+                      </div>
+                    </ContextMenu>
+                  ))}
+                </div>
               )}
             </div>
           ),

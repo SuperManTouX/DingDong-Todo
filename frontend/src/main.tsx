@@ -9,7 +9,6 @@ import { initializeTheme, useThemeStore } from "./store/themeStore";
 import { AppRouter } from "./routes";
 import { useAuthStore } from "./store/authStore";
 import { HotkeysProvider } from "react-hotkeys-hook";
-import A from "./Test";
 import {
   initializeResponsiveListener,
   useGlobalSettingsStore,
@@ -58,6 +57,5 @@ createRoot(document.getElementById("root")!).render(
     <HotkeysProvider>
       <AppWithTheme />
     </HotkeysProvider>
-    <A></A>
   </StrictMode>,
 );

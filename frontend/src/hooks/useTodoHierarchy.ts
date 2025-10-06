@@ -1,25 +1,15 @@
 import { useState, useCallback } from "react";
 import { useTodoStore } from "@/store/todoStore";
-import { useAuthStore } from "@/store/authStore";
 import type { Todo } from "@/types";
-import { PointerSensor, KeyboardSensor, useSensor } from "@dnd-kit/core";
-import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { SpecialLists } from "@/constants";
-import { throttle } from "lodash";
-import api from "@/services/api";
-import { message } from "antd";
-import { swapTasksPositions } from "@/store/todoStore";
 
 // 定义hook返回类型
 interface UseTodoHierarchyReturn {
   expandedTasks: Record<string, boolean>;
-  sensors: any[];
   toggleTaskExpand: (taskId: string) => void;
   hasSubTasks: (taskId: string) => boolean;
   getHierarchicalTasks: (type?: boolean) => (Todo | Todo[])[];
   getHierarchicalTasksForGroup: (tasks: Todo[]) => (Todo | Todo[])[];
-  handleDragOver: (event: any) => void;
-  handleDragEnd: (event: any) => void;
 }
 
 // 任务层次结构和拖拽相关的hook
@@ -39,17 +29,7 @@ export default function useTodoHierarchy(
     // 默认可以在这里设置一些任务的展开状态
   });
 
-  // 设置@dnd-kit传感器
-  const sensors = [
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  ];
+
   // 判断当前是哪种分组模式
   const isGroupMode = useCallback(() => {
     // 如果不是特殊列表且不包含"tag"，则为分组模式
@@ -176,285 +156,13 @@ export default function useTodoHierarchy(
     return hierarchicalTasks;
   };
 
-  // 使用lodash的throttle函数创建节流处理函数
-  const throttledDragUpdate = useCallback(
-    throttle((active: any, over: any) => {
-      const activeId = active.id as string;
-      const overId = over.id as string;
-      const overContainerId = over.data.current.sortable.containerId as string;
-      // 获取拖动和放置的任务
-      const draggedTask = tasks.find((item) => item.id === activeId);
-      const targetTask = tasks.find((item) => item.id === overId);
-      if (!draggedTask || !overContainerId) return;
 
-      // 如果是在同一个组内拖动，使用新的action交换两个任务在数组中的实际位置
-      if (
-        draggedTask.groupId === overContainerId &&
-        targetTask.groupId === overContainerId
-      ) {
-        swapTasksPositions(draggedTask, targetTask);
-        console.log("在同一个组内拖动，已交换两个任务位置");
-        return;
-      }
-
-      // 获取被拖动任务的所有子任务
-      const findSubtasks = (parentId: string): Todo[] => {
-        const directSubtasks = tasks.filter(
-          (task) => task.parentId === parentId,
-        );
-        let allSubtasks: Todo[] = [...directSubtasks];
-
-        // 递归查找所有嵌套子任务
-        directSubtasks.forEach((subtask) => {
-          allSubtasks = [...allSubtasks, ...findSubtasks(subtask.id)];
-        });
-
-        return allSubtasks;
-      };
-
-      const subtasks = findSubtasks(draggedTask.id);
-
-      // 确定要更新的字段
-      let updateFields: Partial<Todo> = {};
-
-      if (activeListId.indexOf("tag") !== -1) {
-        // 当激活的列表ID包含"tag"时，将draggedTask的listId更新为over的listId
-        updateFields = {
-          listId: targetTask?.listId,
-          groupId: null,
-        };
-      } else if (activeListId in SpecialLists) {
-        updateFields = {
-          // 如果有参考任务，则使用其deadline
-          deadline: targetTask?.deadline || draggedTask.deadline,
-        };
-      } else {
-        updateFields = {
-          // 使用确定的目标分组ID
-          groupId: overContainerId,
-        };
-      }
-
-      // 更新拖动的任务
-      updateTodoLocally({
-        ...draggedTask,
-        ...updateFields,
-      });
-
-      // 更新所有子任务
-      subtasks.forEach((subtask) => {
-        updateTodoLocally({
-          ...subtask,
-          ...updateFields,
-        });
-      });
-    }, 100), // 限制为每100ms最多执行一次
-    [tasks, updateTodoLocally, activeListId, swapTasksPositions],
-  );
-
-  // 拖动时 - 使用useCallback包装并调用节流函数
-  const handleDragOver = useCallback(
-    (event: any) => {
-      const { active, over } = event;
-      if (!over || active.id === over.id) return;
-
-      // 使用节流来限制状态更新频率
-      throttledDragUpdate(active, over);
-    },
-    [throttledDragUpdate],
-  );
-
-  // 拖动排序方法 - 使用@dnd-kit处理拖拽排序和层级转换
-  const handleDragEnd = useCallback(
-    async (event: any) => {
-      const { active, over } = event;
-
-      // 获取拖动任务和放置目标任务
-      const activeId = active.id as string;
-      const overId = over?.id as string;
-      const overContainerId = over?.data?.current?.sortable
-        ?.containerId as string;
-
-      const draggedTask = tasks.find((item) => item.id === activeId);
-      const targetTask = tasks.find((item) => item.id === overId);
-      if (!draggedTask) {
-        return;
-      }
-
-      // 获取被拖动任务的所有子任务
-      const findSubtasks = (parentId: string): Todo[] => {
-        const directSubtasks = tasks.filter(
-          (task) => task.parentId === parentId,
-        );
-        let allSubtasks: Todo[] = [...directSubtasks];
-
-        // 递归查找所有嵌套子任务
-        directSubtasks.forEach((subtask) => {
-          allSubtasks = [...allSubtasks, ...findSubtasks(subtask.id)];
-        });
-
-        return allSubtasks;
-      };
-
-      const subtasks = findSubtasks(draggedTask.id);
-
-      // 确定当前分组模式
-      const groupMode = isGroupMode();
-      const orderField = groupMode ? "groupOrderIndex" : "timeOrderIndex";
-
-      // 获取当前组内的所有任务（用于更新排序）
-      const getTasksInSameGroup = () => {
-        if (groupMode) {
-          // 分组模式：按groupId筛选
-          return tasks.filter((task) => task.groupId === overContainerId);
-        } else {
-          // 时间模式：按相同的时间分组筛选
-          // 这里简化处理，实际应该根据时间分组逻辑来筛选
-          return tasks.filter((task) => task.listId === draggedTask.listId);
-        }
-      };
-
-      const tasksInSameGroup = getTasksInSameGroup();
-
-      // 更新被拖动任务及其所有子任务
-      const updateTaskAndSubtasks = async () => {
-        try {
-          // 确定要更新的字段
-          let updateFields: Partial<Todo> = {};
-
-          if (activeListId in SpecialLists) {
-            // 在特殊列表中，更新deadline
-            updateFields.deadline =
-              targetTask?.deadline || draggedTask.deadline;
-          } else if (activeListId.indexOf("tag") !== -1) {
-            // 在标签列表中，更新listId
-            updateFields.listId = targetTask?.listId;
-            updateFields.groupId = null;
-          } else {
-            // 在普通列表中，更新groupId
-            updateFields.groupId = overContainerId;
-          }
-
-          // 更新拖动的任务
-          await dispatchTodo({
-            type: "changed",
-            todo: {
-              ...draggedTask,
-              ...updateFields,
-            },
-          });
-
-          // 更新所有子任务
-          for (const subtask of subtasks) {
-            await dispatchTodo({
-              type: "changed",
-              todo: {
-                ...subtask,
-                ...updateFields,
-              },
-            });
-          }
-        } catch (error) {
-          console.error("更新任务和子任务失败:", error);
-        }
-      };
-      // 批量更新排序
-      const updateOrdering = async () => {
-        try {
-          // 获取当前用户ID
-          const userId = useAuthStore.getState()?.userId;
-          if (!userId) {
-            console.error("用户未登录，无法更新任务排序");
-            message.error("请先登录");
-            return;
-          }
-
-          // 在同一个组内拖动时，只交换draggedTask和targetTask的排序索引
-          if (draggedTask && targetTask) {
-            // 获取当前组内的所有任务
-            const tasksInSameGroup = getTasksInSameGroup();
-
-            // 找到draggedTask和targetTask在数组中的索引
-            const draggedIndex = tasksInSameGroup.findIndex(
-              (t) => t.id === draggedTask.id,
-            );
-            const targetIndex = tasksInSameGroup.findIndex(
-              (t) => t.id === targetTask.id,
-            );
-
-            // 构建排序更新请求，只包含这两个任务
-            const orderUpdates = [
-              {
-                id: draggedTask.id,
-                listId: draggedTask.listId,
-                timeOrderIndex:
-                  orderField === "timeOrderIndex"
-                    ? targetIndex
-                    : draggedTask.timeOrderIndex,
-                groupOrderIndex:
-                  orderField === "groupOrderIndex"
-                    ? targetIndex
-                    : draggedTask.groupOrderIndex,
-                groupId: draggedTask.groupId,
-              },
-              {
-                id: targetTask.id,
-                listId: targetTask.listId,
-                timeOrderIndex:
-                  orderField === "timeOrderIndex"
-                    ? draggedIndex
-                    : targetTask.timeOrderIndex,
-                groupOrderIndex:
-                  orderField === "groupOrderIndex"
-                    ? draggedIndex
-                    : targetTask.groupOrderIndex,
-                groupId: targetTask.groupId,
-              },
-            ];
-
-            console.log("交换排序索引:", {
-              draggedTask: {
-                id: draggedTask.id,
-                fromIndex: draggedIndex,
-                toIndex: targetIndex,
-              },
-              targetTask: {
-                id: targetTask.id,
-                fromIndex: targetIndex,
-                toIndex: draggedIndex,
-              },
-            });
-
-            // 调用批量更新API，包含userId和tasks参数
-            await api.post("/todos/batch-update-order", {
-              userId,
-              tasks: orderUpdates,
-            });
-          }
-        } catch (error) {
-          console.error("更新排序失败:", error);
-          message.error("更新任务排序失败，请重试");
-        }
-      };
-
-      // 如果是在同一个组内拖动，还需要更新排序
-      if (overContainerId && draggedTask.groupId === overContainerId) {
-        return await updateOrdering();
-      }
-      // 执行切换分组切换时间
-      await updateTaskAndSubtasks();
-    },
-    [tasks, dispatchTodo, activeListId, updateTodoLocally, isGroupMode],
-  );
 
   return {
     expandedTasks,
-    sensors,
-    handleDragOver,
     toggleTaskExpand,
     hasSubTasks,
     getHierarchicalTasks,
     getHierarchicalTasksForGroup,
-    handleDragEnd,
   };
 }
