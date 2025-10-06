@@ -5,7 +5,6 @@ import { createTodo, updateTodo, deleteTodo } from "@/services/todoService";
 import type { TodoActionExtended } from "@/types";
 import type { TodoState } from "../types";
 import type { Todo } from "@/types";
-import { produce } from "immer";
 
 export const todoActions = {
   dispatchTodo: async (
@@ -18,125 +17,73 @@ export const todoActions = {
     if (!userId) return;
 
     try {
-      // 先调用API
-      let createdTask: any = null;
-      let updatedTask: any = null;
-
-      switch (action.type) {
-        case "added": {
-          // 准备任务数据
-          const taskData = {
-            title: action.title,
-            completed: action.completed || false,
-            priority: action.priority || Priority.normal,
-            deadline: action.deadline || undefined,
-            parentId: action.parentId || null,
-            depth: action.depth || 0,
-            tags: action.tags || [],
-            listId: action.listId,
-            isPinned: action.isPinned,
-            groupId: action.groupId || undefined,
-            userId,
-          };
-
-          // 等待API调用成功
-          createdTask = await createTodo(taskData);
-          break;
-        }
-        case "changed": {
-          if (action.todo.id) {
-            // 等待API调用成功
-            updatedTask = await updateTodo(action.todo.id, {
-              ...action.todo,
-              userId,
-            });
-          }
-          break;
-        }
-        case "deleted": {
-          if (action.deleteId) {
-            // 等待API调用成功
-            await deleteTodo(action.deleteId);
-          }
-          break;
-        }
-        case "completedAll": {
-          // 对于批量操作，我们仍然先更新本地状态
-          // 因为这可能影响多个任务，为了用户体验我们不等待所有API调用
-          set(
-            produce((draftState: TodoState) => {
-              const { completeOrUncomplete, listId } = action;
-              draftState.tasks.forEach((task: any) => {
-                if (task.listId !== listId) return;
-                task.completed = completeOrUncomplete;
-              });
-            }),
-          );
-          // 然后异步更新每个任务
-          const tasksToUpdate = get().tasks.filter(
-            (task: any) => task.listId === action.listId,
-          );
-          await Promise.all(
-            tasksToUpdate.map((task: any) =>
-              updateTodo(task.id, {
-                ...task,
-                completed: action.completeOrUncomplete,
-                userId,
-              }),
-            ),
-          );
-          return;
-        }
-        case "deletedAll": {
-          if (action.todoList && action.listId) {
-            // 获取所有已完成的任务
-            const completedTasks = action.todoList.filter(
-              (task: any) => task.completed && task.listId === action.listId,
-            );
-
-            // 等待所有删除API调用成功
-            await Promise.all(
-              completedTasks.map((task: any) => deleteTodo(task.id)),
-            );
-          }
-          break;
-        }
-        default:
-          break;
+      // 先生成临时任务ID（如果需要）
+      let tempId: string | null = null;
+      if (action.type === "added") {
+        // 为新增任务生成临时ID
+        tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       }
 
-      // API调用成功后再更新本地状态
+      // 先更新本地状态，提供即时反馈
+      let localCreatedTask: Todo | null = null;
       set(
         produce((draftState: TodoState) => {
           switch (action.type) {
-            case "added":
-              if (createdTask) {
-                draftState.tasks.push(createdTask);
+            case "added": {
+              // 准备任务数据
+              const taskData: Todo = {
+                id: tempId!,
+                title: action.title,
+                text: action.text || '',
+                completed: action.completed || false,
+                priority: action.priority || Priority.normal,
+                deadline: action.deadline || undefined,
+                parentId: action.parentId || null,
+                depth: action.depth || 0,
+                tags: action.tags || [],
+                listId: action.listId,
+                isPinned: action.isPinned || false,
+                groupId: action.groupId || undefined,
+                userId,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              };
 
-                // 如果有父任务，更新父任务的updatedAt
-                if (createdTask.parentId) {
-                  const parentTaskIndex = draftState.tasks.findIndex(
-                    (task) => task.id === createdTask.parentId,
-                  );
-                  if (parentTaskIndex !== -1) {
-                    draftState.tasks[parentTaskIndex].updatedAt =
-                      new Date().toISOString();
-                  }
+              // 直接添加到本地状态
+              draftState.tasks.push(taskData);
+              localCreatedTask = taskData;
+
+              // 如果有父任务，更新父任务的updatedAt
+              if (taskData.parentId) {
+                const parentTaskIndex = draftState.tasks.findIndex(
+                  (task) => task.id === taskData.parentId,
+                );
+                if (parentTaskIndex !== -1) {
+                  draftState.tasks[parentTaskIndex].updatedAt = new Date().toISOString();
                 }
               }
               break;
-            case "changed":
-              if (updatedTask && action.todo.id) {
+            }
+            case "changed": {
+              if (action.todo.id) {
                 const todoIndex = draftState.tasks.findIndex(
                   (task) => task.id === action.todo.id,
                 );
                 if (todoIndex !== -1) {
-                  draftState.tasks[todoIndex] = updatedTask;
+                  // 保留createdAt等不变字段，只更新必要字段
+                  draftState.tasks[todoIndex] = {
+                    ...draftState.tasks[todoIndex],
+                    ...action.todo,
+                    userId,
+                    updatedAt: new Date().toISOString(),
+                  };
                 }
               }
               break;
-            case "deleted":
+            }
+            case "deleted": {
               if (action.deleteId) {
+                // 记录要删除的任务及其子任务，以便API调用
                 draftState.tasks = draftState.tasks.filter(
                   (task) => task.id !== action.deleteId,
                 );
@@ -146,7 +93,17 @@ export const todoActions = {
                 );
               }
               break;
-            case "deletedAll":
+            }
+            case "completedAll": {
+              const { completeOrUncomplete, listId } = action;
+              draftState.tasks.forEach((task: any) => {
+                if (task.listId !== listId) return;
+                task.completed = completeOrUncomplete;
+                task.updatedAt = new Date().toISOString();
+              });
+              break;
+            }
+            case "deletedAll": {
               if (action.todoList && action.listId) {
                 // 仅保留未完成的任务
                 draftState.tasks = draftState.tasks.filter(
@@ -154,13 +111,118 @@ export const todoActions = {
                 );
               }
               break;
+            }
             default:
               break;
           }
         }),
       );
+
+      // 然后异步发送API请求
+      switch (action.type) {
+        case "added": {
+          if (localCreatedTask) {
+            // 发送API请求，但不使用tempId
+            const taskData = {
+              ...localCreatedTask,
+              id: undefined, // 让服务器生成真实ID
+            };
+            
+            try {
+              const createdTask = await createTodo(taskData);
+              
+              // API成功后，更新本地状态中的临时ID为真实ID
+              if (createdTask && createdTask.id) {
+                set(
+                  produce((draftState: TodoState) => {
+                    const tempTaskIndex = draftState.tasks.findIndex(
+                      (task) => task.id === tempId,
+                    );
+                    if (tempTaskIndex !== -1) {
+                      draftState.tasks[tempTaskIndex] = createdTask;
+                    }
+                  }),
+                );
+              }
+            } catch (error) {
+              console.error("创建任务API调用失败:", error);
+              // API失败后，可以选择从本地状态中移除临时任务
+              // 这里暂时保留，让用户可以重试
+              throw error;
+            }
+          }
+          break;
+        }
+        case "changed": {
+          if (action.todo.id) {
+            // 发送API请求，但不等待响应
+            updateTodo(action.todo.id, {
+              ...action.todo,
+              userId,
+            }).catch(error => {
+              console.error(`更新任务API调用失败 (ID: ${action.todo.id}):`, error);
+              // API失败后，可以选择回滚本地状态
+              // 这里暂时不回滚，让用户可以重试
+              throw error;
+            });
+          }
+          break;
+        }
+        case "deleted": {
+          if (action.deleteId) {
+            // 发送API请求，但不等待响应
+            deleteTodo(action.deleteId).catch(error => {
+              console.error(`删除任务API调用失败 (ID: ${action.deleteId}):`, error);
+              // API失败后，可以选择回滚本地状态
+              // 这里暂时不回滚，让用户可以重试
+              throw error;
+            });
+          }
+          break;
+        }
+        case "completedAll": {
+          // 异步更新每个任务
+          const tasksToUpdate = get().tasks.filter(
+            (task: any) => task.listId === action.listId,
+          );
+          await Promise.all(
+            tasksToUpdate.map((task: any) =>
+              updateTodo(task.id, {
+                ...task,
+                completed: action.completeOrUncomplete,
+                userId,
+              }).catch(error => {
+                console.error(`批量完成任务API调用失败 (ID: ${task.id}):`, error);
+                return null; // 继续处理其他任务
+              })
+            ),
+          );
+          break;
+        }
+        case "deletedAll": {
+          if (action.todoList && action.listId) {
+            // 获取所有已完成的任务
+            const completedTasks = action.todoList.filter(
+              (task: any) => task.completed && task.listId === action.listId,
+            );
+
+            // 异步删除每个任务
+            await Promise.all(
+              completedTasks.map((task: any) =>
+                deleteTodo(task.id).catch(error => {
+                  console.error(`批量删除任务API调用失败 (ID: ${task.id}):`, error);
+                  return null; // 继续处理其他任务
+                })
+              ),
+            );
+          }
+          break;
+        }
+        default:
+          break;
+      }
     } catch (error) {
-      console.error(`API操作失败 (${action.type}):`, error);
+      console.error(`任务操作失败 (${action.type}):`, error);
       // 可以在这里添加用户友好的错误提示
       throw error; // 重新抛出错误以便调用者可以处理
     }

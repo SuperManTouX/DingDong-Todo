@@ -65,6 +65,7 @@ button + button {
 
 #root {
     height: 100%;
+    overflow: auto;
 }
 :root{
     --gradient-yellow: linear-gradient(to bottom, rgb(243,194,104), rgb(244,170,139))
