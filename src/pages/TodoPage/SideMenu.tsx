@@ -1,7 +1,7 @@
 import { Menu } from "antd";
 import type { MenuProps } from "antd";
 import type { SideMenuProps } from "@/types";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTodoStore } from "@/store";
 import { useNavigate } from "react-router-dom";
 
@@ -10,13 +10,20 @@ import { useNavigate } from "react-router-dom";
  * 使用antd的Menu组件实现
  */
 export default function SideMenu({ menuItem }: SideMenuProps) {
-  const { setActiveListId, loadTasksByType } = useTodoStore();
+  const { activeListId, setActiveListId, loadTasksByType } = useTodoStore();
   const navigate = useNavigate();
 
   // 默认选中菜单项
   const [selectedKeys, setSelectedKeys] = useState<string[]>(["a"]);
   // 默认打开菜单栏
   const [openKeys, setOpenKeys] = useState<string[]>(["grp2"]);
+
+  // 监听activeListId变化，变化时加载对应类型的任务
+  useEffect(() => {
+    if (activeListId) {
+      loadTasksByType(activeListId);
+    }
+  }, [activeListId, loadTasksByType]);
   // 菜单项点击处理函数
   const handleClick: MenuProps["onClick"] = async ({ key, keyPath }) => {
     setSelectedKeys([key]);
@@ -32,9 +39,6 @@ export default function SideMenu({ menuItem }: SideMenuProps) {
       navigate("/search");
       return;
     }
-
-    // 加载任务数据（loadTasksByType现在会同时处理普通任务和置顶任务）
-    await loadTasksByType(key);
 
     // 然后设置激活的列表ID
     setActiveListId(key);

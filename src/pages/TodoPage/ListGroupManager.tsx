@@ -299,7 +299,7 @@ export default function ListGroupManager() {
       };
 
       // 创建基础菜单项对象
-      const menuItem: MenuProps["items"][number] = {
+      const tagSubMenuItem: MenuProps["items"][number] = {
         key: tag.id,
         label: (
           <Row justify={"space-between"} align={"middle"}>
@@ -336,11 +336,11 @@ export default function ListGroupManager() {
 
       // 当collapsed不为true时，添加icon属性
       if (!collapsed) {
-        menuItem.icon = <TagOutlined />;
+        tagSubMenuItem.icon = <TagOutlined />;
       }
 
       //菜单Tag列表推入（push）
-      result.push(menuItem);
+      result.push(tagSubMenuItem);
     });
     return result;
   }
@@ -357,7 +357,7 @@ export default function ListGroupManager() {
       icon: <QuestionOutlined />,
       label: "最近七天",
     },
-    { type: "divider" },
+    { type: "divider", style: { margin: "2rem 0" } },
     {
       key: "lists",
       icon: <OrderedListOutlined />,
