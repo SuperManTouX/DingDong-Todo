@@ -52,6 +52,9 @@ export const {
   loadDataAll,
   loadTags,
   loadListPinnedTasks,
+  // 新增方法
+  moveTaskToGroup,
+  moveTaskToList,
 } = useTodoStore.getState();
 
 // 为了确保兼容性，创建并导出一些可能使用的自定义hooks

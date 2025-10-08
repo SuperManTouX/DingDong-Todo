@@ -575,6 +575,9 @@ button + button {
     background-color: transparent !important;
     border: none !important;
 }
+.ant-pro-card{
+    background-color: transparent !important;
+}
 
 
 /* 暗黑模式 Dark mode */

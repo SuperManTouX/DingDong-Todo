@@ -14,6 +14,7 @@ export interface TodoState {
   groups: Group[]; // 全局分组数组
   userId: string | null; // 用户ID字段
   pinnedTasks: Todo[]; // 置顶任务数组
+  needsTableReload: boolean; // 标记表格是否需要刷新
 
   // 计算属性 - 这些属性在持久化时会被忽略
   activeGroup(): TodoListData;
@@ -41,7 +42,7 @@ export interface TodoState {
   getBinTodos: () => Todo[]; // 获取回收站中的所有任务
 
   // 辅助方法 - 用于查询和获取特定数据
-  getTodoById: (id: string) => Todo | null;
+  getTodoById: (id: string | null) => Promise<Todo | null>;
   getGroupByTodoId: (todoId: string) => TodoListData | null;
   getActiveListData: () => TodoListData;
   getActiveListTasks: () => Todo[];

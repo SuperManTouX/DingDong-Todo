@@ -13,6 +13,7 @@ import {
   initializeResponsiveListener,
   useGlobalSettingsStore,
 } from "./store/globalSettingsStore";
+import { websocketService } from "./services/websocketService";
 
 // 初始化主题
 initializeTheme();
@@ -29,6 +30,20 @@ const AppWithTheme: React.FC = () => {
       loadUserInfo();
     }
   }, [loadUserInfo]);
+
+  // 用户ID变化时，初始化或断开WebSocket连接
+  const userId = useAuthStore((state) => state.userId);
+  useEffect(() => {
+    if (userId) {
+      console.log(`初始化 WebSocket 连接，用户ID: ${userId}`);
+      websocketService.connect(userId);
+    }
+
+    return () => {
+      // 组件卸载或用户ID变化时断开连接
+      websocketService.disconnect();
+    };
+  }, [userId]);
 
   // 初始化响应式监听器
   useEffect(() => {
@@ -50,7 +65,7 @@ const AppWithTheme: React.FC = () => {
   const debouncedSetCollapsed = useRef(
     debounce((value: boolean) => {
       setCollapsed(value);
-    }, 200) // 200ms的延迟
+    }, 200), // 200ms的延迟
   ).current;
 
   //若响应式模式变化
@@ -69,9 +84,9 @@ const AppWithTheme: React.FC = () => {
 };
 
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <HotkeysProvider>
-      <AppWithTheme />
-    </HotkeysProvider>
-  </StrictMode>,
+  // <StrictMode>
+  <HotkeysProvider>
+    <AppWithTheme />
+  </HotkeysProvider>,
+  // </StrictMode>,
 );

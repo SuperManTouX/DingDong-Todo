@@ -166,6 +166,27 @@ export interface InitializeTagsAction extends TagAction {
 // 扁平化后，子任务相关的Action可以被通用的TodoAction替代
 // 但为了兼容性，我们保留部分Action类型
 
+// 移动任务到分组的Action类型
+interface TodoMoveToGroupAction {
+  type: "moveToGroup";
+  todoId: string;
+  groupId: string | null;
+}
+
+// 移动任务到清单的Action类型
+interface TodoMoveToListAction {
+  type: "moveToList";
+  todoId: string;
+  listId: string;
+}
+
+// 切换任务完成状态的Action类型
+interface TodoCompletedChangeAction {
+  type: "completedChange";
+  todoId: string;
+  completed: boolean;
+}
+
 export type TodoAction =
   | TodoAddAction
   | TodoToggleAction
@@ -176,7 +197,10 @@ export type TodoAction =
   | TodoDeleteAllCompleteAction
   | AddTagToTodoAction
   | RemoveTagFromTodoAction
-  | UpdateTodoTagsAction;
+  | UpdateTodoTagsAction
+  | TodoMoveToGroupAction
+  | TodoMoveToListAction
+  | TodoCompletedChangeAction;
 
 // 扩展后的Action类型，用于重构后的reducer
 // 任务相关的Action类型
@@ -197,8 +221,6 @@ export type TagReducerAction =
 export interface TodoItemProps {
   todo: Todo;
   other?: boolean;
-  hasSubTasks?: boolean;
-  isExpanded?: boolean;
   onToggleExpand?: () => void;
 }
 

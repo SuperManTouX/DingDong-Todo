@@ -120,11 +120,23 @@ export const generateAntdThemeConfig = (currentTheme: ThemeConfig) => {
         itemSelectedColor: currentTheme.textColor,
       },
 
-      DatePicker: {
-        activeBg: "transparent",
+      Card: {
+        // ProTable中ant-pro-card-body的全局主题token配置
+        colorBgContainer: currentTheme.bgLayoutColor,
+        padding: 16, // 控制Card整体内边距
+        bodyPadding: 16, // 控制Card body的内边距
+        headerPadding: 16, // 控制Card header的内边距
+        borderRadius: 8,
       },
+
       Table: {
         colorBgContainer: currentTheme.bgLayoutColor,
+        // ProTable全局主题token配置
+        cellPadding: 12,
+        headerBg: currentTheme.bgLayoutColor || "#fafafa",
+        borderColor: currentTheme.hoverColor || "#f0f0f0",
+        colorTextBase: currentTheme.textColor,
+        colorPrimary: currentTheme.primaryColor,
       },
     },
   };

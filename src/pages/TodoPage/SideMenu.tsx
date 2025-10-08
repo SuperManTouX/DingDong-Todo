@@ -4,7 +4,6 @@ import type { SideMenuProps } from "@/types";
 import { useEffect, useState } from "react";
 import { useTodoStore } from "@/store";
 import { useNavigate } from "react-router-dom";
-import { getCompletedTasks } from "@/services/todoService";
 
 /**
  * 侧边菜单组件
@@ -22,21 +21,11 @@ export default function SideMenu({ menuItem }: SideMenuProps) {
 
   // 监听activeListId变化，变化时加载对应类型的任务和已完成任务
   useEffect(() => {
-    const loadAllTasks = async () => {
-      if (activeListId) {
-        try {
-          // 加载任务数据
-          await loadTasksByType(activeListId);
-
-          await loadCompletedTasks(activeListId);
-        } catch (error) {
-          console.error("加载任务数据失败:", error);
-        }
-      }
-    };
-
-    loadAllTasks();
-  }, [activeListId, loadTasksByType]);
+    if (activeListId) {
+      // 加载任务数据
+      loadTasksByType(activeListId);
+    }
+  }, [activeListId]);
   // 菜单项点击处理函数
   const handleClick: MenuProps["onClick"] = async ({ key, keyPath }) => {
     setSelectedKeys([key]);

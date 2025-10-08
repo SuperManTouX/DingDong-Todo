@@ -14,6 +14,7 @@ export const MESSAGES = {
     TASK_UPDATED: "任务更新成功",
     TASK_PERMANENTLY_DELETED: "删除完成",
     USER_LOGGED_OUT: "用户已成功注销",
+    TASK_MOVE: "移动成功",
   },
 
   // 信息消息

@@ -1,3 +1,4 @@
+import { type ActionType, ProTable } from "@ant-design/pro-components";
 import {
   Typography,
   Button,
@@ -9,7 +10,7 @@ import {
   Table,
   Pagination,
 } from "antd";
-import React, { memo, useCallback, useMemo, useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import type { ColumnsType } from "antd/es/table";
 import {
   MenuFoldOutlined,
@@ -25,6 +26,8 @@ import FilterGroup from "./FilterGroup";
 import ContextMenu from "../../components/ContextMenu";
 import TodoTask from "./TodoTask";
 import type { Todo } from "@/types";
+import { getCompletedTasks } from "@/services/todoService";
+import { websocketService } from "../../services/websocketService";
 
 const { Header, Content, Footer } = Layout;
 
@@ -38,19 +41,16 @@ export default function FilteredTodoList({
   groupName,
   toggleCollapsed,
   collapsed,
+  PTableDOM,
 }: {
   groupName: string;
   toggleCollapsed: () => void;
   collapsed: boolean;
+  PTableDOM: React.RefObject<ActionType>;
 }) {
   // 获取所有任务，然后根据用户ID过滤
   const tasks = getActiveListTasks();
-  const {
-    pinnedTasks,
-    activeListId,
-    displayCompletedTasks,
-    loadCompletedTasks,
-  } = useTodoStore();
+  const { pinnedTasks, activeListId, loadCompletedTasks } = useTodoStore();
   // 获取全局设置和操作方法
   const {
     showTaskDetails,
@@ -64,9 +64,30 @@ export default function FilteredTodoList({
   // 分页相关状态
   const [completedTasksPage, setCompletedTasksPage] = useState(1);
   const [completedTasksPageSize] = useState(10);
-  const [filteredCompletedTasks, setFilteredCompletedTasks] = useState<Todo[]>(
-    [],
-  );
+
+  // 订阅WebSocket事件以刷新表格
+  useEffect(() => {
+    if (!PTableDOM.current) return;
+
+    const refreshTable = () => {
+      if (PTableDOM.current) {
+        PTableDOM.current.reload();
+      }
+      console.log("WebSocket事件触发表格刷新");
+    };
+
+    // 订阅WebSocket任务更新事件
+    websocketService.subscribe("task:updated", refreshTable);
+    websocketService.subscribe("task:created", refreshTable);
+    websocketService.subscribe("task:deleted", refreshTable);
+
+    // 组件卸载时取消订阅
+    return () => {
+      websocketService.unsubscribe("task:updated", refreshTable);
+      websocketService.unsubscribe("task:created", refreshTable);
+      websocketService.unsubscribe("task:deleted", refreshTable);
+    };
+  }, [PTableDOM]);
 
   // 下拉菜单配置
   const menuProps = {
@@ -108,23 +129,6 @@ export default function FilteredTodoList({
     handleDeleteAllCompleted,
     isAllDone,
   } = useTodoOperations(tasks);
-
-  // 当activeListId变化时，加载已完成任务并重置页码
-  useEffect(() => {
-    if (
-      activeListId &&
-      (activeListId === "cp" || activeListId === "bin" || !hideCompletedTasks)
-    ) {
-      // 调用分页加载已完成任务的方法
-      loadCompletedTasks(activeListId, 1, completedTasksPageSize);
-      setCompletedTasksPage(1);
-    }
-  }, [
-    activeListId,
-    hideCompletedTasks,
-    completedTasksPageSize,
-    loadCompletedTasks,
-  ]);
 
   // 处理分页变化
   const handleCompletedTasksPageChange = (page: number, pageSize: number) => {
@@ -199,17 +203,13 @@ export default function FilteredTodoList({
       key: "task",
       width: "100%",
       render: (_, record) => {
-        const hasSubTasks = record.children && record.children.length > 0;
-        const isExpanded = expandedRowKeys.includes(record.id);
-
         return (
           <ContextMenu key={record.id} todo={record}>
-            <div style={{ cursor: "context-menu", width: "100%" }}>
+            <div style={{ width: "100%" }}>
               <TodoTask
                 todo={record}
-                hasSubTasks={hasSubTasks}
-                isExpanded={isExpanded}
                 onToggleExpand={() => {}}
+                PTableDOM={PTableDOM}
               />
             </div>
           </ContextMenu>
@@ -241,7 +241,7 @@ export default function FilteredTodoList({
           size="small"
           bordered={false}
           rowKey="id"
-          style={{ minHeight: "200px" }}
+          style={{ minHeight: "50px" }}
         />
       );
 
@@ -355,21 +355,65 @@ export default function FilteredTodoList({
                 </FilterGroup>
               ))}
 
-            {/*使用分页树形表格展示已完成任务，不再虚化显示*/}
-            {displayCompletedTasks.tasks?.length > 0 &&
-              (activeListId === "cp" ||
-                activeListId === "bin" ||
-                !hideCompletedTasks) && (
-                <FilterGroup title="已完成" tasks={displayCompletedTasks}>
-                  <div style={{ opacity: `.3` }}>
-                    {renderTreeTable(
-                      displayCompletedTasks.tasks,
-                      true,
-                      displayCompletedTasks.tasks?.length,
-                    )}
-                  </div>
-                </FilterGroup>
-              )}
+            {/*使用ProTable分页树形表格展示已完成任务，不再虚化显示*/}
+            {(activeListId === "cp" ||
+              activeListId === "bin" ||
+              !hideCompletedTasks) && (
+              <FilterGroup title="已完成" tasks={[]}>
+                <div style={{ opacity: ".4" }}>
+                  <ProTable
+                    columns={columns}
+                    request={async (params) => {
+                      try {
+                        // 使用todoService的getCompletedTasks方法获取数据
+                        const { page, totalPages, total, tasks, pageSize } =
+                          await getCompletedTasks(
+                            activeListId,
+                            params.current || 1,
+                            params.pageSize || 10,
+                          );
+
+                        // 将获取的任务转换为树形结构
+                        const treeData = convertToTreeTableData(tasks);
+
+                        // 由于getCompletedTasks直接返回任务数组，需要构造ProTable需要的数据格式
+                        // 假设API返回的数据包含总任务数，这里可以根据实际情况调整
+                        return {
+                          data: treeData,
+                          success: true,
+                          total: total, // 这里应该从API响应中获取实际总数
+                        };
+                      } catch (error) {
+                        console.error("获取已完成任务失败:", error);
+                        return {
+                          data: [],
+                          success: false,
+                          total: 0,
+                        };
+                      }
+                    }}
+                    actionRef={PTableDOM}
+                    expandable={{
+                      rowExpandable: (record) =>
+                        record.children && record.children.length > 0,
+                      expandedRowKeys: expandedRowKeys,
+                      onExpand: handleExpandChange,
+                      indentSize: 35,
+                    }}
+                    rowKey="id"
+                    options={false}
+                    pagination={{
+                      pageSize: 10,
+                      showSizeChanger: true,
+                      showQuickJumper: true,
+                      showTotal: (total) => `共 ${total} 条记录`,
+                    }}
+                    className="todo-tree-table"
+                    search={false} // 禁用查询框
+                  />
+                </div>
+              </FilterGroup>
+            )}
           </Space>
         </div>
       </Content>

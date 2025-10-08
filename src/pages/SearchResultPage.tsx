@@ -35,7 +35,7 @@ const { Search } = Input;
  */
 export default function SearchResultPage() {
   const navigate = useNavigate();
-  const { setActiveListId, loadTasksByType } = useTodoStore();
+  const { setActiveListId, loadTasksByType, selectTodo } = useTodoStore();
   const [searchParams] = useSearchParams();
 
   const initialKeyword = searchParams.get("keyword") || "";
@@ -45,7 +45,8 @@ export default function SearchResultPage() {
   const [hasSearched, setHasSearched] = useState(false);
   const { isTodoDrawerOpen, setIsTodoDrawerOpen, isMobile } =
     useGlobalSettingsStore();
-  const selectedTodo = useSelectTodo();
+  const selectedTodo = selectTodo();
+  console.log("selectedTodo", selectedTodo);
 
   // 执行搜索
   const performSearch = useCallback(
