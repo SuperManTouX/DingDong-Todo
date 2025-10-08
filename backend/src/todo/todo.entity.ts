@@ -27,8 +27,8 @@ export class Task {
   @Column({ type: 'varchar', nullable: true })
   deadline: string;
 
-  @Column({ nullable: true, name: 'parent_id' })
-  parentId: string;
+  @Column({ nullable: true, name: 'parent_id', type: 'varchar' })
+  parentId: string | null;
 
   @Column({ default: 0 })
   depth: number;

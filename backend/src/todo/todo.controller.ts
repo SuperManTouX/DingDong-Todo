@@ -3,6 +3,7 @@ import { TaskService } from './todo.service';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { BatchUpdateOrderDto } from './dto/batch-update-order.dto';
+import { UpdateParentIdDto } from './dto/update-parent-id.dto';
 @ApiTags('任务管理')
 @Controller('todos')
 export class TodoController {
@@ -189,6 +190,27 @@ export class TodoController {
   @Patch(':id/pin')
   async togglePin(@Param('id') id: string, @Req() req) {
     return this.todoService.togglePin(id, req.user.id);
+  }
+
+  // 更新任务的父任务ID
+  @ApiOperation({
+    summary: '更新任务的父任务ID',
+    description: '更新任务的父任务ID，并自动计算和更新depth值，同时更新所有子任务的depth',
+  })
+  @ApiBearerAuth()
+  @ApiParam({ name: 'id', description: '任务ID' })
+  @ApiBody({
+    type: UpdateParentIdDto,
+    description: '新的父任务ID信息',
+  })
+  @ApiResponse({ status: 200, description: '更新成功' })
+  @ApiResponse({ status: 404, description: '任务不存在' })
+  @ApiResponse({ status: 400, description: '参数错误或循环引用' })
+  @ApiResponse({ status: 401, description: '未授权' })
+  @UseGuards(AuthGuard('jwt'))
+  @Patch(':id/parent')
+  async updateParentId(@Param('id') id: string, @Body() dto: UpdateParentIdDto, @Req() req) {
+    return this.todoService.updateParentId(id, dto.parentId, req.user.id);
   }
 
   // 批量更新任务排序
