@@ -1,7 +1,6 @@
 import { useTodoStore } from "@/store/todoStore";
 import type { Todo } from "@/types";
 import dayjs from "dayjs";
-import { SpecialLists } from "@/constants";
 
 // 定义统一的分组显示结构
 interface DisplayGroup {
@@ -13,7 +12,7 @@ interface DisplayGroup {
 
 // 定义hook返回类型
 interface UseTodoGroupingReturn {
-  groupMode: "normal" | "time" | "none" | "list";
+  groupMode: "normal" | "time" | "list";
   displayGroups: DisplayGroup[];
   allTasks: Todo[];
   displayUncompletedCount: number;
@@ -33,7 +32,7 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
   // 特殊activeListId处理
   if (activeListId.indexOf("tag") !== -1) {
     // 当激活的列表ID包含"tag"时，按不同list分组
-    groupMode = "normal";
+    groupMode = "list";
     // 保持所有任务，不需要特殊过滤
     filteredTasks = [...tasks];
   } else if (activeListId === "today") {
@@ -64,9 +63,9 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
     groupMode = "time"; // 已完成任务也使用时间分组模式
     filteredTasks = [];
     isCompletedMode = true;
-  } else if (activeListId in SpecialLists) {
+  } else if (activeListId === "bin") {
     // 其他特殊列表保持原有的时间分组模式
-    groupMode = "time";
+    groupMode = "list";
   }
 
   // 在已完成模式下，显示所有已完成任务；否则只显示未完成任务
@@ -87,35 +86,7 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
   const groups = getGroupsByListId(activeListId);
   if (groupMode === "normal") {
     // 普通清单模式
-    if (activeListId.indexOf("tag") !== -1) {
-      // 当激活的列表ID包含"tag"时，按不同list分组
-      const listGrouped: { [key: string]: Todo[] } = {};
-
-      // 初始化分组并按listId分组任务
-      displayTasks.forEach((task) => {
-        const listId = task.listId || "未分类";
-        if (!listGrouped[listId]) {
-          listGrouped[listId] = [];
-        }
-        listGrouped[listId].push(task);
-      });
-
-      // 转换为统一的显示分组格式
-      Object.keys(listGrouped).forEach((listId) => {
-        // 查找listId对应的标题，如果找不到则使用listId
-        const listTitle =
-          listId === "未分类"
-            ? "未分类"
-            : todoListData.find((list) => list.id === listId)?.title || listId;
-
-        displayGroups.push({
-          id: `list_${listId}`,
-          title: listTitle,
-          tasks: listGrouped[listId],
-          type: "group",
-        });
-      });
-    } else if (groups.length === 0) {
+    if (groups.length === 0) {
       // 没有分组，所有任务都放入未分组
       displayGroups.push({
         title: "未分组",
@@ -186,7 +157,7 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
         });
       }
     }
-  } else {
+  } else if (groupMode === "time") {
     // 时间分组模式
     // 预定义的特殊时间分组
     const today = dayjs().format("YYYY-MM-DD");
@@ -220,7 +191,7 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
       const parentT = tasksWithDeadlineTop.find((taskI) => {
         return taskO.parentId === taskI.id;
       });
-
+      console.log(taskO, parentT);
       // 确定任务应该属于哪个时间分组
       let targetGroup = "之后";
 
@@ -277,6 +248,34 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
         type: "ungrouped",
       });
     }
+  } else if (groupMode === "list") {
+    // 当激活的列表ID包含"tag"时，按不同list分组
+    const listGrouped: { [key: string]: Todo[] } = {};
+
+    // 初始化分组并按listId分组任务
+    displayTasks.forEach((task) => {
+      const listId = task.listId || "未分类";
+      if (!listGrouped[listId]) {
+        listGrouped[listId] = [];
+      }
+      listGrouped[listId].push(task);
+    });
+
+    // 转换为统一的显示分组格式
+    Object.keys(listGrouped).forEach((listId) => {
+      // 查找listId对应的标题，如果找不到则使用listId
+      const listTitle =
+        listId === "未分类"
+          ? "未分类"
+          : todoListData.find((list) => list.id === listId)?.title || listId;
+
+      displayGroups.push({
+        id: `list_${listId}`,
+        title: listTitle,
+        tasks: listGrouped[listId],
+        type: "group",
+      });
+    });
   }
   // 计算displayGroups中的任务总数
   const displayTasksCount = displayGroups.reduce((total, group) => {

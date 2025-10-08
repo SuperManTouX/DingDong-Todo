@@ -10,15 +10,9 @@ import {
 export const binActions = {
   moveToBin: async (todo: Todo, set: any): Promise<void> => {
     try {
-      // 调用API将任务移到回收站
-      await moveTaskToBin(todo.id);
-
-      // 更新本地状态
+      // 先更新本地状态（乐观更新）
       set(
         produce((draftState: TodoState) => {
-          // 将任务添加到回收站
-          draftState.bin.push(todo);
-
           // 从任务列表中移除
           draftState.tasks = draftState.tasks.filter(
             (task: any) => task.id !== todo.id,
@@ -30,74 +24,90 @@ export const binActions = {
           );
         }),
       );
+
+      // 然后发送API请求，但不等待响应
+      moveTaskToBin(todo.id).catch(error => {
+        console.error("移动到回收站失败:", error);
+        // 这里暂时不回滚状态，让用户可以重试
+      });
     } catch (error) {
-      console.error("移动到回收站失败:", error);
+      console.error("移动到回收站本地操作失败:", error);
       throw error;
     }
   },
 
   restoreFromBin: async (todoId: string, set: any, get): Promise<void> => {
     try {
-      // 调用API恢复任务
-      await restoreFromBin(todoId);
-
-      // 更新本地状态
+      // 先更新本地状态（乐观更新）
       set(
         produce((draftState: TodoState) => {
-          // 查找要恢复的任务
-          const taskToRestore = draftState.bin.find(
-            (task: any) => task.id === todoId,
+          // 从任务列表中移除
+          draftState.tasks = draftState.tasks.filter(
+            (task: any) => task.id !== todoId,
           );
 
-          if (taskToRestore) {
-            // 将任务添加回任务列表
-            draftState.tasks.push(taskToRestore);
-            // 从回收站中移除
-            draftState.bin = draftState.bin.filter(
-              (task: any) => task.id !== todoId,
-            );
-          }
+          // 同时移除子任务
+          draftState.tasks = draftState.tasks.filter(
+            (task: any) => task.parentId !== todoId,
+          );
         }),
       );
+
+      // 然后发送API请求，但不等待响应
+      restoreFromBin(todoId).catch(error => {
+        console.error("从回收站恢复失败:", error);
+        // 这里暂时不回滚状态，让用户可以重试
+      });
     } catch (error) {
-      console.error("从回收站恢复失败:", error);
+      console.error("从回收站恢复本地操作失败:", error);
       throw error;
     }
   },
 
   deleteFromBin: async (todoId: string, set: any): Promise<void> => {
     try {
-      // 调用API永久删除任务
-      await deleteFromBin(todoId);
-
-      // 更新本地状态
+      // 先更新本地状态（乐观更新）
       set(
         produce((draftState: TodoState) => {
-          // 从回收站中移除
-          draftState.bin = draftState.bin.filter(
+          // 从任务列表中移除
+          draftState.tasks = draftState.tasks.filter(
             (task: any) => task.id !== todoId,
+          );
+
+          // 同时移除子任务
+          draftState.tasks = draftState.tasks.filter(
+            (task: any) => task.parentId !== todoId,
           );
         }),
       );
+
+      // 然后发送API请求，但不等待响应
+      deleteFromBin(todoId).catch(error => {
+        console.error("从回收站删除失败:", error);
+        // 这里暂时不回滚状态，让用户可以重试
+      });
     } catch (error) {
-      console.error("从回收站删除失败:", error);
+      console.error("从回收站删除本地操作失败:", error);
       throw error;
     }
   },
 
   emptyBin: async (set: any): Promise<void> => {
     try {
-      // 调用API清空回收站
-      await emptyBin();
-
-      // 更新本地状态
+      // 先更新本地状态（乐观更新）
       set(
         produce((draftState: TodoState) => {
           draftState.bin = [];
         }),
       );
+
+      // 然后发送API请求，但不等待响应
+      emptyBin().catch(error => {
+        console.error("清空回收站失败:", error);
+        // 这里暂时不回滚状态，让用户可以重试
+      });
     } catch (error) {
-      console.error("清空回收站失败:", error);
+      console.error("清空回收站本地操作失败:", error);
       throw error;
     }
   },

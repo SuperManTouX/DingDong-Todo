@@ -127,11 +127,22 @@ export default function TaskDateTimePicker({ todo }: TaskDateTimePickerProps) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
       <DatePicker
+        presets={[
+          { label: "今天", value: dayjs() },
+          { label: "下周", value: dayjs().add(+7, "d") },
+          { label: "昨天", value: dayjs().add(-1, "d") },
+          { label: "上周", value: dayjs().add(-7, "d") },
+          { label: "上月", value: dayjs().add(-1, "month") },
+        ]}
         value={todo.deadline ? dayjs(todo.deadline) : undefined}
         style={{ width: 220 }}
         showTime
+        needConfirm
+        placeholder="Borderless"
+        variant="borderless"
         format="YYYY-MM-DD HH:mm"
         onChange={handleDateChange}
+        showNow={false}
       />
 
       <Popover
