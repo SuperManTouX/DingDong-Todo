@@ -1,19 +1,202 @@
 import { DeleteOutlined, EditOutlined, RedoOutlined } from "@ant-design/icons";
 import type { ContextMenuProps, Todo } from "@/types";
-import { Dropdown, type MenuProps, Modal } from "antd";
+import { Dropdown, type MenuProps, Modal, TreeSelect } from "antd";
 import { message } from "@/utils/antdStatic";
 import { MESSAGES } from "@/constants/messages";
 import { useTodoStore } from "@/store/todoStore";
 import { togglePinTask } from "@/services/todoService";
 import TagTreeSelect from "./TagTreeSelect";
 import TaskDateTimePicker from "./TaskDateTimePicker";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+
+// 定义树形表格数据类型
+interface TreeTableData extends Todo {
+  key: string;
+  children?: TreeTableData[];
+}
+
+// 定义TreeSelect需要的数据格式
+interface TreeNode {
+  value: string;
+  title: string;
+  children?: TreeNode[];
+}
 
 export default function ContextMenu({ todo, children }: ContextMenuProps) {
-  const { dispatchTodo, todoTags } = useTodoStore();
+  const { dispatchTodo, todoTags, tasks } = useTodoStore();
   const [isOpen, setIsOpen] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const dropdownRef = useRef<Dropdown>(null);
+  const [selectedParentId, setSelectedParentId] = useState<string>(
+    todo.parentId,
+  );
+
+  // 添加样式到组件
+  useEffect(() => {
+    // 创建样式元素
+    const styleElement = document.createElement("style");
+    styleElement.textContent = `
+      /* 限制移动任务子菜单的高度 */
+      .move-task-submenu + .ant-dropdown-menu-sub {
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      
+      /* 限制所有嵌套子菜单的高度 */
+      .ant-dropdown-menu-submenu-popup .ant-dropdown-menu {
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      
+      /* 为TreeSelect在Dropdown中设置样式 */
+      .tree-select-wrapper {
+        width: 250px;
+        padding: 8px;
+      }
+      
+      /* 为TreeSelect的下拉菜单设置样式 */
+      .custom-tree-select .ant-select-dropdown {
+        max-height: 300px;
+        overflow: auto;
+      }
+    `;
+
+    // 添加到文档头部
+    document.head.appendChild(styleElement);
+
+    // 组件卸载时移除样式
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
+
+  // 将任务数据转换为TreeSelect需要的格式
+  const convertToTreeSelectData = useCallback(
+    (tasks: Todo[], currentTodoId: string): TreeNode[] => {
+      // 创建ID到任务的映射
+      const taskMap = new Map<string, TreeNode>();
+      const rootNodes: TreeNode[] = [];
+
+      // 首先创建所有节点
+      tasks.forEach((task) => {
+        taskMap.set(task.id, { value: task.id, title: task.title });
+      });
+
+      // 构建树形结构
+      tasks.forEach((task) => {
+        const node = taskMap.get(task.id);
+        if (node) {
+          if (!task.parentId) {
+            // 根节点直接加入
+            rootNodes.push(node);
+          } else {
+            // 添加到父节点的children中
+            const parentNode = taskMap.get(task.parentId);
+            if (parentNode) {
+              if (!parentNode.children) {
+                parentNode.children = [];
+              }
+              parentNode.children.push(node);
+            } else {
+              // 如果父节点不存在或被过滤掉，则作为根节点
+              rootNodes.push(node);
+            }
+          }
+        }
+      });
+
+      // 在最前面添加"移到顶层"选项
+      return [{ value: "", title: "移到顶层" }, ...rootNodes];
+    },
+    [],
+  );
+
+  // 处理任务移动
+  const handleTaskMove = async (value: string | null) => {
+    try {
+      // 获取store状态一次，避免多次获取可能导致的状态不一致
+      const store = useTodoStore.getState();
+      const targetParentId = value === "" || value === null ? null : value;
+
+      // 检查是否选择了当前任务作为父任务
+      if (targetParentId === todo.id) {
+        message.warning("不能将任务移动到自身下");
+        // 重置选择
+        setSelectedParentId(undefined);
+        return;
+      }
+
+      // 首先获取当前任务和目标父任务的数据
+      const currentTask = store.getTodoById(todo.id);
+      const targetParentTask = targetParentId
+        ? store.getTodoById(targetParentId)
+        : null;
+
+      // 更新服务器数据
+      await store.updateParentId(todo.id, targetParentId);
+
+      // 服务器更新成功后，在本地更新任务数据，不再调用loadTasksByType
+
+      // 1. 更新当前任务的parentId、listId和groupId
+      const updatedTask = {
+        ...currentTask,
+        parentId: targetParentId,
+        // 如果父任务存在且其listId与当前任务不同，则更新
+        listId:
+          targetParentTask && targetParentTask.listId !== currentTask.listId
+            ? targetParentTask.listId
+            : currentTask.listId,
+        // 如果父任务存在且其groupId与当前任务不同，则更新
+        groupId:
+          targetParentTask && targetParentTask.groupId !== currentTask.groupId
+            ? targetParentTask.groupId
+            : currentTask.groupId,
+      };
+
+      // 2. 计算新的depth
+      if (targetParentId) {
+        // 如果有父任务，新depth为父任务depth+1
+        updatedTask.depth = (targetParentTask?.depth || 0) + 1;
+      } else {
+        // 如果没有父任务，depth为0
+        updatedTask.depth = 0;
+      }
+
+      // 3. 更新当前任务的本地数据
+      store.updateTodoLocally(updatedTask);
+
+      // 4. 递归更新所有子任务的depth
+      updateChildTasksDepth(todo.id, updatedTask.depth);
+
+      message.success(value ? "任务移动成功" : "任务已移至顶级");
+
+      // 重置选择
+      setSelectedParentId(undefined);
+    } catch (error) {
+      console.error("移动任务失败:", error);
+      message.error("任务移动失败，请重试");
+    }
+  };
+
+  // 递归更新子任务的depth
+  const updateChildTasksDepth = (parentId: string, parentDepth: number) => {
+    const state = useTodoStore.getState();
+    const childTasks = state.tasks.filter((task) => task.parentId === parentId);
+
+    childTasks.forEach((childTask) => {
+      // 更新子任务的depth为父任务depth+1
+      const updatedChildTask = {
+        ...childTask,
+        depth: parentDepth + 1,
+      };
+
+      // 更新本地数据
+      state.updateTodoLocally(updatedChildTask);
+
+      // 递归更新子任务的子任务
+      updateChildTasksDepth(childTask.id, updatedChildTask.depth);
+    });
+  };
 
   // 添加子任务
   function handleAddSubTask(todo: Todo): void {
@@ -78,7 +261,12 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
   const moveToBin = useTodoStore((state) => state.moveToBin);
   const restoreFromBin = useTodoStore((state) => state.restoreFromBin);
   const deleteFromBin = useTodoStore((state) => state.deleteFromBin);
-  const activeListId = useTodoStore((state) => state.activeListId);
+
+  // 过滤掉当前任务，避免循环引用
+  const filteredTasks = tasks.filter((task) => task.id !== todo.id);
+
+  // 转换为TreeSelect需要的数据格式
+  const treeSelectData = convertToTreeSelectData(tasks, todo.id);
 
   const normalItems: MenuProps["items"] = [
     {
@@ -109,7 +297,7 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
 
           // 重新加载数据以反映子任务的变化
           const { loadTasksByType } = useTodoStore.getState();
-          await loadTasksByType(activeListId);
+          await loadTasksByType(useTodoStore.getState().activeListId);
 
           message.success(MESSAGES.SUCCESS.TASK_PINNED);
         } catch (error) {
@@ -128,6 +316,33 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
           message.warning(MESSAGES.WARNING.SUBTASK_NOT_AVAILABLE);
         }
       },
+    },
+    {
+      key: "move_task_select",
+      disabled: true,
+      label: (
+        <div className="tree-select-wrapper">
+          <div style={{ marginBottom: "8px" }}>移动任务到：</div>
+          <TreeSelect
+            showSearch
+            treeNodeFilterProp="title"
+            showCheckedStrategy="SHOW_PARENT"
+            style={{ width: "120%" }}
+            placeholder="搜索并选择目标任务"
+            className="custom-tree-select"
+            treeData={treeSelectData}
+            value={selectedParentId}
+            onChange={(value) => handleTaskMove(value)}
+            onSelect={(value) => {
+              if (value === todo.id) {
+                message.warning("不能将任务移动到自身下");
+                return false;
+              }
+              return true;
+            }}
+          />
+        </div>
+      ),
     },
     {
       key: "delete",
@@ -193,7 +408,10 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
       key={todo.id}
       trigger={["contextMenu"]}
       menu={{
-        items: activeListId === "bin" ? binItems : normalItems,
+        items:
+          useTodoStore.getState().activeListId === "bin"
+            ? binItems
+            : normalItems,
         className: "ctx-menu-left",
       }}
       open={isOpen}

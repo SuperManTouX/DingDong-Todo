@@ -123,6 +123,9 @@ export const generateAntdThemeConfig = (currentTheme: ThemeConfig) => {
       DatePicker: {
         activeBg: "transparent",
       },
+      Table: {
+        colorBgContainer: currentTheme.bgLayoutColor,
+      },
     },
   };
 };
