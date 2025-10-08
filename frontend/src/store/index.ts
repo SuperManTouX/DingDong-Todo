@@ -33,19 +33,8 @@ export const useTodoStore = create<TodoState>()(
         userId: null,
         pinnedTasks: [], // 初始化置顶任务数组
         displayCompletedTasks: [], // 新增：存储已完成的任务
+        needsTableReload: false, // 初始化表格刷新标记
 
-        // 设置显示已完成任务
-        setDisplayCompletedTasks: (tasks: Todo[]) => {
-          set({ displayCompletedTasks: tasks });
-        },
-
-        activeGroup: () => {
-          const state = get();
-          return (
-            state.todoListData.find((item) => item.id === state.activeListId) ||
-            ({} as any)
-          );
-        },
         selectTodo: () => {
           const state = get();
           if (!state.selectTodoId) return null;

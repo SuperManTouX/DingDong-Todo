@@ -4,13 +4,14 @@ import { formatMessage, MESSAGES } from "@/constants/messages";
 import { Priority } from "@/constants";
 import { theme } from "antd";
 import { RollbackOutlined } from "@ant-design/icons";
-import { isEqual } from 'lodash';
+import { isEqual } from "lodash";
+import { useTodoStore } from "@/store/todoStore";
+import type { Todo } from "@/types";
+import type { ActionType } from "@ant-design/pro-components";
 
 interface TodoCheckboxProps {
-  completed: boolean;
-  priority: Priority;
-  title: string;
-  onChange: (checked: boolean) => void;
+  todo: Todo;
+  PTableDOM?: React.RefObject<ActionType>;
 }
 
 // 创建样式CSS类名（实际项目中应放在单独的CSS文件中）
@@ -68,90 +69,122 @@ const todoCheckboxStyles = `
   }
 `;
 
-const TodoCheckbox: React.FC<TodoCheckboxProps> = memo(({
-  completed,
-  priority,
-  title,
-  onChange,
-}) => {
-  const { token } = theme.useToken();
-  const [isHovered, setIsHovered] = useState(false);
+const TodoCheckbox: React.FC<TodoCheckboxProps> = memo(
+  ({ todo, PTableDOM }) => {
+    const { dispatchTodo, loadTasksByType, activeListId } = useTodoStore();
+    const { token } = theme.useToken();
+    const [isHovered, setIsHovered] = useState(false);
 
-  // 使用useCallback包装事件处理函数
-  const getPriorityColor = useCallback(() => {
-    switch (priority) {
-      case Priority.High:
-        return "#ff4d4f"; // 红色
-      case Priority.Medium:
-        return "#faad14"; // 黄色
-      case Priority.Low:
-        return "#1677ff"; // 蓝色
-      default:
-        return "#909399"; // 灰色
-    }
-  }, [priority]);
+    // 使用useCallback包装事件处理函数
+    const getPriorityColor = useCallback(() => {
+      switch (todo.priority) {
+        case Priority.High:
+          return "#ff4d4f"; // 红色
+        case Priority.Medium:
+          return "#faad14"; // 黄色
+        case Priority.Low:
+          return "#1677ff"; // 蓝色
+        default:
+          return "#909399"; // 灰色
+      }
+    }, [todo.priority]);
 
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const checked = e.currentTarget.checked;
-    onChange(checked);
-    if (checked) {
-      message.info({
-        content: (
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <span>
-              {formatMessage(MESSAGES.INFO.TASK_COMPLETED, {
-                taskTitle: title,
-              })}
-            </span>
-            <RollbackOutlined
-              style={{ marginLeft: 8, cursor: "pointer", color: "orange" }}
-              onClick={(e) => {
-                e.stopPropagation();
-                onChange(false); // 撤销完成状态
-              }}
-            />
-          </div>
-        ),
-        duration: 3, // 消息显示3秒
-      });
-    }
-  }, [onChange, title]);
+    const handleChange = useCallback(
+      async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const checked = e.currentTarget.checked;
 
-  const handleMouseEnter = useCallback(() => {
-    setIsHovered(true);
-  }, []);
+        try {
+          // 更新本地状态以立即反映变化
+          await dispatchTodo({
+            type: "completedChange",
+            todoId: todo.id,
+            completed: checked,
+          });
+          await loadTasksByType(activeListId);
+          // 不再直接调用PTableDOM.reload()，由事件系统处理
 
-  const handleMouseLeave = useCallback(() => {
-    setIsHovered(false);
-  }, []);
+          if (checked) {
+            message.info({
+              content: (
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <span>
+                    {formatMessage(MESSAGES.INFO.TASK_COMPLETED, {
+                      taskTitle: todo.title,
+                    })}
+                  </span>
+                  <RollbackOutlined
+                    style={{
+                      marginLeft: 8,
+                      cursor: "pointer",
+                      color: "orange",
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // 撤销完成状态
+                      dispatchTodo({
+                        type: "completedChange",
+                        todoId: todo.id,
+                        completed: false,
+                      });
+                      // 不再直接调用PTableDOM.reload()，由事件系统处理
+                    }}
+                  />
+                </div>
+              ),
+              duration: 3, // 消息显示3秒
+            });
+          }
+        } catch (error) {
+          // 处理错误
+          console.error("切换任务完成状态失败:", error);
+          message.error(formatMessage(MESSAGES.ERROR.FAILED_TO_UPDATE_TASK));
 
-  const checkboxClasses = `todo-checkbox me-2 ${completed ? 'checked' : ''} ${!completed && isHovered ? 'hovered' : ''}`;
-  const priorityColor = getPriorityColor();
+          // 恢复原来的选中状态
+          e.currentTarget.checked = todo.completed;
+        }
+      },
+      [todo, dispatchTodo, PTableDOM],
+    );
 
-  return (
-    <>
-      <style>{todoCheckboxStyles}</style>
-      <div className="todo-checkbox-container">
-        <input
-          type="checkbox"
-          className={checkboxClasses}
-          style={{
-            borderColor: priorityColor,
-            color: priorityColor,
-            backgroundColor: completed ? priorityColor : token.colorBgBase,
-          }}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-          checked={completed}
-          onChange={handleChange}
-        />
-        {completed && <div className="todo-checkbox-checkmark" />}
-      </div>
-    </>
-  );
-}, (prevProps, nextProps) => {
-  // 使用lodash的isEqual进行深度比较
-  return isEqual(prevProps, nextProps);
-});
+    const handleMouseEnter = useCallback(() => {
+      setIsHovered(true);
+    }, []);
+
+    const handleMouseLeave = useCallback(() => {
+      setIsHovered(false);
+    }, []);
+
+    const checkboxClasses = `todo-checkbox me-2 ${todo.completed ? "checked" : ""} ${!todo.completed && isHovered ? "hovered" : ""}`;
+    const priorityColor = getPriorityColor();
+
+    return (
+      <>
+        <style>{todoCheckboxStyles}</style>
+        <div className="todo-checkbox-container">
+          <input
+            type="checkbox"
+            className={checkboxClasses}
+            style={{
+              borderColor: priorityColor,
+              color: priorityColor,
+              backgroundColor: todo.completed
+                ? priorityColor
+                : token.colorBgBase,
+            }}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            checked={todo.completed}
+            onChange={handleChange}
+          />
+          {todo.completed && <div className="todo-checkbox-checkmark" />}
+        </div>
+      </>
+    );
+  },
+  (prevProps, nextProps) => {
+    // 使用lodash的isEqual进行深度比较
+    return isEqual(prevProps, nextProps);
+  },
+);
 
 export default TodoCheckbox;

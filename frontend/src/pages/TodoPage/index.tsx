@@ -1,17 +1,22 @@
-import React, { useEffect, useState } from "react";
-import { Layout, type MenuProps, Button } from "antd";
+import React, { useRef } from "react";
+import { Layout, type MenuProps } from "antd";
+
+import type { ActionType } from "@ant-design/pro-components";
 import {
   useTodoStore,
   getActiveListData,
   useSelectTodo,
 } from "@/store/todoStore";
 import { useGlobalSettingsStore } from "@/store/globalSettingsStore";
+
 import FilteredTodoList from "@/pages/TodoPage/FilteredTodoList";
 import EditTodo from "@/pages/TodoPage/EditTodo";
-import Sider from "antd/es/layout/Sider";
 import SideMenu from "@/pages/TodoPage/SideMenu";
 import ListGroupManager from "@/pages/TodoPage/ListGroupManager";
 import { useTodoDataLoader } from "@/hooks/useTodoDataLoader";
+
+import Sider from "antd/es/layout/Sider";
+
 /**
  * 待办事项页面组件
  * 显示主待办事项列表和编辑功能
@@ -25,6 +30,9 @@ const Index: React.FC = () => {
     collapsed,
     toggleCollapsed,
   } = useGlobalSettingsStore();
+
+  // 创建PTableDOM引用，用于表格刷新功能
+  const PTableDOM = useRef<ActionType>();
 
   // 使用自定义hook加载待办数据
   useTodoDataLoader();
@@ -75,14 +83,15 @@ const Index: React.FC = () => {
           groupName={activeListTitle}
           toggleCollapsed={toggleCollapsed}
           collapsed={collapsed}
+          PTableDOM={PTableDOM}
         />
       </Layout>
       {/*如果屏幕小了就不显示*/}
       <EditTodo
-        key={selectedTodo ? selectedTodo.id : "s"}
         asDrawer={isMobile}
         open={isMobile ? isTodoDrawerOpen : true}
         onClose={isMobile ? () => setIsTodoDrawerOpen(false) : undefined}
+        PTableDOM={PTableDOM}
       />
 
       {/* 清单管理模态框 */}

@@ -2,6 +2,8 @@ import { produce } from "immer";
 import type { TagReducerAction, TodoState } from "../types";
 import { message } from "@/utils/antdStatic";
 import { createTag, deleteTag, updateTag } from "@/services/tagService";
+import { websocketService } from "@/services/websocketService";
+import { useAuthStore } from "@/store/authStore";
 
 export const tagActions = {
   dispatchTag: async (
@@ -9,6 +11,9 @@ export const tagActions = {
     set: any,
     get: () => TodoState,
   ): Promise<void> => {
+    const authState = useAuthStore.getState();
+    const { userId } = authState;
+    if (!userId) return;
     try {
       // 先执行API调用
       switch (action.type) {
@@ -53,6 +58,11 @@ export const tagActions = {
         case "deleteTag": {
           // 先发送API请求
           await deleteTag(action.payload);
+          websocketService.emit("task:updated", {
+            taskId: action.todoId,
+            userId: userId,
+            timestamp: new Date().toISOString(),
+          });
 
           // API成功后更新本地状态
           set(

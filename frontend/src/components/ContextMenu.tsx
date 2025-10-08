@@ -111,7 +111,7 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
     [],
   );
 
-  // 处理任务移动
+  // 处理任务移动层级
   const handleTaskMove = async (value: string | null) => {
     try {
       // 获取store状态一次，避免多次获取可能导致的状态不一致
@@ -168,13 +168,13 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
       // 4. 递归更新所有子任务的depth
       updateChildTasksDepth(todo.id, updatedTask.depth);
 
-      message.success(value ? "任务移动成功" : "任务已移至顶级");
+      message.success(value ? "任务层级移动成功" : "任务层级已移至顶级");
 
       // 重置选择
       setSelectedParentId(undefined);
     } catch (error) {
-      console.error("移动任务失败:", error);
-      message.error("任务移动失败，请重试");
+      console.error("移动任务层级失败:", error);
+      message.error("任务移动层级失败，请重试");
     }
   };
 
@@ -281,6 +281,54 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
           onTagsChange={handleTagsChange}
         />
       ),
+    },
+    {
+      key: "move_group",
+      label: "移动分组",
+      children: [
+        {
+          key: "group-null",
+          label: "无分组",
+          onClick: async () => {
+            try {
+              await dispatchTodo({
+                type: "moveToGroup",
+                todoId: todo.id,
+                groupId: null,
+                listId: todo.listId, // 使用当前任务的清单ID
+              });
+              message.success("任务已移出分组");
+            } catch (error) {
+              console.error("移动任务到分组失败:", error);
+              message.error("移动任务到分组失败，请重试");
+            }
+          },
+        },
+        ...useTodoStore.getState().groups.map((group) => {
+          // 获取分组对应的清单信息
+          const list = useTodoStore
+            .getState()
+            .todoListData.find((l) => l.id === group.listId);
+          return {
+            key: `group-${group.id}`,
+            label: `${group.groupName} (${list?.title || "未知清单"})`,
+            onClick: async () => {
+              try {
+                await dispatchTodo({
+                  type: "moveToGroup",
+                  todoId: todo.id,
+                  groupId: group.id,
+                  listId: list?.id,
+                });
+                message.success(`任务已移动到分组：${group.groupName}`);
+              } catch (error) {
+                console.error("移动任务到分组失败:", error);
+                message.error("移动任务到分组失败，请重试");
+              }
+            },
+          };
+        }),
+      ],
     },
     {
       key: "pin",

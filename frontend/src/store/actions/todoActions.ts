@@ -1,11 +1,38 @@
 import { produce } from "immer";
 import { Priority } from "@/constants";
 import { useAuthStore } from "@/store/authStore";
-import { createTodo, updateTodo, deleteTodo } from "@/services/todoService";
+import {
+  createTodo,
+  updateTodo,
+  deleteTodo,
+  moveTaskToGroup,
+  moveTaskToList,
+  toggleTaskCompleted,
+} from "@/services/todoService";
 import type { TodoActionExtended } from "@/types";
 import type { TodoState } from "../types";
 import type { Todo } from "@/types";
-import { produce } from "immer";
+import { message } from "@/utils/antdStatic";
+import { MESSAGES } from "@/constants/messages";
+import { websocketService } from "@/services/websocketService";
+
+// 创建一个简单的事件系统用于通知表格刷新
+export const tableEvents = {
+  listeners: new Set<() => void>(),
+
+  subscribe(callback: () => void) {
+    this.listeners.add(callback);
+    return () => this.listeners.delete(callback);
+  },
+
+  unsubscribe(callback: () => void) {
+    this.listeners.delete(callback);
+  },
+
+  notify() {
+    this.listeners.forEach((callback) => callback());
+  },
+};
 
 export const todoActions = {
   dispatchTodo: async (
@@ -35,7 +62,7 @@ export const todoActions = {
               const taskData: Todo = {
                 id: tempId!,
                 title: action.title,
-                text: action.text || '',
+                text: action.text || "",
                 completed: action.completed || false,
                 priority: action.priority || Priority.normal,
                 deadline: action.deadline || undefined,
@@ -60,7 +87,30 @@ export const todoActions = {
                   (task) => task.id === taskData.parentId,
                 );
                 if (parentTaskIndex !== -1) {
-                  draftState.tasks[parentTaskIndex].updatedAt = new Date().toISOString();
+                  draftState.tasks[parentTaskIndex].updatedAt =
+                    new Date().toISOString();
+                }
+              }
+              break;
+            }
+            case "completedChange": {
+              if (action.todoId && typeof action.completed === "boolean") {
+                // 直接更新任务的completed属性
+                const todoIndex = draftState.tasks.findIndex(
+                  (task) => task.id === action.todoId,
+                );
+
+                if (todoIndex !== -1) {
+                  // 直接更新现有任务的completed属性
+                  draftState.tasks[todoIndex] = {
+                    ...draftState.tasks[todoIndex],
+                    completed: action.completed,
+                    userId,
+                    updatedAt: new Date().toISOString(),
+                  };
+                  console.log(
+                    `任务 ${action.todoId} 的完成状态已更新为: ${action.completed}`,
+                  );
                 }
               }
               break;
@@ -72,7 +122,7 @@ export const todoActions = {
                 );
                 // 检查任务是否在tasks数组中
                 const taskInTasksArray = todoIndex !== -1;
-                
+
                 // 保留createdAt等不变字段，只更新必要字段
                 const updatedTask = {
                   id: action.todo.id,
@@ -81,12 +131,14 @@ export const todoActions = {
                   userId,
                   updatedAt: new Date().toISOString(),
                 };
-                
+
                 if (action.todo.completed === true) {
                   // 当completed状态变为true时，从tasks中移除任务
                   if (taskInTasksArray) {
                     draftState.tasks.splice(todoIndex, 1);
-                    console.log(`任务 ${action.todo.id} 已从tasks中移除，因为状态变为已完成`);
+                    console.log(
+                      `任务 ${action.todo.id} 已从tasks中移除，因为状态变为已完成`,
+                    );
                   }
                 } else if (action.todo.completed === false) {
                   // 当completed状态变为false时，添加到tasks数组
@@ -96,7 +148,9 @@ export const todoActions = {
                   } else {
                     // 如果任务不在tasks中，添加进去
                     draftState.tasks.push(updatedTask);
-                    console.log(`任务 ${action.todo.id} 已添加到tasks中，因为状态变为未完成`);
+                    console.log(
+                      `任务 ${action.todo.id} 已添加到tasks中，因为状态变为未完成`,
+                    );
                   }
                 } else {
                   // 其他情况，正常更新tasks中的任务（如果存在）
@@ -138,8 +192,42 @@ export const todoActions = {
               }
               break;
             }
-            default:
+            case "moveToGroup": {
+              if (action.todoId && action.groupId !== undefined) {
+                // 更新本地状态
+                draftState.tasks = draftState.tasks.map((task) => {
+                  if (
+                    task.id === action.todoId ||
+                    task.parentId === action.todoId
+                  ) {
+                    return {
+                      ...task,
+                      groupId: action.groupId,
+                      updatedAt: new Date().toISOString(),
+                    };
+                  }
+                  return task;
+                });
+              }
               break;
+            }
+            case "moveToList": {
+              if (action.todoId && action.listId) {
+                // 从本地直接删除任务和它的子任务
+                draftState.tasks = draftState.tasks.filter(
+                  (task) =>
+                    task.id !== action.todoId &&
+                    task.parentId !== action.todoId,
+                );
+                // 同时从pinnedTasks中删除
+                draftState.pinnedTasks = draftState.pinnedTasks.filter(
+                  (task) =>
+                    task.id !== action.todoId &&
+                    task.parentId !== action.todoId,
+                );
+              }
+              break;
+            }
           }
         }),
       );
@@ -153,10 +241,10 @@ export const todoActions = {
               ...localCreatedTask,
               id: undefined, // 让服务器生成真实ID
             };
-            
+
             try {
               const createdTask = await createTodo(taskData);
-              
+
               // API成功后，更新本地状态中的临时ID为真实ID
               if (createdTask && createdTask.id) {
                 set(
@@ -169,6 +257,13 @@ export const todoActions = {
                     }
                   }),
                 );
+
+                // 通过WebSocket发送任务创建通知
+                websocketService.emit("task:created", {
+                  taskId: createdTask.id,
+                  userId: userId,
+                  timestamp: new Date().toISOString(),
+                });
               }
             } catch (error) {
               console.error("创建任务API调用失败:", error);
@@ -179,30 +274,84 @@ export const todoActions = {
           }
           break;
         }
+        // 处理任务完成状态变化的专门分支
+        case "completedChange": {
+          if (action.todoId && typeof action.completed === "boolean") {
+            // 使用专门的toggleTaskCompleted方法
+            await toggleTaskCompleted(action.todoId, action.completed)
+              .then(() => {
+                // 通过WebSocket发送任务更新通知
+                websocketService.emit("task:updated", {
+                  taskId: action.todoId,
+                  userId: userId,
+                  timestamp: new Date().toISOString(),
+                });
+              })
+              .catch((error) => {
+                console.error(
+                  `切换任务完成状态API调用失败 (ID: ${action.todoId}):`,
+                  error,
+                );
+                throw error;
+              });
+          }
+          break;
+        }
         case "changed": {
           if (action.todo.id) {
             // 发送API请求，但不等待响应
-            updateTodo(action.todo.id, {
+            await updateTodo(action.todo.id, {
               ...action.todo,
               userId,
-            }).catch(error => {
-              console.error(`更新任务API调用失败 (ID: ${action.todo.id}):`, error);
-              // API失败后，可以选择回滚本地状态
-              // 这里暂时不回滚，让用户可以重试
-              throw error;
-            });
+            })
+              .then(() => {
+                set(
+                  produce((draftState: TodoState) => {
+                    draftState.needsTableReload = true;
+                  }),
+                );
+                // 标记需要通知表格刷新
+
+                // 通过WebSocket发送任务更新通知
+                websocketService.emit("task:updated", {
+                  taskId: action.todo.id,
+                  userId: userId,
+                  timestamp: new Date().toISOString(),
+                });
+              })
+              .catch((error) => {
+                console.error(
+                  `更新任务API调用失败 (ID: ${action.todo.id}):`,
+                  error,
+                );
+                // API失败后，可以选择回滚本地状态
+                // 这里暂时不回滚，让用户可以重试
+                throw error;
+              });
           }
           break;
         }
         case "deleted": {
           if (action.deleteId) {
             // 发送API请求，但不等待响应
-            deleteTodo(action.deleteId).catch(error => {
-              console.error(`删除任务API调用失败 (ID: ${action.deleteId}):`, error);
-              // API失败后，可以选择回滚本地状态
-              // 这里暂时不回滚，让用户可以重试
-              throw error;
-            });
+            deleteTodo(action.deleteId)
+              .then(() => {
+                // 通过WebSocket发送任务删除通知
+                websocketService.emit("task:deleted", {
+                  taskId: action.deleteId,
+                  userId: userId,
+                  timestamp: new Date().toISOString(),
+                });
+              })
+              .catch((error) => {
+                console.error(
+                  `删除任务API调用失败 (ID: ${action.deleteId}):`,
+                  error,
+                );
+                // API失败后，可以选择回滚本地状态
+                // 这里暂时不回滚，让用户可以重试
+                throw error;
+              });
           }
           break;
         }
@@ -217,10 +366,13 @@ export const todoActions = {
                 ...task,
                 completed: action.completeOrUncomplete,
                 userId,
-              }).catch(error => {
-                console.error(`批量完成任务API调用失败 (ID: ${task.id}):`, error);
+              }).catch((error) => {
+                console.error(
+                  `批量完成任务API调用失败 (ID: ${task.id}):`,
+                  error,
+                );
                 return null; // 继续处理其他任务
-              })
+              }),
             ),
           );
           break;
@@ -235,17 +387,65 @@ export const todoActions = {
             // 异步删除每个任务
             await Promise.all(
               completedTasks.map((task: any) =>
-                deleteTodo(task.id).catch(error => {
-                  console.error(`批量删除任务API调用失败 (ID: ${task.id}):`, error);
+                deleteTodo(task.id).catch((error) => {
+                  console.error(
+                    `批量删除任务API调用失败 (ID: ${task.id}):`,
+                    error,
+                  );
                   return null; // 继续处理其他任务
-                })
+                }),
               ),
             );
           }
           break;
         }
-        default:
+        case "moveToGroup": {
+          if (action.todoId && action.groupId !== undefined) {
+            // 发送API请求
+            await moveTaskToGroup(action.todoId, action.groupId, action.listId)
+              .then(() => {
+                message.success(MESSAGES.SUCCESS.TASK_MOVE);
+              })
+              .catch((error) => {
+                console.error(
+                  `移动任务到分组API调用失败 (ID: ${action.todoId}):`,
+                  error,
+                );
+                throw error;
+              });
+          }
           break;
+        }
+        case "moveToList": {
+          if (action.todoId && action.listId) {
+            // 发送API请求
+            await moveTaskToList(action.todoId, action.listId)
+              .then(() => {
+                message.success(MESSAGES.SUCCESS.TASK_MOVE);
+              })
+              .catch((error) => {
+                console.error(
+                  `移动任务到清单API调用失败 (ID: ${action.todoId}):`,
+                  error,
+                );
+                throw error;
+              });
+          }
+          break;
+        }
+      }
+
+      // 检查是否需要通知表格刷新
+      const currentState = get();
+      if (currentState.needsTableReload) {
+        // 通知所有订阅者刷新表格
+        tableEvents.notify();
+        // 重置刷新标记
+        set(
+          produce((draftState: TodoState) => {
+            draftState.needsTableReload = false;
+          }),
+        );
       }
     } catch (error) {
       console.error(`任务操作失败 (${action.type}):`, error);
@@ -255,12 +455,21 @@ export const todoActions = {
   },
 
   // 交换两个任务在数组中的位置
-  swapTasksPositions: (draggedTask: Todo, targetTask: Todo, set: any, get: () => TodoState): void => {
+  swapTasksPositions: (
+    draggedTask: Todo,
+    targetTask: Todo,
+    set: any,
+    get: () => TodoState,
+  ): void => {
     set(
       produce((draftState: TodoState) => {
         // 查找两个任务在tasks数组中的索引
-        const draggedIndex = draftState.tasks.findIndex(task => task.id === draggedTask.id);
-        const targetIndex = draftState.tasks.findIndex(task => task.id === targetTask.id);
+        const draggedIndex = draftState.tasks.findIndex(
+          (task) => task.id === draggedTask.id,
+        );
+        const targetIndex = draftState.tasks.findIndex(
+          (task) => task.id === targetTask.id,
+        );
 
         // 确保两个任务都存在于数组中
         if (draggedIndex !== -1 && targetIndex !== -1) {
@@ -268,10 +477,12 @@ export const todoActions = {
           const temp = draftState.tasks[draggedIndex];
           draftState.tasks[draggedIndex] = draftState.tasks[targetIndex];
           draftState.tasks[targetIndex] = temp;
-          
-          console.log(`已成功交换任务位置: draggedTask (${draggedTask.id}) 与 targetTask (${targetTask.id})`);
+
+          console.log(
+            `已成功交换任务位置: draggedTask (${draggedTask.id}) 与 targetTask (${targetTask.id})`,
+          );
         } else {
-          console.error('交换任务失败: 未找到指定的任务');
+          console.error("交换任务失败: 未找到指定的任务");
         }
       }),
     );
@@ -299,5 +510,5 @@ export const todoActions = {
         }
       }),
     );
-  }
+  },
 };

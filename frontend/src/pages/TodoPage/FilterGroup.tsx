@@ -51,17 +51,6 @@ export default function FilterGroup({
 
   // 获取当前清单的所有分组
   const groups = getGroupsByListId(activeListId);
-  // 获取当前分组内可排序的任务ID
-  const getSortableTaskIds = (): string[] => {
-    // 从任务数组中提取ID
-    return tasks.map((task) => task.id);
-  };
-
-  // 获取当前分组的信息
-  const groupToUse =
-    isGroupMode && typeof title === "string"
-      ? groups.find((group) => group.groupName === title)
-      : ({} as Group);
 
   // 根据模式格式化标题
   const formatTitle = (): string => {
@@ -190,7 +179,7 @@ export default function FilterGroup({
                     className={"ms-2"}
                     style={{ fontSize: "12px" }}
                   >
-                    {tasks.length}
+                    {tasks.length > 0 ? tasks.length : ""}
                   </Typography.Text>
                 </span>
               )}
