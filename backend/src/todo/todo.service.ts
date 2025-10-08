@@ -1,10 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, TreeRepository, EntityManager, Connection, QueryRunner } from 'typeorm';
+import { Repository, In, TreeRepository, EntityManager, Connection, QueryRunner, Not, Between, MoreThanOrEqual, IsNull } from 'typeorm';
 import { Task } from './todo.entity';
 import { TaskTag } from '../task-tag/task-tag.entity';
-import { BinService } from '../bin/bin.service';
 import { TodoTag } from '../todo-tag/todo-tag.entity';
+import { TodoList } from '../todo-list/todo-list.entity';
+import { TaskGroup } from '../task-group/task-group.entity';
 import { BatchUpdateOrderDto, TaskOrderUpdate } from './dto/batch-update-order.dto';
 import { log } from 'console';
 
@@ -20,8 +21,10 @@ export class TaskService {
     private taskTagRepository: Repository<TaskTag>,
     @InjectRepository(TodoTag)
     private todoTagRepository: Repository<TodoTag>,
-    @Inject(forwardRef(() => BinService))
-    private binService: BinService,
+    @InjectRepository(TodoList)
+    private todoListRepository: Repository<TodoList>,
+    @InjectRepository(TaskGroup)
+    private taskGroupRepository: Repository<TaskGroup>,
     private entityManager: EntityManager,
     private connection: Connection
   ) {}
@@ -254,13 +257,13 @@ export class TaskService {
   }
 
   /**
-   * 删除任务（将任务及其所有嵌套子任务移至回收站）
+   * 删除任务（软删除，将任务及其所有嵌套子任务标记为已删除）
    */
   async delete(id: string, userId: string): Promise<boolean> {
     // 先验证任务存在且属于当前用户
     await this.findOne(id, userId);
     
-    // 递归处理所有嵌套子任务，将它们移至回收站
+    // 递归处理所有嵌套子任务，将它们标记为已删除
     await this.moveNestedTasksToBin(id, userId);
     
     return true;
@@ -287,7 +290,7 @@ export class TaskService {
     }
   }
   private async moveNestedTasksToBin(taskId: string, userId: string): Promise<void> {
-    // 查找当前任务的所有直接子任务
+    // 查找当前任务的所有直接子任务（不管是否已删除）
     const childTasks = await this.taskRepository.find({
       where: { parentId: taskId, userId },
     });
@@ -297,21 +300,211 @@ export class TaskService {
       await this.moveNestedTasksToBin(childTask.id, userId);
     }
     
-    // 获取当前任务的完整信息
-    const task = await this.taskRepository.findOne({ where: { id: taskId } });
+    // 软删除当前任务
+    await this.taskRepository.update({ id: taskId, userId }, {
+      deletedAt: new Date()
+    });
     
-    if (task) {
-      // 将任务添加到回收站
-      await this.binService.addToBin(task);
+    // 保留内存中的标签映射，便于后续可能的恢复操作
+  }
+  
+  /**
+   * 递归永久删除任务及其所有子任务
+   */
+  async permanentlyDelete(taskId: string, userId: string): Promise<boolean> {
+    // 先验证任务存在且属于当前用户且已被软删除
+    const task = await this.taskRepository.findOne({
+      where: { id: taskId, userId, deletedAt: Not(IsNull()) }
+    });
+    
+    if (!task) {
+      throw new NotFoundException('任务不存在或您没有权限访问');
+    }
+    
+    // 使用事务确保数据一致性
+    await this.entityManager.transaction(async (transactionalEntityManager) => {
+      await this.permanentlyDeleteNestedTasks(taskId, userId, transactionalEntityManager);
+    });
+    
+    return true;
+  }
+  
+  /**
+   * 递归永久删除子任务
+   */
+  private async permanentlyDeleteNestedTasks(taskId: string, userId: string, entityManager: EntityManager): Promise<void> {
+    // 查找当前任务的所有直接子任务
+    const childTasks = await entityManager.find(Task, {
+      where: { parentId: taskId, userId, deletedAt: Not(IsNull()) }
+    });
+    
+    // 递归删除每个子任务
+    for (const childTask of childTasks) {
+      await this.permanentlyDeleteNestedTasks(childTask.id, userId, entityManager);
+    }
+    
+    // 永久删除当前任务（先删除关联关系）
+    await entityManager.delete('task_tag', { taskId });
+    await entityManager.delete(Task, { id: taskId, userId });
+  }
+
+  /**
+   * 恢复已删除的任务及其子任务
+   */
+  async restore(taskId: string, userId: string): Promise<Task> {
+    // 验证任务存在且属于当前用户
+    const task = await this.taskRepository.findOne({
+      where: { id: taskId, userId, deletedAt: Not(IsNull()) },
+      relations: ['taskTags']
+    });
+    
+    if (!task) {
+      throw new NotFoundException('任务不存在或您没有权限访问');
+    }
+    
+    // 使用事务确保数据一致性
+    await this.entityManager.transaction(async (transactionalEntityManager) => {
+      // 检查父任务是否存在且未被删除
+      let updateData: { deletedAt: null; parentId?: null; listId?: string; groupId?: string | null } = { deletedAt: null };
       
-      // 删除任务的标签关联
-      await this.taskTagRepository.delete({ taskId });
+      if (task.parentId) {
+        const parentTask = await transactionalEntityManager.findOne(Task, {
+          where: { id: task.parentId, userId, deletedAt: IsNull() }
+        });
+        
+        // 如果父任务不存在或已被删除，则将父任务设置为null
+        if (!parentTask) {
+          updateData.parentId = null;
+        }
+      }
       
-      // 从任务表中删除
-      await this.taskRepository.delete(taskId);
+      // 检查listId是否存在且属于当前用户
+      if (task.listId) {
+        const listExists = await transactionalEntityManager.findOne(TodoList, {
+          where: { id: task.listId, userId }
+        });
+        
+        // 如果list不存在，使用用户的第一个list
+        if (!listExists) {
+          const firstList = await transactionalEntityManager.findOne(TodoList, {
+            where: { userId },
+            order: { createdAt: 'ASC' }
+          });
+          if (firstList) {
+            updateData.listId = firstList.id;
+          }
+        }
+      }
       
-      // 删除内存中的标签映射
-      this.taskTagsMap.delete(taskId);
+      // 检查groupId是否存在且属于当前用户
+      if (task.groupId) {
+        const groupExists = await transactionalEntityManager.findOne(TaskGroup, {
+          where: { id: task.groupId, userId }
+        });
+        
+        // 如果group不存在，使用用户的第一个group，或者设为null
+        if (!groupExists) {
+          const firstGroup = await transactionalEntityManager.findOne(TaskGroup, {
+            where: { userId },
+            order: { createdAt: 'ASC' }
+          });
+          updateData.groupId = firstGroup ? firstGroup.id : null;
+        }
+      }
+      
+      // 恢复当前任务
+      await transactionalEntityManager.update(Task, { id: taskId, userId }, updateData);
+      
+      // 查找子任务并递归恢复
+      const childTasks = await transactionalEntityManager.find(Task, {
+        where: { parentId: taskId, userId, deletedAt: Not(IsNull()) }
+      });
+      
+      if (childTasks && childTasks.length > 0) {
+        for (const childTask of childTasks) {
+          await this.restoreNestedTasks(childTask.id, userId, transactionalEntityManager);
+        }
+      }
+    });
+    
+    // 返回恢复后的任务
+    return this.findOne(taskId, userId);
+  }
+  
+  /**
+   * 递归恢复子任务
+   */
+  private async restoreNestedTasks(taskId: string, userId: string, entityManager: EntityManager): Promise<void> {
+    // 先获取当前子任务信息
+    const task = await entityManager.findOne(Task, {
+      where: { id: taskId, userId, deletedAt: Not(IsNull()) }
+    });
+    
+    if (!task) {
+      return;
+    }
+    
+    // 检查父任务是否存在且未被删除
+    let updateData: { deletedAt: null; parentId?: null; listId?: string; groupId?: string | null } = { deletedAt: null };
+    
+    if (task.parentId) {
+      const parentTask = await entityManager.findOne(Task, {
+        where: { id: task.parentId, userId, deletedAt: IsNull() }
+      });
+      
+      // 如果父任务不存在或已被删除，则将父任务设置为null
+      if (!parentTask) {
+        updateData.parentId = null;
+      }
+    }
+    
+    // 检查listId是否存在且属于当前用户
+    if (task.listId) {
+      const listExists = await entityManager.findOne(TodoList, {
+        where: { id: task.listId, userId }
+      });
+      
+      // 如果list不存在，使用用户的第一个list
+      if (!listExists) {
+        const firstList = await entityManager.findOne(TodoList, {
+          where: { userId },
+          order: { createdAt: 'ASC' }
+        });
+        if (firstList) {
+          updateData.listId = firstList.id;
+        }
+      }
+    }
+    
+    // 检查groupId是否存在且属于当前用户
+    if (task.groupId) {
+      const groupExists = await entityManager.findOne(TaskGroup, {
+        where: { id: task.groupId, userId }
+      });
+      
+      // 如果group不存在，使用用户的第一个group，或者设为null
+      if (!groupExists) {
+        const firstGroup = await entityManager.findOne(TaskGroup, {
+          where: { userId },
+          order: { createdAt: 'ASC' }
+        });
+        updateData.groupId = firstGroup ? firstGroup.id : null;
+      }
+    }
+    
+    // 恢复当前子任务
+    await entityManager.update(Task, { id: taskId, userId }, updateData);
+    
+    // 查找当前任务的子任务
+    const childTasks = await entityManager.find(Task, {
+      where: { parentId: taskId, userId, deletedAt: Not(IsNull()) }
+    });
+    
+    // 递归恢复每个子任务
+    if (childTasks && childTasks.length > 0) {
+      for (const childTask of childTasks) {
+        await this.restoreNestedTasks(childTask.id, userId, entityManager);
+      }
     }
   }
   
@@ -641,6 +834,47 @@ export class TaskService {
     await this.delete(id, userId);
     return { message: '任务已成功删除' };
   }
+
+  /**
+   * 硬删除单个任务（不经过回收站，直接从数据库删除）
+   * @param id 任务ID
+   * @param userId 用户ID
+   * @returns 是否删除成功
+   */
+  async hardDelete(id: string, userId: string): Promise<boolean> {
+    // 先验证任务存在且属于当前用户
+    await this.findOne(id, userId);
+    
+    // 使用事务确保数据一致性
+    await this.entityManager.transaction(async (transactionalEntityManager) => {
+      // 递归删除所有子任务
+      await this.permanentlyDeleteNestedTasks(id, userId, transactionalEntityManager);
+    });
+    
+    return true;
+  }
+
+  /**
+   * 硬删除用户的所有任务
+   * @param userId 用户ID
+   * @returns 是否删除成功
+   */
+  async hardDeleteAll(userId: string): Promise<boolean> {
+    // 使用事务确保数据一致性
+    await this.entityManager.transaction(async (transactionalEntityManager) => {
+      // 查找用户的所有根任务（没有父任务的任务）
+      const rootTasks = await transactionalEntityManager.find(Task, {
+        where: { userId, parentId: IsNull() }
+      });
+      
+      // 递归删除每个根任务及其所有子任务
+      for (const task of rootTasks) {
+        await this.permanentlyDeleteNestedTasks(task.id, userId, transactionalEntityManager);
+      }
+    });
+    
+    return true;
+  }
   
   /**
    * 根据类型获取任务列表
@@ -649,13 +883,16 @@ export class TaskService {
    * @returns 任务列表
    */
   async getTasksByType(userId: string, type: string): Promise<any[]> {
-    // 如果类型中包含"bin"，从回收站获取任务
+    // 如果类型中包含"bin"，从task表查询已删除的任务
     if (type.includes('bin')) {
-      const binItems = await this.binService.findAllByUserId(userId);
-      return binItems.map(binItem => ({
-        ...binItem,
-        taskTags: [] // 回收站项目可能没有标签信息
-      }));
+      const query = this.taskRepository.createQueryBuilder('task')
+        .where('task.userId = :userId', { userId })
+        .andWhere('task.deletedAt IS NOT NULL')
+        .leftJoinAndSelect('task.taskTags', 'taskTags')
+        .orderBy('task.deletedAt', 'DESC');
+        
+      const tasks = await query.getMany();
+      return tasks.map(task => this.formatTaskResponse(task));
     }
 
     // 检查是否是标签查询
@@ -670,6 +907,7 @@ export class TaskService {
         const query = this.taskRepository.createQueryBuilder('task')
           .where('task.userId = :userId', { userId })
           .andWhere('task.isPinned = false')
+          .andWhere('task.deletedAt IS NULL')
           .leftJoinAndSelect('task.taskTags', 'taskTags')
           .innerJoin('task.taskTags', 'tt')
           .andWhere('tt.tagId IN (:...tagIds)', { tagIds: allTagIds })
@@ -688,6 +926,7 @@ export class TaskService {
     const query = this.taskRepository.createQueryBuilder('task')
       .where('task.userId = :userId', { userId })
       .andWhere('task.isPinned = false')
+      .andWhere('task.deletedAt IS NULL')
       .leftJoinAndSelect('task.taskTags', 'taskTags');
 
     const today = new Date();
@@ -939,6 +1178,177 @@ export class TaskService {
     return tasks.map(task => this.formatTaskResponse(task));
   }
   
+  /**
+   * 分页获取已完成任务，支持按类型过滤
+   * @param userId 用户ID
+   * @param page 页码（从1开始）
+   * @param pageSize 每页数量
+   * @param type 任务类型过滤
+   * @returns 分页结果对象，包含任务列表和分页信息
+   */
+  async getCompletedTasksWithPagination(
+    userId: string,
+    page: number = 1,
+    pageSize: number = 20,
+    type?: string
+  ): Promise<{
+    tasks: any[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  }> {
+    try {
+      // 获取过滤条件
+      const whereConditions = await this.getAdditionalConditionsForCompletedTasks(type, userId);
+
+      // 获取总记录数
+      const total = await this.taskRepository.count({
+        where: whereConditions
+      });
+
+      // 计算总页数
+      const totalPages = Math.ceil(total / pageSize);
+
+      // 获取任务列表
+      const tasks = await this.taskRepository.find({
+        where: whereConditions,
+        relations: ['taskTags'],
+        order: {
+          createdAt: 'DESC',
+          updatedAt: 'DESC'
+        },
+        skip: (page - 1) * pageSize,
+        take: pageSize
+      });
+
+      // 格式化任务数据
+      const formattedTasks = tasks.map(task => this.formatTaskResponse(task));
+
+      return {
+        tasks: formattedTasks,
+        total,
+        page,
+        pageSize,
+        totalPages
+      };
+    } catch (error) {
+      console.error('获取已完成任务分页出错:', error);
+      // 返回空结果
+      return {
+        tasks: [],
+        total: 0,
+        page,
+        pageSize,
+        totalPages: 0
+      };
+    }
+  }
+
+  /**
+   * 获取已完成任务的额外过滤条件
+   * @param type 任务类型
+   * @param userId 用户ID
+   * @returns 查询条件对象
+   */
+  private async getAdditionalConditionsForCompletedTasks(type?: string, userId?: string): Promise<any> {
+    // 基础条件
+    const conditions: any = {
+      userId,
+      completed: true
+    };
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // 处理todolist前缀 - 保留前缀进行查询
+    if (type && type.startsWith('todolist-')) {
+      // 直接使用完整ID（包含前缀）
+      return {
+        ...conditions,
+        listId: type, // 保留完整的todolist-* ID
+        deletedAt: IsNull()
+      };
+    }
+
+    // 处理tag前缀 - 保留前缀进行查询
+    if (type && type.startsWith('tag-') && userId) {
+      try {
+        // 直接使用完整的标签ID（包含前缀）
+        const tagId = type;
+        
+        // 获取标签及其所有子标签的ID
+        const tagIds = await this.getAllTagIdsWithChildren(tagId, userId);
+        
+        if (tagIds && tagIds.length > 0) {
+          // 查询有这些标签的任务ID列表
+          const taskTags = await this.taskTagRepository.find({
+            where: { tagId: In(tagIds) },
+            select: ['taskId']
+          });
+          
+          const taskIds = taskTags.map(tt => tt.taskId);
+          
+          if (taskIds.length > 0) {
+            return {
+              ...conditions,
+              id: In(taskIds),
+              deletedAt: IsNull()
+            };
+          }
+        }
+        // 如果没有找到匹配的任务，返回一个不会匹配的条件
+        return { ...conditions, id: 'NON_EXISTENT_ID' };
+      } catch (error) {
+        console.error('标签过滤出错:', error);
+        return { ...conditions, id: 'NON_EXISTENT_ID' };
+      }
+    }
+
+    switch (type) {
+      case 'today':
+        // 今天完成的任务
+        return {
+          ...conditions,
+          completedAt: Between(
+            new Date(today),
+            new Date(today.setHours(23, 59, 59, 999))
+          ),
+          deletedAt: IsNull()
+        };
+      
+      case 'nearlyWeek':
+        // 当天之前七天，之后七天的已完成任务
+        const sevenDaysAgo = new Date(today);
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        
+        const sevenDaysLater = new Date(today);
+        sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
+        sevenDaysLater.setHours(23, 59, 59, 999);
+        
+        return {
+          ...conditions,
+          completedAt: Between(sevenDaysAgo, sevenDaysLater),
+          deletedAt: IsNull()
+        };
+      
+      case 'bin':
+        // 已删除任务中的已完成任务
+        return {
+          ...conditions,
+          deletedAt: Not(IsNull())
+        };
+      
+      case 'cp':
+      default:
+        // 所有未删除的已完成任务
+        return {
+          ...conditions,
+          deletedAt: IsNull()
+        };
+    }
+  }
+
   // 创建演示任务（接口别名）
   async createDemo(): Promise<any> {
     return this.createTestTask();

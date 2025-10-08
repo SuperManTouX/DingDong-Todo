@@ -304,6 +304,61 @@
         ]
       }
     },
+    "/todos/completed": {
+      "get": {
+        "description": "分页获取当前用户的已完成任务，支持多种类型过滤",
+        "operationId": "TodoController_getCompletedTasks",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "页码",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "example": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "description": "任务类型过滤：today、nearlyWeek、bin、cp或todolist-{id}、tag-{id}",
+            "schema": {
+              "example": "today",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "分页获取已完成任务",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
     "/todos": {
       "get": {
         "description": "获取当前用户的所有任务",
@@ -670,7 +725,7 @@
         ]
       },
       "delete": {
-        "description": "将任务移至回收站",
+        "description": "将任务移至回收站（软删除）",
         "operationId": "TodoController_remove",
         "parameters": [
           {
@@ -822,6 +877,104 @@
           }
         ],
         "summary": "批量更新任务排序",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/{id}/restore": {
+      "patch": {
+        "description": "从回收站恢复指定的已删除任务",
+        "operationId": "TodoController_restore",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "任务ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "恢复成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "回收站中未找到该任务"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "恢复已删除的任务",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/{id}/hard": {
+      "delete": {
+        "description": "不经过回收站，直接从数据库删除指定任务及其所有子任务",
+        "operationId": "TodoController_hardDelete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "任务ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "任务不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "硬删除单个任务",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/hard/all": {
+      "delete": {
+        "description": "不经过回收站，直接从数据库删除当前用户的所有任务",
+        "operationId": "TodoController_hardDeleteAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "硬删除所有任务",
         "tags": [
           "任务管理"
         ]
