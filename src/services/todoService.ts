@@ -99,6 +99,17 @@ export const searchTasks = async (keyword: string): Promise<Todo[]> => {
   );
 };
 
+// 使用统一请求处理封装 - 更新任务的父任务ID（更新后清除相关缓存）
+export const updateParentId = (id: string, parentId: string | null) => {
+  return request(
+    () => api.patch<Todo>(`/todos/${id}/parent`, { parentId }),
+    `更新任务 ${id} 的父任务失败`,
+    {
+      invalidateCache: ['/todos', `/todos/${id}`], // 清除相关缓存
+    }
+  );
+};
+
 // 使用统一请求处理封装 - 删除待办事项（删除后清除相关缓存）
 export const deleteTodo = (id: string) => {
   return request(

@@ -32,12 +32,9 @@ export default function EditTodo({
   const { currentTheme } = useThemeStore();
   const { token } = theme.useToken();
 
-  // 如果没有选中的任务，返回null
-  if (!selectTodo) return <Layout></Layout>;
-
   // 确定优先级样式类
   let priClass = "";
-  switch (selectTodo.priority) {
+  switch (selectTodo?.priority) {
     case Priority.Low:
       priClass = "low-todo";
       break;
@@ -365,7 +362,7 @@ export default function EditTodo({
       <Drawer
         title={
           <Row className="h-100" justify="space-between" align="middle">
-            {renderHeaderContent()}
+            {selectTodo ? renderHeaderContent() : ""}
           </Row>
         }
         open={open}
@@ -374,10 +371,11 @@ export default function EditTodo({
         placement="right"
         className=""
       >
-        {renderContent()}
+        {selectTodo ? renderContent() : ""}
       </Drawer>
     );
   }
-  console.log(renderContent());
+  // 如果没有选中的任务，返回null
+  if (!selectTodo) return <Layout></Layout>;
   return <Layout>{renderContent()}</Layout>;
 }

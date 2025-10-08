@@ -58,6 +58,14 @@ export const useTodoStore = create<TodoState>()(
         dispatchList: (action) => listActions.dispatchList(action, set, get),
         dispatchTag: (action) => tagActions.dispatchTag(action, set, get),
 
+        // 任务层级相关操作
+        updateParentId: async (taskId: string, parentId: string | null) => {
+          const { updateParentId: updateParentIdApi } = await import(
+            "@/services/todoService"
+          );
+          return updateParentIdApi(taskId, parentId);
+        },
+
         // 分组相关操作
         addGroup: (listId, groupName, groupItemIds) =>
           groupActions.addGroup(listId, groupName, groupItemIds, set, get),

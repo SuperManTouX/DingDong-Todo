@@ -24,13 +24,7 @@ const Index: React.FC = () => {
     isMobile,
     collapsed,
     toggleCollapsed,
-    setCollapsed,
   } = useGlobalSettingsStore();
-
-  //若响应式模式变化
-  useEffect(() => {
-    setCollapsed(isMobile);
-  }, [isMobile]);
 
   // 使用自定义hook加载待办数据
   useTodoDataLoader();

@@ -1,7 +1,15 @@
-import { Typography, Button, Space, Col, Row, Dropdown, Layout } from "antd";
-import React, { memo, useCallback, useMemo } from "react";
-import type { Task } from "@dnd-kit/sortable-tree";
-import { SortableTree, SimpleTreeItemWrapper } from "dnd-kit-sortable-tree";
+import {
+  Typography,
+  Button,
+  Space,
+  Col,
+  Row,
+  Dropdown,
+  Layout,
+  Table,
+} from "antd";
+import React, { memo, useCallback, useMemo, useState } from "react";
+import type { ColumnsType } from "antd/es/table";
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -9,58 +17,22 @@ import {
 } from "@ant-design/icons";
 import useTodoOperations from "../../hooks/useTodoOperations";
 import useTodoGrouping from "../../hooks/useTodoGrouping";
-import { useGlobalSettingsStore } from "../../store/globalSettingsStore";
+import { useGlobalSettingsStore } from "@/store/globalSettingsStore";
 import { useTodoStore, getActiveListTasks } from "../../store/todoStore";
 import Controller from "./Controller";
 import FilterGroup from "./FilterGroup";
 import ContextMenu from "../../components/ContextMenu";
 import TodoTask from "./TodoTask";
-import type { Todo } from "../../types/Todo";
-import { ItemChangedReason } from "dnd-kit-sortable-tree/dist/types";
-import App from "@/Test";
+import type { Todo } from "@/types";
 
 const { Header, Content, Footer } = Layout;
 
-// 将TreeItemComponent移到外部，避免每次父组件渲染都创建新的函数引用
-const TreeItemComponent = memo(
-  React.forwardRef((props: any, ref: React.Ref<any>) => {
-    const todo = props.item.data as Todo;
-    return (
-      <SimpleTreeItemWrapper {...props} ref={ref}>
-        <ContextMenu key={todo.id} todo={todo}>
-          <div style={{ cursor: "context-menu", width: "100%" }}>
-            <TodoTask
-              todo={todo}
-              hasSubTasks={props.item.children?.length > 0}
-              isExpanded={props.item.collapsed !== true}
-              onToggleExpand={() => {}}
-            />
-          </div>
-        </ContextMenu>
-      </SimpleTreeItemWrapper>
-    );
-  }),
-  // 添加自定义比较函数，只在必要时重新渲染
-  (prevProps, nextProps) => {
-    // 只有当item数据发生变化时才重新渲染
-    const prevTodo = prevProps.item.data;
-    const nextTodo = nextProps.item.data;
-    // 基本比较：id相同且内容未变时，认为组件不需要重新渲染
-    if (prevTodo.id === nextTodo.id) {
-      // 可以根据实际需求扩展比较字段
-      console.log(
-        prevTodo.title === nextTodo.title &&
-          prevTodo.completed === nextTodo.completed &&
-          prevTodo.priority === nextTodo.priority &&
-          prevTodo.dueTime === nextTodo.dueTime &&
-          prevTodo.parentId === nextTodo.parentId &&
-          prevTodo.depth === nextTodo.depth,
-      );
-      // return true;
-    }
-    return false;
-  },
-);
+// 定义树形表格数据类型
+interface TreeTableData extends Todo {
+  key: string;
+  children?: TreeTableData[];
+}
+
 export default function FilteredTodoList({
   groupName,
   toggleCollapsed,
@@ -80,6 +52,9 @@ export default function FilteredTodoList({
     toggleHideCompletedTasks,
     hideCompletedTasks,
   } = useGlobalSettingsStore();
+
+  // 控制表格行展开/折叠状态
+  const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
 
   // 下拉菜单配置
   const menuProps = {
@@ -124,184 +99,119 @@ export default function FilteredTodoList({
     isAllDone,
   } = useTodoOperations(tasks);
 
-  // 将Todo对象转换为dnd-kit-sortable-tree的Task对象
-  const convertToTreeTasks = useCallback((todos: Todo[]): Task[] => {
-    // 创建ID到任务的映射，用于快速查找父任务
-    const taskMap = new Map<string, Task>();
+  // 将Todo对象转换为树形表格数据格式
+  const convertToTreeTableData = useCallback(
+    (todos: Todo[]): TreeTableData[] => {
+      // 创建ID到任务的映射，用于快速查找父任务
+      const taskMap = new Map<string, TreeTableData>();
 
-    // 递归创建任务树
-    const createTask = (todo: Todo): Task => {
-      const task: Task = {
-        id: todo.id,
-        data: todo,
-        children: [],
-        collapsed: false, // 默认展开
-      };
-      taskMap.set(todo.id, task);
-      return task;
-    };
+      // 首先创建所有任务对象 - 不再默认初始化children数组
+      todos.forEach((todo) => {
+        const task: TreeTableData = {
+          ...todo,
+          key: todo.id,
+          // 移除默认的空children数组，只在有子任务时才初始化
+        };
+        taskMap.set(todo.id, task);
+      });
 
-    // 首先创建所有顶级任务（没有parentId的任务）
-    const topLevelTasks: Task[] = [];
-
-    todos.forEach((todo) => {
-      if (!todo.parentId) {
-        topLevelTasks.push(createTask(todo));
-      }
-    });
-
-    // 然后为每个任务添加子任务
-    todos.forEach((todo) => {
-      if (todo.parentId && !taskMap.has(todo.id)) {
-        createTask(todo); // 确保所有任务都被创建
-      }
-    });
-
-    // 建立父子关系
-    todos.forEach((todo) => {
-      if (todo.parentId && taskMap.has(todo.id) && taskMap.has(todo.parentId)) {
-        const task = taskMap.get(todo.id)!;
-        const parentTask = taskMap.get(todo.parentId)!;
-        parentTask.children.push(task);
-      }
-    });
-
-    return topLevelTasks;
-  }, []);
-
-  // 创建防抖函数
-  const debounce = <T extends (...args: any[]) => any>(
-    func: T,
-    wait: number,
-  ) => {
-    let timeout: ReturnType<typeof setTimeout> | null = null;
-    return (...args: Parameters<T>) => {
-      if (timeout) clearTimeout(timeout);
-      timeout = setTimeout(() => func(...args), wait);
-    };
-  };
-
-  // 批量更新函数，减少dispatch次数
-  const batchUpdateTasks = useCallback(
-    (
-      updates: {
-        id: string;
-        parentId: string | null;
-        depth: number;
-        collapsed?: boolean;
-      }[],
-    ) => {
-      if (updates.length === 0) return;
-
-      // 可以考虑添加一个批量更新的action类型
-      updates.forEach((update) => {
-        const task = tasks.find((t) => t.id === update.id);
-        if (task) {
-          const updateTodo = {
-            ...task,
-            parentId: update.parentId,
-            depth: update.depth,
-          };
-
-          // 如果提供了collapsed字段，则更新它
-          if (update.collapsed !== undefined) {
-            updateTodo.collapsed = update.collapsed;
+      // 构建树形结构
+      const treeData: TreeTableData[] = [];
+      todos.forEach((todo) => {
+        if (!todo.parentId) {
+          // 顶级任务直接加入树数据
+          treeData.push(taskMap.get(todo.id)!);
+        } else {
+          // 子任务加入父任务的children数组
+          const parentTask = taskMap.get(todo.parentId);
+          if (parentTask) {
+            if (!parentTask.children) {
+              parentTask.children = [];
+            }
+            parentTask.children.push(taskMap.get(todo.id)!);
           }
+        }
+      });
 
-          dispatchTodo({
-            type: "changed",
-            todo: updateTodo,
-          });
+      return treeData;
+    },
+    [],
+  );
+
+  // 处理行展开/折叠
+  const handleExpandChange = useCallback(
+    (expanded: boolean, record: TreeTableData) => {
+      setExpandedRowKeys((prevKeys) => {
+        if (expanded) {
+          // 添加到展开行
+          return [...prevKeys, record.id];
+        } else {
+          // 从展开行移除
+          return prevKeys.filter((key) => key !== record.id);
         }
       });
     },
-    [tasks, dispatchTodo],
+    [],
   );
 
-  // 防抖的批量更新函数
-  const debouncedBatchUpdate = useCallback(debounce(batchUpdateTasks, 100), [
-    batchUpdateTasks,
-  ]);
+  // 定义表格列
+  const columns: ColumnsType<TreeTableData> = [
+    {
+      dataIndex: "",
+      key: "task",
+      width: "100%",
+      render: (_, record) => {
+        const hasSubTasks = record.children && record.children.length > 0;
+        const isExpanded = expandedRowKeys.includes(record.id);
 
-  // 处理树项目变化
-  const handleTreeItemsChanged = useCallback(
-    (items: Task[]) => {
-      // 直接更新树结构，这是最简单且有效的方法
-      // 在dnd-kit-sortable-tree中，应该使用传入的items参数来更新树状态
-
-      // 对于这个实现，我们不需要处理具体的reason类型
-      // 因为库已经在内部处理了折叠/展开状态的切换
-      // 我们只需要确保树结构被正确更新
-
-      // 优化后的递归更新逻辑，收集所有需要更新的任务
-      const collectTasksToUpdate = (
-        tasks: Task[],
-        parentId: string | null,
-        depth: number,
-        updates: {
-          id: string;
-          parentId: string | null;
-          depth: number;
-          collapsed?: boolean;
-        }[],
-      ) => {
-        tasks.forEach((task) => {
-          const todo = task.data as Todo;
-
-          // 收集需要更新的任务信息，包括parentId、depth和collapsed状态
-          const update: {
-            id: string;
-            parentId: string | null;
-            depth: number;
-            collapsed?: boolean;
-          } = {
-            id: todo.id,
-            parentId,
-            depth,
-          };
-
-          // 如果task有collapsed属性且与todo的collapsed属性不同，也需要更新
-          if (
-            task.collapsed !== undefined &&
-            task.collapsed !== todo.collapsed
-          ) {
-            update.collapsed = task.collapsed;
-          }
-
-          // 只收集真正需要更新的任务
-          if (
-            todo.parentId !== parentId ||
-            (todo.depth !== undefined && todo.depth !== depth) ||
-            update.collapsed !== undefined
-          ) {
-            updates.push(update);
-          }
-
-          // 递归处理子任务
-          if (task.children && task.children.length > 0) {
-            collectTasksToUpdate(task.children, task.id, depth + 1, updates);
-          }
-        });
-      };
-
-      // 收集需要更新的任务
-      const tasksToUpdate: {
-        id: string;
-        parentId: string | null;
-        depth: number;
-        collapsed?: boolean;
-      }[] = [];
-      collectTasksToUpdate(items, null, 0, tasksToUpdate);
-
-      // 使用防抖的批量更新，减少状态更新和重渲染
-      debouncedBatchUpdate(tasksToUpdate);
+        return (
+          <ContextMenu key={record.id} todo={record}>
+            <div style={{ cursor: "context-menu", width: "100%" }}>
+              <TodoTask
+                todo={record}
+                hasSubTasks={hasSubTasks}
+                isExpanded={isExpanded}
+                onToggleExpand={() => {}}
+              />
+            </div>
+          </ContextMenu>
+        );
+      },
     },
-    [debouncedBatchUpdate],
-  );
+  ];
 
   // 获取要渲染的任务列表
   const todoList = renderTodos();
   const otherTodosList = renderOtherTodos();
+
+  // 渲染树形表格的组件
+  const renderTreeTable = useCallback(
+    (tasksToRender: Todo[]) => {
+      const treeData = convertToTreeTableData(tasksToRender);
+
+      return (
+        <Table
+          className="todo-tree-table"
+          columns={columns}
+          dataSource={treeData}
+          pagination={false}
+          expandable={{
+            rowExpandable: (record) =>
+              record.children && record.children.length > 0,
+            expandedRowKeys: expandedRowKeys,
+            onExpand: handleExpandChange,
+            indentSize: 35, // 控制每一层的缩进宽度
+          }}
+          size="small"
+          bordered={false}
+          rowKey="id"
+          style={{ minHeight: "200px" }}
+        />
+      );
+    },
+    [columns, convertToTreeTableData, expandedRowKeys, handleExpandChange],
+  );
+
   return (
     <>
       {/*标题栏*/}
@@ -355,28 +265,16 @@ export default function FilteredTodoList({
                 title={"⭐已置顶"}
                 tasks={pinnedTasks}
               >
-                <div className="task-group">
-                  <SortableTree
-                    items={convertToTreeTasks(pinnedTasks)}
-                    onItemsChanged={handleTreeItemsChanged}
-                    TreeItemComponent={TreeItemComponent}
-                  />
-                </div>
+                <div className="task-group">{renderTreeTable(pinnedTasks)}</div>
               </FilterGroup>
             )}
 
-            {/*普通渲染模式 - 使用SortableTree*/}
+            {/*普通渲染模式 - 使用树形表格*/}
             {groupMode === "none" && todoList.length > 0 && (
-              <div className="task-group">
-                <SortableTree
-                  items={convertToTreeTasks(todoList)}
-                  onItemsChanged={handleTreeItemsChanged}
-                  TreeItemComponent={TreeItemComponent}
-                />
-              </div>
+              <div className="task-group">{renderTreeTable(todoList)}</div>
             )}
 
-            {/*分组模式 - 每个分组使用独立的SortableTree*/}
+            {/*分组模式 - 每个分组使用独立的树形表格*/}
             {groupMode !== "none" &&
               displayGroups.length > 0 &&
               displayGroups.map((group) => (
@@ -387,21 +285,11 @@ export default function FilteredTodoList({
                   isUngrouped={group.type === "ungrouped"}
                 >
                   <div className="task-group">
-                    <SortableTree
-                      indicator={true}
-                      dropAnimation={null} // ① 关掉被拖节点的飞回动画
-                      sortableProps={{
-                        animateLayoutChanges: () => false, // ② 关掉其余节点的重排动画
-                      }}
-                      items={convertToTreeTasks(group.tasks)}
-                      onItemsChanged={handleTreeItemsChanged}
-                      TreeItemComponent={TreeItemComponent}
-                    />
+                    {renderTreeTable(group.tasks)}
                   </div>
                 </FilterGroup>
               ))}
 
-            <App></App>
             {/*虚化显示其他任务*/}
             {otherTodosList.length > 0 &&
               (activeListId === "cp" ||
@@ -409,11 +297,7 @@ export default function FilteredTodoList({
                 !hideCompletedTasks) && (
                 <FilterGroup title="已完成" tasks={otherTodosList}>
                   <div style={{ opacity: `.3` }}>
-                    <SortableTree
-                      items={convertToTreeTasks(otherTodosList)}
-                      onItemsChanged={handleTreeItemsChanged}
-                      TreeItemComponent={TreeItemComponent}
-                    />
+                    {renderTreeTable(otherTodosList)}
                   </div>
                 </FilterGroup>
               )}
@@ -436,4 +320,19 @@ export default function FilteredTodoList({
       </Footer>
     </>
   );
+}
+
+/* 树形表格样式调整 */
+const styles = `
+  /* 移除之前的自定义样式干扰，让Ant Design表格组件自动处理树形展示 */
+  .todo-tree-table .ant-table-row-expand-icon-cell {
+    min-width: 40px;
+  }
+`;
+
+// 将样式注入到组件中
+if (typeof document !== "undefined") {
+  const styleElement = document.createElement("style");
+  styleElement.textContent = styles;
+  document.head.appendChild(styleElement);
 }

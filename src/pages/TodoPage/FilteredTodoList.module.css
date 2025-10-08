@@ -1,0 +1,80 @@
+/* 树形表格样式 */
+.custom-tree-node {
+  padding: 0;
+  border: none;
+  position: relative;
+}
+
+.custom-tree-node:hover {
+  background-color: var(--theme--colorBgElevated) !important;
+}
+
+/* 拖拽图标样式 */
+.custom-scrollbar {
+  overflow-y: auto;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--theme--colorBgSecondary);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--theme--colorTextTertiary);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--theme--colorTextSecondary);
+}
+
+/* 任务组样式 */
+.task-group {
+  width: 100%;
+}
+
+/* 确保表格行与任务组件完美对齐 */
+.ant-table-tbody > tr > td {
+  padding: 0;
+  border: none;
+}
+
+/* 树形图标样式调整 */
+.ant-table-row-expand-icon,
+.ant-table-row-indent,
+.ant-table-row-expand-icon-col {
+  padding: 0;
+  min-width: 32px;
+}
+
+/* 调整展开/折叠图标的位置 */
+.ant-table-row-expand-icon {
+  font-size: 16px;
+  margin-right: 4px;
+}
+
+/* 拖拽相关样式 */
+.ant-table-row-dragging {
+  background-color: var(--theme--colorPrimaryBg) !important;
+  border: 1px dashed var(--theme--colorPrimary) !important;
+  opacity: 0.8;
+}
+
+/* 拖拽提示线样式 */
+.ant-table-drag-hover {
+  border-bottom: 2px solid var(--theme--colorPrimary) !important;
+}
+
+/* 确保任务项内容与展开图标正确对齐 */
+.ant-table-tbody > tr > td:first-child {
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+
+/* 防止表格行在拖拽时出现意外的背景色变化 */
+.ant-table-row-hover:not(.custom-tree-node:hover) {
+  background-color: transparent !important;
+}
