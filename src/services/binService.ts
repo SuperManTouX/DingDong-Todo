@@ -50,7 +50,7 @@ export const deleteFromBin = async (
 // 清空回收站
 export const emptyBin = async (): Promise<{ message: string }> => {
   try {
-    const response = await api.delete("/bin/empty");
+    const response = await api.delete("/bin");
     return response;
   } catch (error) {
     console.error("清空回收站失败:", error);

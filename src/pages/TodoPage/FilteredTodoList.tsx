@@ -44,7 +44,7 @@ export default function FilteredTodoList({
 }) {
   // 获取所有任务，然后根据用户ID过滤
   const tasks = getActiveListTasks();
-  const { pinnedTasks, activeListId, dispatchTodo } = useTodoStore();
+  const { pinnedTasks, activeListId } = useTodoStore();
   // 获取全局设置和操作方法
   const {
     showTaskDetails,
@@ -104,7 +104,6 @@ export default function FilteredTodoList({
     (todos: Todo[]): TreeTableData[] => {
       // 创建ID到任务的映射，用于快速查找父任务
       const taskMap = new Map<string, TreeTableData>();
-
       // 首先创建所有任务对象 - 不再默认初始化children数组
       todos.forEach((todo) => {
         const task: TreeTableData = {
@@ -125,10 +124,14 @@ export default function FilteredTodoList({
           // 子任务加入父任务的children数组
           const parentTask = taskMap.get(todo.parentId);
           if (parentTask) {
-            if (!parentTask.children) {
-              parentTask.children = [];
+            // 确保children是一个数组，并且不包含当前任务
+            const existingChildren = parentTask.children || [];
+            const currentTask = taskMap.get(todo.id)!;
+            // 检查当前任务是否已存在于子任务数组中
+            if (!existingChildren.find(child => child.id === currentTask.id)) {
+              // 创建新的数组而不是修改可能不可扩展的数组
+              parentTask.children = [...existingChildren, currentTask];
             }
-            parentTask.children.push(taskMap.get(todo.id)!);
           }
         }
       });
@@ -188,7 +191,6 @@ export default function FilteredTodoList({
   const renderTreeTable = useCallback(
     (tasksToRender: Todo[]) => {
       const treeData = convertToTreeTableData(tasksToRender);
-
       return (
         <Table
           className="todo-tree-table"
@@ -312,7 +314,7 @@ export default function FilteredTodoList({
             <button
               type="button"
               onClick={() => {
-                if (window.confirm('确定要清空回收站吗？此操作不可恢复！')) {
+                if (window.confirm("确定要清空回收站吗？此操作不可恢复！")) {
                   useTodoStore.getState().emptyBin();
                 }
               }}
@@ -330,7 +332,9 @@ export default function FilteredTodoList({
             </button>
           )}
           {activeListId !== "bin" && (
-            <span>未完成：{displayUncompletedCount + pinnedTasks.length}个</span>
+            <span>
+              未完成：{displayUncompletedCount + pinnedTasks.length}个
+            </span>
           )}
         </Row>
       </Footer>
