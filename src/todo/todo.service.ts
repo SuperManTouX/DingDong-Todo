@@ -1,11 +1,12 @@
-import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, TreeRepository, EntityManager } from 'typeorm';
+import { Repository, In, TreeRepository, EntityManager, Connection, QueryRunner } from 'typeorm';
 import { Task } from './todo.entity';
 import { TaskTag } from '../task-tag/task-tag.entity';
 import { BinService } from '../bin/bin.service';
 import { TodoTag } from '../todo-tag/todo-tag.entity';
 import { BatchUpdateOrderDto, TaskOrderUpdate } from './dto/batch-update-order.dto';
+import { log } from 'console';
 
 @Injectable()
 export class TaskService {
@@ -21,7 +22,8 @@ export class TaskService {
     private todoTagRepository: Repository<TodoTag>,
     @Inject(forwardRef(() => BinService))
     private binService: BinService,
-    private entityManager: EntityManager
+    private entityManager: EntityManager,
+    private connection: Connection
   ) {}
 
   /**
@@ -375,6 +377,200 @@ export class TaskService {
       
       // 递归处理子任务的子任务
       await this.toggleChildTasksPin(childTask.id, userId, isPinned);
+    }
+  }
+
+  /**
+   * 更新任务的父任务ID，并自动计算和更新depth值，同时更新所有子任务的depth
+   * @param taskId 要更新的任务ID
+   * @param newParentId 新的父任务ID
+   * @param userId 当前用户ID
+   * @returns 更新后的任务
+   */
+  async updateParentId(taskId: string, newParentId: string | null, userId: string) {
+    // 验证任务是否存在且属于当前用户
+    const task = await this.taskRepository.findOne({
+      where: { id: taskId, userId },
+    });
+
+    if (!task) {
+      throw new NotFoundException('任务不存在');
+    }
+
+    // 检查是否形成循环引用
+    if (newParentId) {
+      const parentTask = await this.taskRepository.findOne({
+        where: { id: newParentId, userId },
+      });
+
+      if (!parentTask&&newParentId!==null) {
+        throw new NotFoundException('指定的父任务不存在');
+      }
+
+      // 检查循环引用
+      if (await this.hasCircularDependency(newParentId, taskId)) {
+        throw new BadRequestException('不能将任务设置为其子任务的子任务，会形成循环引用');
+      }
+    }
+
+    // 计算新的depth值
+    const newDepth = newParentId 
+      ? (await this.getTaskDepth(newParentId)) + 1
+      : 0;
+
+    // 计算depth差值
+    const depthDiff = newDepth - task.depth;
+
+    // 开始事务
+    const queryRunner = this.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // 更新当前任务的parentId和depth
+      task.parentId = newParentId;
+      task.depth = newDepth;
+      
+      // 如果有父任务ID，获取父任务的listId和groupId，并更新当前任务的这两个属性
+      if (newParentId) {
+        const parentTask = await this.taskRepository.findOne({
+          where: { id: newParentId, userId },
+          select: ['listId', 'groupId'],
+        });
+        
+        if (parentTask) {
+          // 确保不为null
+          task.listId = parentTask.listId || task.listId; // 如果父任务没有listId，保持原有的
+          task.groupId = parentTask.groupId; // groupId可能允许为null或undefined
+          
+          // 递归更新所有子任务的listId和groupId
+          if (parentTask.listId) { // 只有当父任务有listId时才更新子任务
+            await this.updateChildTasksListAndGroup(queryRunner, taskId, parentTask.listId, parentTask.groupId);
+          }
+        }
+      }
+      
+      await queryRunner.manager.save(task);
+
+      // 如果depth发生变化，递归更新所有子任务的depth
+      if (depthDiff !== 0) {
+        await this.updateChildTasksDepth(queryRunner, taskId, depthDiff);
+      }
+
+      // 提交事务
+      await queryRunner.commitTransaction();
+
+      // 返回更新后的任务
+      return this.findOne(taskId, userId);
+    } catch (error) {
+      // 回滚事务
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      // 释放连接
+      await queryRunner.release();
+    }
+  }
+
+  /**
+   * 获取任务的深度
+   * @param taskId 任务ID
+   * @returns 任务深度
+   */
+  private async getTaskDepth(taskId: string): Promise<number> {
+    const task = await this.taskRepository.findOne({
+      where: { id: taskId },
+      select: ['depth'],
+    });
+
+    if (!task) {
+      throw new NotFoundException('任务不存在');
+    }
+
+    return task.depth;
+  }
+
+  /**
+   * 检查是否存在循环依赖
+   * @param parentId 父任务ID
+   * @param childId 子任务ID
+   * @returns 是否存在循环依赖
+   */
+  private async hasCircularDependency(parentId: string, childId: string): Promise<boolean> {
+    // 如果要检查的父任务ID就是子任务ID，直接返回true（循环）
+    if (parentId === childId) {
+      return true;
+    }
+
+    // 获取父任务的父任务
+    const parentTask = await this.taskRepository.findOne({
+      where: { id: parentId },
+      select: ['parentId'],
+    });
+
+    // 如果父任务没有父任务，则不会形成循环
+    if (!parentTask || !parentTask.parentId) {
+      return false;
+    }
+
+    // 递归检查父任务的父任务是否会导致循环
+    return this.hasCircularDependency(parentTask.parentId, childId);
+  }
+
+  /**
+   * 递归更新所有子任务的depth
+   * @param queryRunner 查询运行器
+   * @param parentId 父任务ID
+   * @param depthDiff depth差值
+   */
+  private async updateChildTasksDepth(
+    queryRunner: QueryRunner,
+    parentId: string,
+    depthDiff: number
+  ): Promise<void> {
+    // 获取所有直接子任务
+    const childTasks = await queryRunner.manager.find(Task, {
+      where: { parentId },
+    });
+
+    // 更新每个子任务的depth
+    for (const childTask of childTasks) {
+      childTask.depth += depthDiff;
+      await queryRunner.manager.save(childTask);
+
+      // 递归更新子任务的子任务
+      await this.updateChildTasksDepth(queryRunner, childTask.id, depthDiff);
+    }
+  }
+  
+  /**
+   * 递归更新所有子任务的listId和groupId
+   * @param queryRunner 查询运行器
+   * @param parentId 父任务ID
+   * @param newListId 要更新的listId
+   * @param newGroupId 要更新的groupId
+   */
+  private async updateChildTasksListAndGroup(
+    queryRunner: QueryRunner,
+    parentId: string,
+    newListId: string,
+    newGroupId: string | null | undefined
+  ): Promise<void> {
+    // 获取所有直接子任务
+    const childTasks = await queryRunner.manager.find(Task, {
+      where: { parentId },
+    });
+
+    // 更新每个子任务的listId和groupId
+    for (const childTask of childTasks) {
+      childTask.listId = newListId; // listId必须是string
+      if (newGroupId !== undefined) { // 只有当新的groupId不是undefined时才更新
+        childTask.groupId = newGroupId;
+      }
+      await queryRunner.manager.save(childTask);
+
+      // 递归更新子任务的子任务
+      await this.updateChildTasksListAndGroup(queryRunner, childTask.id, newListId, newGroupId);
     }
   }
   

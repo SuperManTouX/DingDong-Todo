@@ -742,6 +742,57 @@
         ]
       }
     },
+    "/todos/{id}/parent": {
+      "patch": {
+        "description": "更新任务的父任务ID，并自动计算和更新depth值，同时更新所有子任务的depth",
+        "operationId": "TodoController_updateParentId",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "任务ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "新的父任务ID信息",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateParentIdDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功"
+          },
+          "400": {
+            "description": "参数错误或循环引用"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "任务不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "更新任务的父任务ID",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
     "/todos/batch-update-order": {
       "post": {
         "description": "批量更新任务的排序索引",
@@ -1834,6 +1885,19 @@
       }
     },
     "schemas": {
+      "UpdateParentIdDto": {
+        "type": "object",
+        "properties": {
+          "parentId": {
+            "type": "string",
+            "description": "新的父任务ID，如果为null则表示移到根级",
+            "nullable": true
+          }
+        },
+        "required": [
+          "parentId"
+        ]
+      },
       "BatchUpdateOrderDto": {
         "type": "object",
         "properties": {}
