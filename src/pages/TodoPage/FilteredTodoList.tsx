@@ -308,14 +308,30 @@ export default function FilteredTodoList({
       {/*底部操作栏*/}
       <Footer className="rounded-bottom">
         <Row align={"middle"} justify={"space-between"}>
-          <button
-            type="button"
-            onClick={() => handleDeleteAllCompleted()}
-            className="btn btn-primary btn-sm"
-          >
-            删除所有已完成
-          </button>
-          <span>未完成：{displayUncompletedCount + pinnedTasks.length}个</span>
+          {activeListId === "bin" ? (
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm('确定要清空回收站吗？此操作不可恢复！')) {
+                  useTodoStore.getState().emptyBin();
+                }
+              }}
+              className="btn btn-danger btn-sm"
+            >
+              清空所有回收站todo
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => handleDeleteAllCompleted()}
+              className="btn btn-primary btn-sm"
+            >
+              删除所有已完成
+            </button>
+          )}
+          {activeListId !== "bin" && (
+            <span>未完成：{displayUncompletedCount + pinnedTasks.length}个</span>
+          )}
         </Row>
       </Footer>
     </>
