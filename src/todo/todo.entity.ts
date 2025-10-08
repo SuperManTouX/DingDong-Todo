@@ -66,6 +66,9 @@ export class Task {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
+  @Column({ nullable: true, type: 'datetime', name: 'deleted_at' })
+  deletedAt: Date | null;
+
   @ManyToOne(() => TodoList)
   @JoinColumn({ name: 'list_id' })
   list: TodoList;

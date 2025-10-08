@@ -9,6 +9,49 @@ import { UpdateParentIdDto } from './dto/update-parent-id.dto';
 export class TodoController {
   constructor(private todoService: TaskService) {}
 
+  /**
+   * 分页获取已完成任务
+   * @param page 页码（从1开始，默认1）
+   * @param pageSize 每页数量（默认20）
+   * @param type 任务类型过滤（today、nearlyWeek、bin、cp或todolist-{id}、tag-{id}）
+   * @param req 请求对象，用于获取用户信息
+   * @returns 分页结果
+   */
+  @ApiOperation({
+    summary: '分页获取已完成任务',
+    description: '分页获取当前用户的已完成任务，支持多种类型过滤',
+  })
+  @ApiBearerAuth()
+  @ApiQuery({ name: 'page', description: '页码', required: false, example: 1 })
+  @ApiQuery({ name: 'pageSize', description: '每页数量', required: false, example: 20 })
+  @ApiQuery({ 
+    name: 'type', 
+    description: '任务类型过滤：today、nearlyWeek、bin、cp或todolist-{id}、tag-{id}', 
+    required: false, 
+    example: 'today'
+  })
+  @ApiResponse({ status: 200, description: '获取成功' })
+  @ApiResponse({ status: 401, description: '未授权' })
+  @UseGuards(AuthGuard('jwt'))
+  @Get('completed')
+  async getCompletedTasks(
+    @Req() req,
+    @Query('page') page: number = 1,
+    @Query('pageSize') pageSize: number = 20,
+    @Query('type') type?: string
+  ) {
+    // 确保页码和每页数量有效
+    const validPage = Math.max(1, Number(page) || 1);
+    const validPageSize = Math.max(1, Math.min(100, Number(pageSize) || 20));
+    
+    return this.todoService.getCompletedTasksWithPagination(
+      req.user.id,
+      validPage,
+      validPageSize,
+      type
+    );
+  }
+
   // 获取所有任务
   @ApiOperation({
     summary: '获取所有任务',
@@ -228,10 +271,27 @@ export class TodoController {
     return this.todoService.batchUpdateOrder(dto, req.user.id);
   }
 
-  // 删除任务
+  // 恢复已删除的任务
+  @ApiOperation({
+    summary: '恢复已删除的任务',
+    description: '从回收站恢复指定的已删除任务',
+  })
+  @ApiBearerAuth()
+  @ApiParam({ name: 'id', description: '任务ID' })
+  @ApiResponse({ status: 200, description: '恢复成功' })
+  @ApiResponse({ status: 404, description: '回收站中未找到该任务' })
+  @ApiResponse({ status: 401, description: '未授权' })
+  @UseGuards(AuthGuard('jwt'))
+  @Patch(':id/restore')
+  async restore(@Param('id') id: string, @Req() req) {
+    await this.todoService.restore(id, req.user.id);
+    return { message: '任务已成功恢复' };
+  }
+
+  // 删除任务（软删除）
   @ApiOperation({
     summary: '删除任务',
-    description: '将任务移至回收站',
+    description: '将任务移至回收站（软删除）',
   })
   @ApiBearerAuth()
   @ApiParam({ name: 'id', description: '任务ID' })
@@ -242,6 +302,38 @@ export class TodoController {
   @Delete(':id')
   async remove(@Param('id') id: string, @Req() req) {
     return this.todoService.remove(id, req.user.id);
+  }
+
+  // 硬删除单个任务
+  @ApiOperation({
+    summary: '硬删除单个任务',
+    description: '不经过回收站，直接从数据库删除指定任务及其所有子任务',
+  })
+  @ApiBearerAuth()
+  @ApiParam({ name: 'id', description: '任务ID' })
+  @ApiResponse({ status: 200, description: '删除成功' })
+  @ApiResponse({ status: 404, description: '任务不存在' })
+  @ApiResponse({ status: 401, description: '未授权' })
+  @UseGuards(AuthGuard('jwt'))
+  @Delete(':id/hard')
+  async hardDelete(@Param('id') id: string, @Req() req): Promise<{ success: boolean; message: string }> {
+    await this.todoService.hardDelete(id, req.user.id);
+    return { success: true, message: '任务已成功硬删除' };
+  }
+
+  // 硬删除所有任务
+  @ApiOperation({
+    summary: '硬删除所有任务',
+    description: '不经过回收站，直接从数据库删除当前用户的所有任务',
+  })
+  @ApiBearerAuth()
+  @ApiResponse({ status: 200, description: '删除成功' })
+  @ApiResponse({ status: 401, description: '未授权' })
+  @UseGuards(AuthGuard('jwt'))
+  @Delete('hard/all')
+  async hardDeleteAll(@Req() req): Promise<{ success: boolean; message: string }> {
+    await this.todoService.hardDeleteAll(req.user.id);
+    return { success: true, message: '所有任务已成功硬删除' };
   }
 
   // 重复的createDemo和searchTasks函数已删除，避免重复定义错误

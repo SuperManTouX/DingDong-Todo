@@ -1,7 +1,5 @@
-import { Controller, Get, Post, Delete, Param, Body, Request, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Request, UseGuards } from '@nestjs/common';
 import { BinService } from './bin.service';
-import { Bin } from './bin.entity';
-import { Task } from '../todo/todo.entity';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 
@@ -22,7 +20,7 @@ export class BinController {
   @ApiResponse({ status: 401, description: '未授权' })
   @UseGuards(AuthGuard('jwt'))
   @Get()
-  async findAll(@Request() req): Promise<Bin[]> {
+  async findAll(@Request() req): Promise<any[]> {
     const userId = req.user.id; // 假设用户信息存储在请求对象中
     return this.binService.findAllByUserId(userId);
   }
@@ -41,7 +39,7 @@ export class BinController {
   @ApiResponse({ status: 401, description: '未授权' })
   @UseGuards(AuthGuard('jwt'))
   @Post('restore/:id')
-  async restore(@Param('id') id: string, @Request() req): Promise<Task> {
+  async restore(@Param('id') id: string, @Request() req): Promise<any> {
     const userId = req.user.id;
     return this.binService.restoreFromBin(id, userId);
   }
