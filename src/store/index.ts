@@ -10,6 +10,7 @@ import { utilsActions } from "@/store/actions/utilsActions";
 import { loadActions } from "@/store/actions/loadActions";
 import { getListPinnedTodos } from "@/services/todoService";
 import { SpecialLists } from "@/constants";
+import { type } from "node:os";
 
 export const useTodoStore = create<TodoState>()(
   // 添加devtools中间件
@@ -31,8 +32,13 @@ export const useTodoStore = create<TodoState>()(
         groups: [],
         userId: null,
         pinnedTasks: [], // 初始化置顶任务数组
+        displayCompletedTasks: [], // 新增：存储已完成的任务
 
-        // 计算属性实现
+        // 设置显示已完成任务
+        setDisplayCompletedTasks: (tasks: Todo[]) => {
+          set({ displayCompletedTasks: tasks });
+        },
+
         activeGroup: () => {
           const state = get();
           return (
@@ -123,6 +129,12 @@ export const useTodoStore = create<TodoState>()(
         // 从loadActions注册的方法，用于加载指定类型的任务
         loadTasksByType: (type: string) =>
           loadActions.loadTasksByType(set, get, type),
+        // 加载已完成任务，支持分页
+        loadCompletedTasks: (
+          type: string,
+          page?: number = 1,
+          pageSize?: number = 20,
+        ) => loadActions.loadCompletedTasks(set, get, type, page, pageSize),
       };
     },
     { name: "TodoStore" },

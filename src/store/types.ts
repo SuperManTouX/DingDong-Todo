@@ -50,4 +50,9 @@ export interface TodoState {
   loadDataAll: () => Promise<void>;
   loadTags: () => Promise<void>;
   loadTasksByType: (taskId: string) => Promise<void>;
+  loadCompletedTasks: (
+    type: string,
+    page?: number,
+    pageSize?: number,
+  ) => Promise<void>;
 }

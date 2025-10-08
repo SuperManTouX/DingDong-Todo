@@ -34,7 +34,7 @@ export const useGlobalSettingsStore = create<GlobalSettingsState>()(
   devtools(
     (set, get) => ({
       // 初始状态
-      showTaskDetails: true, // 默认显示详情
+      showTaskDetails: false, // 默认显示详情
       hideCompletedTasks: false, // 默认不隐藏已完成任务
       isTodoDrawerOpen: false, // 默认关闭编辑抽屉
       isMobile: window.innerWidth <= MOBILE_BREAKPOINT, // 初始判断是否为移动端
