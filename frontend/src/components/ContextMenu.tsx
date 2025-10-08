@@ -262,9 +262,6 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
   const restoreFromBin = useTodoStore((state) => state.restoreFromBin);
   const deleteFromBin = useTodoStore((state) => state.deleteFromBin);
 
-  // 过滤掉当前任务，避免循环引用
-  const filteredTasks = tasks.filter((task) => task.id !== todo.id);
-
   // 转换为TreeSelect需要的数据格式
   const treeSelectData = convertToTreeSelectData(tasks, todo.id);
 
