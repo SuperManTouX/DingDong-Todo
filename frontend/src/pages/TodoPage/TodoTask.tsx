@@ -12,13 +12,7 @@ import { BellOutlined, RightOutlined } from "@ant-design/icons";
 import React, { useCallback, useEffect, useRef } from "react";
 
 dayjs.extend(isoWeek);
-export default function TodoTask({
-  todo,
-  other = false,
-  hasSubTasks = false,
-  isExpanded = false,
-  onToggleExpand,
-}: TodoItemProps) {
+export default function TodoTask({ todo, other = false }: TodoItemProps) {
   const { dispatchTodo, setSelectTodoId, selectTodoId, todoTags } =
     useTodoStore();
   const { showTaskDetails, setIsTodoDrawerOpen, isMobile } =

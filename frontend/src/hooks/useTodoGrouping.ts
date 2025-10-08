@@ -121,23 +121,7 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
       // 转换为统一的显示分组格式
       Object.keys(grouped).forEach((name) => {
         const originalGroup = groups.find((group) => group.groupName === name);
-        if (grouped[name].length == 0) {
-          const todoExample: Todo = {
-            id: "",
-            title: "占位Todo",
-            text: "占位Todo",
-            completed: false,
-            priority: 1,
-            deadline: undefined,
-            parentId: null,
-            depth: 0,
-            tags: [],
-            listId: "",
-            groupId: originalGroup?.id,
-            userId: "",
-          };
-          grouped[name].push(todoExample);
-        }
+
         displayGroups.push({
           id:
             originalGroup?.id ||

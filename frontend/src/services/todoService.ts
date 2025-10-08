@@ -99,6 +99,32 @@ export const searchTasks = async (keyword: string): Promise<Todo[]> => {
   );
 };
 
+// 获取已完成的任务，支持分页
+// 当type参数为空时获取所有已完成任务，否则获取指定类型的已完成任务
+export const getCompletedTasks = async (type?: string, page: number = 1, pageSize: number = 20): Promise<Todo[]> => {
+  let url = '/todos/completed';
+  
+  // 构建查询参数
+  const params = new URLSearchParams();
+  if (type) params.append('type', type);
+  params.append('page', page.toString());
+  params.append('pageSize', pageSize.toString());
+  
+  const queryString = params.toString();
+  if (queryString) url += `?${queryString}`;
+  
+  return request(
+    () => api.get<Todo[]>(url),
+    `获取已完成任务失败`,
+    {
+      cache: true,
+      cacheKey: url,
+      cacheTime: 60000, // 1分钟缓存
+      invalidateCache: '/todos', // 获取后清除主缓存
+    }
+  );
+};
+
 // 使用统一请求处理封装 - 更新任务的父任务ID（更新后清除相关缓存）
 export const updateParentId = (id: string, parentId: string | null) => {
   return request(

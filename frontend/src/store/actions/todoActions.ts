@@ -70,14 +70,39 @@ export const todoActions = {
                 const todoIndex = draftState.tasks.findIndex(
                   (task) => task.id === action.todo.id,
                 );
-                if (todoIndex !== -1) {
-                  // 保留createdAt等不变字段，只更新必要字段
-                  draftState.tasks[todoIndex] = {
-                    ...draftState.tasks[todoIndex],
-                    ...action.todo,
-                    userId,
-                    updatedAt: new Date().toISOString(),
-                  };
+                // 检查任务是否在tasks数组中
+                const taskInTasksArray = todoIndex !== -1;
+                
+                // 保留createdAt等不变字段，只更新必要字段
+                const updatedTask = {
+                  id: action.todo.id,
+                  ...(taskInTasksArray ? draftState.tasks[todoIndex] : {}),
+                  ...action.todo,
+                  userId,
+                  updatedAt: new Date().toISOString(),
+                };
+                
+                if (action.todo.completed === true) {
+                  // 当completed状态变为true时，从tasks中移除任务
+                  if (taskInTasksArray) {
+                    draftState.tasks.splice(todoIndex, 1);
+                    console.log(`任务 ${action.todo.id} 已从tasks中移除，因为状态变为已完成`);
+                  }
+                } else if (action.todo.completed === false) {
+                  // 当completed状态变为false时，添加到tasks数组
+                  if (taskInTasksArray) {
+                    // 如果任务已经在tasks中，直接更新
+                    draftState.tasks[todoIndex] = updatedTask;
+                  } else {
+                    // 如果任务不在tasks中，添加进去
+                    draftState.tasks.push(updatedTask);
+                    console.log(`任务 ${action.todo.id} 已添加到tasks中，因为状态变为未完成`);
+                  }
+                } else {
+                  // 其他情况，正常更新tasks中的任务（如果存在）
+                  if (taskInTasksArray) {
+                    draftState.tasks[todoIndex] = updatedTask;
+                  }
                 }
               }
               break;

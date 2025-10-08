@@ -7,8 +7,9 @@ import {
   Dropdown,
   Layout,
   Table,
+  Pagination,
 } from "antd";
-import React, { memo, useCallback, useMemo, useState } from "react";
+import React, { memo, useCallback, useMemo, useState, useEffect } from "react";
 import type { ColumnsType } from "antd/es/table";
 import {
   MenuFoldOutlined,
@@ -44,7 +45,12 @@ export default function FilteredTodoList({
 }) {
   // 获取所有任务，然后根据用户ID过滤
   const tasks = getActiveListTasks();
-  const { pinnedTasks, activeListId } = useTodoStore();
+  const {
+    pinnedTasks,
+    activeListId,
+    displayCompletedTasks,
+    loadCompletedTasks,
+  } = useTodoStore();
   // 获取全局设置和操作方法
   const {
     showTaskDetails,
@@ -55,6 +61,12 @@ export default function FilteredTodoList({
 
   // 控制表格行展开/折叠状态
   const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
+  // 分页相关状态
+  const [completedTasksPage, setCompletedTasksPage] = useState(1);
+  const [completedTasksPageSize] = useState(10);
+  const [filteredCompletedTasks, setFilteredCompletedTasks] = useState<Todo[]>(
+    [],
+  );
 
   // 下拉菜单配置
   const menuProps = {
@@ -94,10 +106,31 @@ export default function FilteredTodoList({
     handleAdded,
     handleCompleteAll,
     handleDeleteAllCompleted,
-    renderTodos,
-    renderOtherTodos,
     isAllDone,
   } = useTodoOperations(tasks);
+
+  // 当activeListId变化时，加载已完成任务并重置页码
+  useEffect(() => {
+    if (
+      activeListId &&
+      (activeListId === "cp" || activeListId === "bin" || !hideCompletedTasks)
+    ) {
+      // 调用分页加载已完成任务的方法
+      loadCompletedTasks(activeListId, 1, completedTasksPageSize);
+      setCompletedTasksPage(1);
+    }
+  }, [
+    activeListId,
+    hideCompletedTasks,
+    completedTasksPageSize,
+    loadCompletedTasks,
+  ]);
+
+  // 处理分页变化
+  const handleCompletedTasksPageChange = (page: number, pageSize: number) => {
+    setCompletedTasksPage(page);
+    loadCompletedTasks(activeListId, page, pageSize);
+  };
 
   // 将Todo对象转换为树形表格数据格式
   const convertToTreeTableData = useCallback(
@@ -128,7 +161,9 @@ export default function FilteredTodoList({
             const existingChildren = parentTask.children || [];
             const currentTask = taskMap.get(todo.id)!;
             // 检查当前任务是否已存在于子任务数组中
-            if (!existingChildren.find(child => child.id === currentTask.id)) {
+            if (
+              !existingChildren.find((child) => child.id === currentTask.id)
+            ) {
               // 创建新的数组而不是修改可能不可扩展的数组
               parentTask.children = [...existingChildren, currentTask];
             }
@@ -183,15 +218,14 @@ export default function FilteredTodoList({
     },
   ];
 
-  // 获取要渲染的任务列表
-  const todoList = renderTodos();
-  const otherTodosList = renderOtherTodos();
+  // 获取要渲染的已完成任务列表 - 现在使用displayCompletedTasks
+  // const otherTodosList = tasks.filter((t) => t.completed);
 
   // 渲染树形表格的组件
   const renderTreeTable = useCallback(
-    (tasksToRender: Todo[]) => {
+    (tasksToRender: Todo[], usePagination: boolean = false, total?: number) => {
       const treeData = convertToTreeTableData(tasksToRender);
-      return (
+      const table = (
         <Table
           className="todo-tree-table"
           columns={columns}
@@ -210,8 +244,37 @@ export default function FilteredTodoList({
           style={{ minHeight: "200px" }}
         />
       );
+
+      if (usePagination && total !== undefined) {
+        return (
+          <div>
+            {table}
+            <div className="mt-2 text-center">
+              <Pagination
+                current={completedTasksPage}
+                pageSize={completedTasksPageSize}
+                total={total}
+                onChange={handleCompletedTasksPageChange}
+                showSizeChanger
+                showQuickJumper
+                showTotal={(total) => `共 ${total} 条记录`}
+              />
+            </div>
+          </div>
+        );
+      }
+
+      return table;
     },
-    [columns, convertToTreeTableData, expandedRowKeys, handleExpandChange],
+    [
+      columns,
+      convertToTreeTableData,
+      expandedRowKeys,
+      handleExpandChange,
+      completedTasksPage,
+      completedTasksPageSize,
+      handleCompletedTasksPageChange,
+    ],
   );
 
   return (
@@ -272,8 +335,8 @@ export default function FilteredTodoList({
             )}
 
             {/*普通渲染模式 - 使用树形表格*/}
-            {groupMode === "none" && todoList.length > 0 && (
-              <div className="task-group">{renderTreeTable(todoList)}</div>
+            {groupMode === "none" && tasks.length > 0 && (
+              <div className="task-group">{renderTreeTable(tasks)}</div>
             )}
 
             {/*分组模式 - 每个分组使用独立的树形表格*/}
@@ -292,14 +355,18 @@ export default function FilteredTodoList({
                 </FilterGroup>
               ))}
 
-            {/*虚化显示其他任务*/}
-            {otherTodosList.length > 0 &&
+            {/*使用分页树形表格展示已完成任务，不再虚化显示*/}
+            {displayCompletedTasks.tasks?.length > 0 &&
               (activeListId === "cp" ||
                 activeListId === "bin" ||
                 !hideCompletedTasks) && (
-                <FilterGroup title="已完成" tasks={otherTodosList}>
+                <FilterGroup title="已完成" tasks={displayCompletedTasks}>
                   <div style={{ opacity: `.3` }}>
-                    {renderTreeTable(otherTodosList)}
+                    {renderTreeTable(
+                      displayCompletedTasks.tasks,
+                      true,
+                      displayCompletedTasks.tasks?.length,
+                    )}
                   </div>
                 </FilterGroup>
               )}

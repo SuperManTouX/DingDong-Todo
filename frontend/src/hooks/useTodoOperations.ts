@@ -9,8 +9,6 @@ interface UseTodoOperationsReturn {
   handleAdded: () => Promise<void>;
   handleCompleteAll: (action: TodoCompleteAllAction) => Promise<void>;
   handleDeleteAllCompleted: () => Promise<void>;
-  renderTodos: () => Todo[];
-  renderOtherTodos: () => Todo[];
   isAllDone: boolean;
   handleDeleteSelectedTodo: () => Promise<void>;
   handleUndoDelete: () => Promise<void>;
@@ -170,14 +168,10 @@ export default function useTodoOperations(
     [],
   );
 
-  //todo模板初始化
-  function renderTodos(): Todo[] {
-    return tasks.filter((t) => !t.completed);
-  }
-
-  function renderOtherTodos(): Todo[] {
-    return tasks.filter((t) => t.completed);
-  }
+  // //todo模板初始化
+  // function renderTodos(): Todo[] {
+  //   return tasks.filter((t) => !t.completed);
+  // }
 
   //当一键完成或一键取消完成的时候
   async function handleCompleteAll(
@@ -212,8 +206,6 @@ export default function useTodoOperations(
     handleAdded,
     handleCompleteAll,
     handleDeleteAllCompleted,
-    renderTodos,
-    renderOtherTodos,
     isAllDone,
     handleDeleteSelectedTodo,
     handleUndoDelete,
