@@ -39,7 +39,7 @@ export class TodoListService {
    */
   async create(createData: { title: string; emoji?: string; color?: string }, userId: string): Promise<TodoList> {
     const newList = this.todoListRepository.create({
-      id: `list-${Date.now()}`,
+      id: `todolist-${Date.now()}`,
       title: createData.title,
       emoji: createData.emoji,
       color: createData.color,

@@ -4,6 +4,8 @@ import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { BatchUpdateOrderDto } from './dto/batch-update-order.dto';
 import { UpdateParentIdDto } from './dto/update-parent-id.dto';
+import { NotFoundException } from '@nestjs/common';
+
 @ApiTags('任务管理')
 @Controller('todos')
 export class TodoController {
@@ -234,6 +236,22 @@ export class TodoController {
   async togglePin(@Param('id') id: string, @Req() req) {
     return this.todoService.togglePin(id, req.user.id);
   }
+  
+  // 切换任务完成状态
+  @ApiOperation({
+    summary: '切换任务完成状态',
+    description: '切换任务的完成状态，并同步更新所有子任务的完成状态',
+  })
+  @ApiBearerAuth()
+  @ApiParam({ name: 'id', description: '任务ID' })
+  @ApiResponse({ status: 200, description: '更新成功' })
+  @ApiResponse({ status: 404, description: '任务不存在' })
+  @ApiResponse({ status: 401, description: '未授权' })
+  @UseGuards(AuthGuard('jwt'))
+  @Patch(':id/completed')
+  async toggleTaskCompleted(@Param('id') id: string, @Req() req) {
+    return this.todoService.toggleTaskCompleted(id, req.user.id);
+  }
 
   // 更新任务的父任务ID
   @ApiOperation({
@@ -254,6 +272,77 @@ export class TodoController {
   @Patch(':id/parent')
   async updateParentId(@Param('id') id: string, @Body() dto: UpdateParentIdDto, @Req() req) {
     return this.todoService.updateParentId(id, dto.parentId, req.user.id);
+  }
+
+  /**
+   * 移动任务及其子任务到指定分组
+   * @param id 任务ID
+   * @param req 请求对象，用于获取用户信息
+   * @param body 请求体，包含新的分组ID和清单ID
+   * @returns 更新后的任务
+   */
+  @ApiOperation({
+    summary: '移动任务及其子任务到指定分组',
+    description: '将指定任务及其所有子任务移动到新的分组',
+  })
+  @ApiBearerAuth()
+  @ApiParam({ name: 'id', description: '任务ID' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        groupId: { type: 'string', nullable: true, description: '新的分组ID，null表示无分组' },
+        listId: { type: 'string', description: '新的清单ID' },
+      },
+      required: ['groupId', 'listId'],
+    },
+  })
+  @ApiResponse({ status: 200, description: '移动成功' })
+  @ApiResponse({ status: 404, description: '任务或分组不存在' })
+  @ApiResponse({ status: 401, description: '未授权' })
+  @UseGuards(AuthGuard('jwt'))
+  @Patch(':id/move-to-group')
+  async moveTaskToGroup(
+    @Param('id') id: string,
+    @Body() body: { groupId: string | null; listId: string },
+    @Req() req
+  ) {
+    return this.todoService.moveTaskToGroup(id, req.user.id, body.groupId, body.listId);
+  }
+
+  /**
+   * 移动任务及其子任务到指定清单
+   * @param id 任务ID
+   * @param request 请求对象，用于获取用户信息
+   * @param body 请求体，包含新的清单ID
+   * @returns 更新后的任务
+   */
+  @ApiOperation({
+    summary: '移动任务及其子任务到指定清单',
+    description: '将指定任务及其所有子任务移动到新的清单，并清空它们的groupId',
+  })
+  @ApiBearerAuth()
+  @ApiParam({ name: 'id', description: '任务ID' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        listId: { type: 'string', description: '新的清单ID' },
+      },
+      required: ['listId'],
+    },
+  })
+  @ApiResponse({ status: 200, description: '移动成功' })
+  @ApiResponse({ status: 404, description: '任务或清单不存在' })
+  @ApiResponse({ status: 401, description: '未授权' })
+  @UseGuards(AuthGuard('jwt'))
+  @Patch(':id/move-to-list')
+  async moveTaskToList(
+    @Param('id') id: string,
+    @Body() body: { listId: string },
+    @Req() req
+  ) {
+    return this.todoService.moveTaskToList(id, req.user.id, body.listId);
   }
 
   // 批量更新任务排序

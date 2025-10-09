@@ -74,7 +74,7 @@ export class TaskService {
   async findOne(id: string, userId: string): Promise<any | null> {
     const task = await this.taskRepository.findOne({
       where: { id, userId },
-      relations: ['list', 'group', 'user'],
+      relations: ['list', 'group', 'user', 'taskTags'],
     });
     
     if (!task) {
@@ -228,8 +228,17 @@ export class TaskService {
         this.ensureISOString(taskDataWithoutTags.reminder_at) : existingTask.reminder_at,
     };
     
+    // 检查是否更新了completed状态
+    const isCompletedUpdated = taskDataWithoutTags.completed !== undefined && 
+                               taskDataWithoutTags.completed !== existingTask.completed;
+    
     Object.assign(existingTask, processedTaskData, { updatedAt: new Date() });
     const updatedTask = await this.taskRepository.save(existingTask);
+    
+    // 如果更新了completed状态，递归更新所有子任务的completed状态
+    if (isCompletedUpdated && taskDataWithoutTags.completed !== undefined) {
+      await this.updateChildTasksCompleted(id, userId, taskDataWithoutTags.completed);
+    }
     
     // 处理标签关联
     if (Array.isArray(tags)) {
@@ -270,24 +279,107 @@ export class TaskService {
   }
   
   /**
-   * 批量清空指定groupId的所有任务的groupId字段
+   * 移动任务及其所有子任务到指定分组
+   * @param taskId 要移动的任务ID
+   * @param userId 用户ID
+   * @param newGroupId 新的分组ID（可以是null表示无分组）
+   * @returns 更新后的任务
    */
-  async clearTasksGroupId(groupId: string, userId: string): Promise<void> {
-    // 查找所有属于该分组的任务
-    const tasks = await this.taskRepository.find({
-      where: { groupId, userId },
+  async moveTaskToList(taskId: string, userId: string, newListId: string): Promise<Task> {
+    // 先验证任务存在且属于当前用户
+    const task = await this.findOne(taskId, userId);
+    
+    // 验证清单存在且属于当前用户
+    const listExists = await this.todoListRepository.findOne({
+      where: { id: newListId, userId }
+    });
+    if (!listExists) {
+      throw new NotFoundException(`清单ID ${newListId} 不存在或不属于当前用户`);
+    }
+    
+    // 使用事务确保数据一致性
+    await this.entityManager.transaction(async (transactionalEntityManager) => {
+      // 递归移动任务及其所有子任务
+      await this.moveTaskAndSubTasksToList(taskId, userId, newListId, transactionalEntityManager);
     });
     
-    // 批量更新任务的groupId为undefined
-    for (const task of tasks) {
-      task.groupId = undefined;
-      task.updatedAt = new Date();
+    // 返回更新后的任务
+    return this.findOne(taskId, userId);
+  }
+
+  /**
+   * 递归移动任务及其子任务到指定清单，并清空groupId
+   */
+  private async moveTaskAndSubTasksToList(taskId: string, userId: string, newListId: string, entityManager: EntityManager): Promise<void> {
+    // 查找当前任务的所有直接子任务
+    const childTasks = await entityManager.find(Task, {
+      where: { parentId: taskId, userId },
+    });
+    
+    // 递归处理每个子任务
+    for (const childTask of childTasks) {
+      await this.moveTaskAndSubTasksToList(childTask.id, userId, newListId, entityManager);
     }
     
-    // 批量保存更新后的任务
-    if (tasks.length > 0) {
-      await this.taskRepository.save(tasks);
+    // 更新当前任务的清单ID并清空groupId（使用null而不是undefined确保数据库中正确置空）
+    await entityManager.update(Task, { id: taskId, userId }, {
+      listId: newListId,
+      groupId: null,
+      updatedAt: new Date()
+    });
+  }
+  async moveTaskToGroup(taskId: string, userId: string, newGroupId: string | null, listId: string): Promise<Task> {
+    // 先验证任务存在且属于当前用户
+    const task = await this.findOne(taskId, userId);
+    
+    // 如果指定了新分组ID，验证分组存在且属于当前用户
+    if (newGroupId) {
+      const groupExists = await this.taskGroupRepository.findOne({
+        where: { id: newGroupId, userId }
+      });
+      if (!groupExists) {
+        throw new NotFoundException(`分组ID ${newGroupId} 不存在或不属于当前用户`);
+      }
     }
+    
+    // 验证清单存在且属于当前用户
+    const listExists = await this.todoListRepository.findOne({
+      where: { id: listId, userId }
+    });
+    if (!listExists) {
+      throw new NotFoundException(`清单ID ${listId} 不存在或不属于当前用户`);
+    }
+    
+    // 使用事务确保数据一致性
+    await this.entityManager.transaction(async (transactionalEntityManager) => {
+      // 递归移动任务及其所有子任务
+      await this.moveTaskAndSubTasksToGroup(taskId, userId, newGroupId, listId, transactionalEntityManager);
+    });
+    
+    // 返回更新后的任务
+    return this.findOne(taskId, userId);
+  }
+  
+  /**
+   * 递归移动任务及其子任务到指定分组
+   */
+  private async moveTaskAndSubTasksToGroup(taskId: string, userId: string, newGroupId: string | null, listId: string, entityManager: EntityManager): Promise<void> {
+    // 查找当前任务的所有直接子任务
+    const childTasks = await entityManager.find(Task, {
+      where: { parentId: taskId, userId },
+    });
+    
+    // 递归处理每个子任务
+    for (const childTask of childTasks) {
+      await this.moveTaskAndSubTasksToGroup(childTask.id, userId, newGroupId, listId, entityManager);
+    }
+    
+    // 更新当前任务的分组ID和清单ID
+    await entityManager.update(Task, { id: taskId, userId }, {
+      groupId: newGroupId,
+      listId: listId,
+      updatedAt: new Date()
+    });
   }
   private async moveNestedTasksToBin(taskId: string, userId: string): Promise<void> {
     // 查找当前任务的所有直接子任务（不管是否已删除）
@@ -549,6 +641,53 @@ export class TaskService {
     await this.toggleChildTasksPin(id, userId, newPinState);
     
     return this.formatTaskResponse(updatedTask);
+  }
+  
+  /**
+   * 切换任务完成状态，并同步更新所有子任务的完成状态
+   */
+  async toggleTaskCompleted(id: string, userId: string): Promise<any> {
+    // 先验证任务存在且属于当前用户
+    await this.findOne(id, userId);
+    const existingTask = await this.taskRepository.findOne({ where: { id } });
+    
+    if (!existingTask) {
+      throw new NotFoundException(`任务不存在`);
+    }
+    
+    // 切换完成状态
+    const newCompletedState = !existingTask.completed;
+    existingTask.completed = newCompletedState;
+    existingTask.updatedAt = new Date();
+    
+    // 保存当前任务的更新
+    const updatedTask = await this.taskRepository.save(existingTask);
+    
+    // 递归处理所有子任务的完成状态
+    await this.updateChildTasksCompleted(id, userId, newCompletedState);
+    
+    return this.formatTaskResponse(updatedTask);
+  }
+  
+  /**
+   * 递归更新所有子任务的完成状态
+   */
+  private async updateChildTasksCompleted(parentId: string, userId: string, completed: boolean): Promise<void> {
+    // 查找当前任务的所有直接子任务
+    const childTasks = await this.taskRepository.find({
+      where: { parentId, userId },
+    });
+    
+    // 递归处理每个子任务
+    for (const childTask of childTasks) {
+      // 更新子任务的完成状态
+      childTask.completed = completed;
+      childTask.updatedAt = new Date();
+      await this.taskRepository.save(childTask);
+      
+      // 递归处理子任务的子任务
+      await this.updateChildTasksCompleted(childTask.id, userId, completed);
+    }
   }
   
   /**

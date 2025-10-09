@@ -2,12 +2,15 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TodoTag } from './todo-tag.entity';
+import { TaskTag } from '../task-tag/task-tag.entity';
 
 @Injectable()
 export class TodoTagService {
   constructor(
     @InjectRepository(TodoTag) 
     private todoTagRepository: Repository<TodoTag>,
+    @InjectRepository(TaskTag) 
+    private taskTagRepository: Repository<TaskTag>,
   ) {}
 
   /**
@@ -77,6 +80,10 @@ export class TodoTagService {
    */
   async delete(id: string, userId: string): Promise<boolean> {
     await this.findOne(id, userId); // 验证标签存在且用户有权限
+    
+    // 先删除task_tag关系表中的相关记录
+    await this.taskTagRepository.delete({ tagId: id });
+    
     // 检查是否有子标签，如果有，先将子标签的parentId设置为null
     const childTags = await this.todoTagRepository.find({
       where: { parentId: id, userId },

@@ -4,12 +4,14 @@ import { Repository } from 'typeorm';
 import { TaskGroup } from './task-group.entity';
 import { TodoListService } from '../todo-list/todo-list.service';
 import { TaskService } from '../todo/todo.service';
-
+import { Task } from '../todo/todo.entity';
 @Injectable()
 export class TaskGroupService {
   constructor(
     @InjectRepository(TaskGroup) 
     private taskGroupRepository: Repository<TaskGroup>,
+    @InjectRepository(Task) 
+    private taskRepository: Repository<Task>,
     private todoListService: TodoListService,
     @Inject(forwardRef(() => TaskService))
     private taskService: TaskService,
@@ -73,8 +75,11 @@ export class TaskGroupService {
     // 验证分组存在且用户有权限
     const group = await this.findOne(id, userId);
     
-    // 清空相关任务的groupId
-    await this.taskService.clearTasksGroupId(id, userId);
+    // 批量更新清空相关任务的groupId
+    await this.taskRepository.update(
+      { groupId: id, userId },
+      { groupId: undefined, updatedAt: new Date() }
+    );
     
     // 删除分组
     const result = await this.taskGroupRepository.delete(id);
