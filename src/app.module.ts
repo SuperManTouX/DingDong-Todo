@@ -9,6 +9,7 @@ import { TodoTagModule } from './todo-tag/todo-tag.module';
 import { TaskGroupModule } from './task-group/task-group.module';
 import { BinModule } from './bin/bin.module';
 import { FocusRecordModule } from './focus-record/focus-record.module';
+import { WebSocketModule } from './websocket/websocket.module';
 import { S3Config } from './config/s3.config';
 
 @Module({
@@ -36,6 +37,7 @@ import { S3Config } from './config/s3.config';
     TaskGroupModule,
     BinModule,
     FocusRecordModule,
+    WebSocketModule,
   ],
   providers: [S3Config],
   exports: [S3Config]

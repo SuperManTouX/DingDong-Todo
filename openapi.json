@@ -797,6 +797,43 @@
         ]
       }
     },
+    "/todos/{id}/completed": {
+      "patch": {
+        "description": "切换任务的完成状态，并同步更新所有子任务的完成状态",
+        "operationId": "TodoController_toggleTaskCompleted",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "任务ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "更新成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "任务不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "切换任务完成状态",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
     "/todos/{id}/parent": {
       "patch": {
         "description": "更新任务的父任务ID，并自动计算和更新depth值，同时更新所有子任务的depth",
@@ -843,6 +880,124 @@
           }
         ],
         "summary": "更新任务的父任务ID",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/{id}/move-to-group": {
+      "patch": {
+        "description": "将指定任务及其所有子任务移动到新的分组",
+        "operationId": "TodoController_moveTaskToGroup",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "任务ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "groupId": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "新的分组ID，null表示无分组"
+                  },
+                  "listId": {
+                    "type": "string",
+                    "description": "新的清单ID"
+                  }
+                },
+                "required": [
+                  "groupId",
+                  "listId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "移动成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "任务或分组不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "移动任务及其子任务到指定分组",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/{id}/move-to-list": {
+      "patch": {
+        "description": "将指定任务及其所有子任务移动到新的清单，并清空它们的groupId",
+        "operationId": "TodoController_moveTaskToList",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "任务ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "listId": {
+                    "type": "string",
+                    "description": "新的清单ID"
+                  }
+                },
+                "required": [
+                  "listId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "移动成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "任务或清单不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "移动任务及其子任务到指定清单",
         "tags": [
           "任务管理"
         ]
