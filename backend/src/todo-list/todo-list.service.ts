@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TodoList } from './todo-list.entity';
 import { User } from '../user/user.entity';
-
+import { Task } from '../todo/todo.entity';
 @Injectable()
 export class TodoListService {
   constructor(
@@ -70,9 +70,45 @@ export class TodoListService {
 
   /**
    * 删除清单
+   * @param id 清单ID
+   * @param userId 用户ID
+   * @param targetListId 目标清单ID（可选）
+   * @param mode 处理模式：'move'（仅移动任务）或 'moveAndDelete'（移动后删除）或 undefined（默认模式：直接删除）
+   * 说明：任务将使用软删除（设置deletedAt为当前时间），清单将从数据库中物理删除
    */
-  async delete(id: string, userId: string): Promise<boolean> {
+  async delete(id: string, userId: string, targetListId?: string, mode?: 'move' | 'moveAndDelete'): Promise<boolean> {
     await this.findOne(id, userId); // 验证清单存在且用户有权限
+    
+    // 获取所有相关任务
+    const tasks = await this.todoListRepository.manager.find(Task, {
+      where: { listId: id, userId },
+    });
+    
+    if (targetListId) {
+      // 验证目标清单存在且属于同一用户
+      await this.findOne(targetListId, userId);
+      
+      // 将任务移入目标清单
+      for (const task of tasks) {
+        task.listId = targetListId;
+        
+        // 如果模式是 'moveAndDelete'，则在移动后软删除任务
+        if (mode === 'moveAndDelete') {
+          task.deletedAt = new Date();
+        }
+        
+        await this.todoListRepository.manager.save(task);
+      }
+    } else {
+      // 默认模式：软删除任务并清除listId
+      for (const task of tasks) {
+        task.deletedAt = new Date();
+        task.listId = '';
+        await this.todoListRepository.manager.save(task);
+      }
+    }
+    
+    // 从数据库中物理删除清单
     const result = await this.todoListRepository.delete(id);
     return result.affected !== null && result.affected !== undefined && result.affected > 0;
   }

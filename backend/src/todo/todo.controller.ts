@@ -319,7 +319,7 @@ export class TodoController {
    */
   @ApiOperation({
     summary: '移动任务及其子任务到指定清单',
-    description: '将指定任务及其所有子任务移动到新的清单，并清空它们的groupId',
+    description: '将指定任务及其所有子任务移动到新的清单，并清空它们的groupId，同时清除父任务的parentId',
   })
   @ApiBearerAuth()
   @ApiParam({ name: 'id', description: '任务ID' })

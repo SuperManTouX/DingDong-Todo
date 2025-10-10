@@ -107,19 +107,33 @@ export class TodoListController {
    */
   @ApiOperation({
     summary: '删除清单',
-    description: '删除指定ID的清单',
+    description: '删除指定ID的清单，可选传入targetListId将任务移至其他清单，mode控制任务处理方式',
   })
   @ApiBearerAuth()
   @ApiParam({ name: 'id', description: '清单ID' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        targetListId: { type: 'string', description: '目标清单ID（可选）' },
+        mode: { 
+          type: 'string', 
+          description: '处理模式: move(仅移动任务) 或 moveAndDelete(移动后删除)',
+          enum: ['move', 'moveAndDelete']
+        },
+      },
+    },
+    required: false,
+  })
   @ApiResponse({ status: 200, description: '删除成功' })
   @ApiResponse({ status: 404, description: '清单不存在' })
   @ApiResponse({ status: 401, description: '未授权' })
   @UseGuards(AuthGuard('jwt'))
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
-  async delete(@Param('id') id: string, @Req() req): Promise<{ message: string }> {
+  async delete(@Param('id') id: string, @Body() body: { targetListId?: string; mode?: 'move' | 'moveAndDelete' }, @Req() req): Promise<{ message: string }> {
     const userId = req.user.id;
-    await this.todoListService.delete(id, userId);
+    await this.todoListService.delete(id, userId, body.targetListId, body.mode);
     return { message: '清单删除成功' };
   }
 }

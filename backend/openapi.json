@@ -949,7 +949,7 @@
     },
     "/todos/{id}/move-to-list": {
       "patch": {
-        "description": "将指定任务及其所有子任务移动到新的清单，并清空它们的groupId",
+        "description": "将指定任务及其所有子任务移动到新的清单，并清空它们的groupId，同时清除父任务的parentId",
         "operationId": "TodoController_moveTaskToList",
         "parameters": [
           {
@@ -1483,7 +1483,7 @@
         ]
       },
       "delete": {
-        "description": "删除指定ID的清单",
+        "description": "删除指定ID的清单，可选传入targetListId将任务移至其他清单，mode控制任务处理方式",
         "operationId": "TodoListController_delete",
         "parameters": [
           {
@@ -1496,6 +1496,30 @@
             }
           }
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "targetListId": {
+                    "type": "string",
+                    "description": "目标清单ID（可选）"
+                  },
+                  "mode": {
+                    "type": "string",
+                    "description": "处理模式: move(仅移动任务) 或 moveAndDelete(移动后删除)",
+                    "enum": [
+                      "move",
+                      "moveAndDelete"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "删除成功"

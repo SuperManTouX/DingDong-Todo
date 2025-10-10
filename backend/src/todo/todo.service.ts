@@ -279,10 +279,10 @@ export class TaskService {
   }
   
   /**
-   * 移动任务及其所有子任务到指定分组
+   * 移动任务及其所有子任务到指定清单
    * @param taskId 要移动的任务ID
    * @param userId 用户ID
-   * @param newGroupId 新的分组ID（可以是null表示无分组）
+   * @param newListId 新的清单ID
    * @returns 更新后的任务
    */
   async moveTaskToList(taskId: string, userId: string, newListId: string): Promise<Task> {
@@ -299,8 +299,16 @@ export class TaskService {
     
     // 使用事务确保数据一致性
     await this.entityManager.transaction(async (transactionalEntityManager) => {
-      // 递归移动任务及其所有子任务
-      await this.moveTaskAndSubTasksToList(taskId, userId, newListId, transactionalEntityManager);
+      // 首先处理子任务，只更新listId和清空groupId
+      await this.moveSubTasksToList(taskId, userId, newListId, transactionalEntityManager);
+      
+      // 然后处理父任务，更新listId、清空groupId，并清除parentId
+      await transactionalEntityManager.update(Task, { id: taskId, userId }, {
+        listId: newListId,
+        groupId: null,
+        parentId: null,
+        updatedAt: new Date()
+      });
     });
     
     // 返回更新后的任务
@@ -308,9 +316,9 @@ export class TaskService {
   }
 
   /**
-   * 递归移动任务及其子任务到指定清单，并清空groupId
+   * 递归移动子任务到指定清单，并清空groupId，但保留parentId
    */
-  private async moveTaskAndSubTasksToList(taskId: string, userId: string, newListId: string, entityManager: EntityManager): Promise<void> {
+  private async moveSubTasksToList(taskId: string, userId: string, newListId: string, entityManager: EntityManager): Promise<void> {
     // 查找当前任务的所有直接子任务
     const childTasks = await entityManager.find(Task, {
       where: { parentId: taskId, userId },
@@ -318,15 +326,15 @@ export class TaskService {
     
     // 递归处理每个子任务
     for (const childTask of childTasks) {
-      await this.moveTaskAndSubTasksToList(childTask.id, userId, newListId, entityManager);
+      await this.moveSubTasksToList(childTask.id, userId, newListId, entityManager);
+      
+      // 更新子任务的清单ID并清空groupId，但保留parentId
+      await entityManager.update(Task, { id: childTask.id, userId }, {
+        listId: newListId,
+        groupId: null,
+        updatedAt: new Date()
+      });
     }
-    
-    // 更新当前任务的清单ID并清空groupId（使用null而不是undefined确保数据库中正确置空）
-    await entityManager.update(Task, { id: taskId, userId }, {
-      listId: newListId,
-      groupId: null,
-      updatedAt: new Date()
-    });
   }
   async moveTaskToGroup(taskId: string, userId: string, newGroupId: string | null, listId: string): Promise<Task> {
     // 先验证任务存在且属于当前用户
