@@ -37,9 +37,15 @@ export const updateTodoList = async (
   }
 };
 // 删除待办事项列表
-export const deleteTodoList = async (id: string): Promise<void> => {
+export const deleteTodoList = async (id: string, targetListId?: string | null, mode?: 'move' | 'moveAndDelete'): Promise<void> => {
   try {
-    await api.delete(`/todo-lists/${id}`);
+    // 通过请求体传递参数
+    await api.delete(`/todo-lists/${id}`, {
+      data: { 
+        targetListId, 
+        mode 
+      }
+    });
   } catch (error) {
     console.error(`删除待办事项列表 ${id} 失败:`, error);
     throw error;

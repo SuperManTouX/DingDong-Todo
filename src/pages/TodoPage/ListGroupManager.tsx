@@ -4,11 +4,12 @@ import {
   Dropdown,
   type MenuProps,
   Modal,
+  Radio,
   Row,
   Select,
 } from "antd";
 import { MESSAGES } from "@/constants/messages";
-import { useState } from "react";
+import { useRef, useState,useEffect } from "react";
 import { useTodoStore } from "@/store/todoStore";
 import { useGlobalSettingsStore } from "@/store/globalSettingsStore";
 import {
@@ -47,10 +48,78 @@ export default function ListGroupManager() {
   const [selectedColor, setSelectedColor] = useState(ListColors.none);
   const [listId, setListId] = useState("");
 
-  // 初始化标签管理器
-  const { showModal: showTagModal, tagModal } = TagManager();
+  // 用于存储选择的radio值和目标清单ID
+  const radioValueRef = useRef<string>('move');
+  const [targetListId, setTargetListId] = useState('');
+  
+  // 标签模态框状态
+  const [isTagModalOpen, setIsTagModalOpen] = useState(false);
+  const [tagMode, setTagMode] = useState<"add" | "edit">("add");
+  const [tagName, setTagName] = useState("");
+  const [tagColor, setTagColor] = useState(ListColors.none);
+  const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
+  const [tagId, setTagId] = useState("");
 
-  // 显示模态框 - 统一处理添加和编辑
+  // 显示标签模态框
+  const showTagModal = (
+    type: "add" | "edit" = "add",
+    tagData?: Partial<Tag>,
+  ) => {
+    setTagMode(type);
+    if (type === "add") {
+      setTagName("");
+      setTagColor(ListColors.none);
+      setSelectedParentId(null);
+      setTagId("");
+    } else if (type === "edit" && tagData) {
+      setTagName(tagData.name || "");
+      // @ts-ignore
+      setTagColor(tagData.color || ListColors.none);
+      setSelectedParentId(tagData.parentId || null);
+      setTagId(tagData.id || "");
+    }
+    setIsTagModalOpen(true);
+  };
+
+  // 处理标签确认按钮
+  const handleTagOk = () => {
+    if (tagName.trim()) {
+      try {
+        if (tagMode === "add") {
+          dispatchTag({
+            type: "addTag",
+            payload: {
+              name: tagName.trim(),
+              color: tagColor,
+              parentId: selectedParentId || null,
+            },
+          });
+        } else if (tagMode === "edit") {
+          dispatchTag({
+            type: "updateTag",
+            payload: {
+              id: tagId,
+              updates: {
+                name: tagName.trim(),
+                color: tagColor,
+                parentId: selectedParentId || null,
+              },
+            },
+          });
+        }
+        setIsTagModalOpen(false);
+      } catch (error) {
+        console.error("标签操作失败:", error);
+      }
+    } else {
+      message.warning("标签名称不能为空");
+    }
+  };
+
+  const handleTagCancel = () => {
+    setIsTagModalOpen(false);
+  };
+    // 显示模态框 - 统一处理添加和编辑
   const showModal = (
     type: "add" | "edit" = "add",
     groupData?: TodoListData,
@@ -112,17 +181,67 @@ export default function ListGroupManager() {
   };
 
   const handleDeleteListGroup = (listId: string, groupTitle: string) => {
-    modal.confirm({
-      title: "确认删除清单",
-      content: `确定要删除清单 "${groupTitle}" 吗？此操作无法撤销。`,
+    // 创建删除确认Modal，包含radio选项
+    Modal.confirm({
+      title: "删除清单",
+      content: (
+        <div>
+          
+          <p>请选择删除清单的方式：</p>
+          <Radio.Group 
+            optionType="button" 
+            buttonStyle="solid" 
+            
+            defaultValue="move"
+            onChange={(e) => {
+              radioValueRef.current = e.target.value;
+            }}
+            options={[
+                {
+                  label: "将任务移动到其他清单",
+                  value: "move"
+                },
+                {
+                  label: "将任务移入回收站",
+                  value: "moveAndDelete"
+                },
+                
+              ]}
+          />
+          {radioValueRef.current === 'move' || radioValueRef.current === 'moveAndDelete' ? (
+              <Select
+                className="mt-2 w-full"
+                placeholder="选择目标清单"
+                disabled={todoListData.filter(l => l.id !== listId).length === 0}
+                style={{ display: 'block', marginTop: '8px' }}
+                defaultValue={todoListData.filter(l => l.id !== listId)[0]?.id}
+                onChange={(value) => {
+                  setTargetListId(value);
+                }}
+                options={todoListData
+                  .filter(l => l.id !== listId)
+                  .map(l => ({
+                    label: `${l.emoji || ''} ${l.title}`,
+                    value: l.id
+                  }))
+                }
+              />
+            ) : null}
+        </div>
+      ),
       okText: "确认删除",
       okType: "danger",
       cancelText: "取消",
       async onOk() {
         try {
+          
+         
+          
           await dispatchList({
             type: "deletedList",
             listId: listId,
+            targetListId: targetListId===''?todoListData[0]?.id:targetListId ,// 传递targetListId参数
+            mode:radioValueRef.current,
           });
           message.success(MESSAGES.SUCCESS.LIST_DELETED);
 
@@ -502,6 +621,86 @@ export default function ListGroupManager() {
         )}
       </Modal>
     ),
-    tagModal,
+    tagModal: (
+      <Modal
+        title={tagMode === "add" ? "添加标签" : "编辑标签"}
+        closable={{ "aria-label": "Custom Close Button" }}
+        open={isTagModalOpen}
+        onOk={handleTagOk}
+        onCancel={handleTagCancel}
+        width={400}
+      >
+        <div className="mb-3">
+          <label htmlFor="tagName" className="form-label">
+            标签名称
+          </label>
+          <input
+            type="text"
+            className="form-control w-100"
+            id="tagName"
+            value={tagName}
+            onChange={(e) => setTagName(e.target.value)}
+            placeholder="请输入标签名称"
+            autoFocus
+          />
+        </div>
+        <div className="mb-3">
+          <label htmlFor="tagColor" className="form-label">
+            标签颜色
+          </label>
+          <Select
+            value={tagColor}
+            style={{ width: "100%" }}
+            onChange={(value) => setTagColor(value)}
+            placeholder="选择颜色"
+            options={Object.entries(ListColors).map(([key, color]) => ({
+              value: color,
+              label: (
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                >
+                  <div
+                    style={{
+                      width: "20px",
+                      height: "20px",
+                      backgroundColor: color,
+                      borderRadius: "50%",
+                      border: "1px solid #d9d9d9",
+                    }}
+                  />
+                  <span>
+                    {ListColorNames[color as keyof typeof ListColorNames] ||
+                      key}
+                  </span>
+                </div>
+              ),
+            }))}
+          />
+        </div>
+        <div className="mb-3">
+          <label htmlFor="parentTag" className="form-label">
+            父标签
+          </label>
+          <Select
+            value={selectedParentId || undefined}
+            style={{ width: "100%" }}
+            onChange={(value) => setSelectedParentId(value)}
+            placeholder="选择父标签（可选）"
+            allowClear
+            options={todoTags
+              .filter((tag) => !tag.parentId && tag.id !== tagId)
+              .map((tag) => ({
+                value: tag.id,
+                label: tag.name,
+              }))}
+          />
+        </div>
+        {tagMode === "add" && (
+          <p className="text-secondary">
+            添加后可以在侧边栏看到新的标签。
+          </p>
+        )}
+      </Modal>
+    ),
   };
 }

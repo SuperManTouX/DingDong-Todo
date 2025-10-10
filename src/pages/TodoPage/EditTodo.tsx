@@ -383,7 +383,7 @@ export default function EditTodo({
       <Drawer
         title={
           <Row className="h-100" justify="space-between" align="middle">
-            renderHeaderContent()
+            {renderHeaderContent()}
           </Row>
         }
         open={open}
@@ -392,7 +392,7 @@ export default function EditTodo({
         placement="right"
         className=""
       >
-        renderContent()
+        {renderContent()}
       </Drawer>
     );
   }
