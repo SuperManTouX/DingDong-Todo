@@ -63,8 +63,8 @@ export const listActions = {
           break;
         }
         case "deletedList": {
-          // 等待API调用成功
-          await deleteTodoList(action.listId);
+          // 等待API调用成功，传递targetListId和mode参数
+          await deleteTodoList(action.listId, action.targetListId, action.mode);
 
           // API调用成功后再更新本地状态
           set(
@@ -72,10 +72,35 @@ export const listActions = {
               draftState.todoListData = draftState.todoListData.filter(
                 (list) => list.id !== action.listId,
               );
-              // 同时删除该列表下的所有任务
-              draftState.tasks = draftState.tasks.filter(
-                (task) => task.listId !== action.listId,
-              );
+              // 如果提供了targetListId和mode，根据mode决定如何处理任务
+              if (action.targetListId) {
+                if (action.mode === 'moveAndDelete') {
+                  // moveAndDelete模式：移动任务并标记为已删除
+                  draftState.tasks = draftState.tasks.map(task => 
+                    task.listId === action.listId 
+                      ? { 
+                          ...task, 
+                          listId: action.targetListId,
+                          deletedAt: new Date().toISOString() 
+                        }
+                      : task
+                  );
+                } else {
+                  // move模式：只移动任务到目标清单
+                  draftState.tasks = draftState.tasks.map(task => 
+                    task.listId === action.listId 
+                      ? { ...task, listId: action.targetListId }
+                      : task
+                  );
+                }
+              } else {
+                // 否则将任务标记为已删除（移入回收站），而不是从state中移除
+                draftState.tasks = draftState.tasks.map(task => 
+                  task.listId === action.listId 
+                    ? { ...task, deletedAt: new Date().toISOString(), listId: '' }
+                    : task
+                );
+              }
             }),
           );
           break;

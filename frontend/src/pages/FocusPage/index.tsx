@@ -241,21 +241,11 @@ export const Index: React.FC = () => {
           {/* 操作按钮区域 */}
           {groupedRecords.size > 0 ? (
             Array.from(groupedRecords.entries()).map(([date, dayRecords]) => {
-              // 转换API记录格式为UI组件所需格式
-              const formattedRecords = dayRecords.map((record) => ({
-                id: record.id,
-                startTime: formatTime(record.start_time),
-                endTime: formatTime(record.end_time),
-                duration: calculateDuration(record.start_time, record.end_time),
-                mode: record.mode,
-                taskTitle: getTodoByIdStore(record.task_id)?.title,
-                note: record.notes || "",
-              }));
-
+              // 直接传递API记录给FocusRecords组件，由其内部处理格式化
               return (
                 <div key={date} className="mb-6">
                   <FocusRecords
-                    records={formattedRecords}
+                    records={dayRecords}
                     date={date}
                     onRecordUpdated={fetchAllFocusRecords}
                   />

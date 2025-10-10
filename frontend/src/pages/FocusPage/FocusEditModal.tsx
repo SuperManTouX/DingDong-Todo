@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   Modal,
   Form,
@@ -21,6 +21,7 @@ import type { ApiFocusRecord } from "@/services/focusService";
 import { focusService } from "@/services/focusService";
 import { CheckOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useTodoStore } from "@/store/todoStore";
+import { useTasksByList } from "@/hooks/useTasksByList";
 
 interface FocusEditModalProps {
   isOpen: boolean;
@@ -46,92 +47,99 @@ export const FocusEditModal: React.FC<FocusEditModalProps> = ({
   // 使用外部传入的form或创建新的form实例
   const [internalForm] = Form.useForm();
   const form = internalForm;
-  
+
   // 添加状态变量
   const [pomodoroCount, setPomodoroCount] = useState<number>(1);
   const [currentMode, setCurrentMode] = useState<string>("normal"); // 添加当前模式状态
 
   // 从todoStore中获取数据
-  const {
-    todoListData,
-    activeListId,
-    setActiveListId,
-    getActiveListData,
-    getActiveListTasks,
-  } = useTodoStore();
+  const { todoListData, getActiveListData } = useTodoStore();
 
-  // 获取当前激活列表的数据
-  const currentListData = getActiveListData();
-
-  // 获取当前激活列表的任务
-  const currentListTasks = getActiveListTasks();
+  // 设置默认的listId为第一个可用的清单，避免初始为undefined
+  const [focusActiveListId, setFocusActiveListId] = useState(
+    todoListData[0]?.id || null,
+  );
+  // 获取当前激活列表的数据，添加空值检查
+  const currentListData = getActiveListData(focusActiveListId) || {};
+  const { tasks: currentListTasks } = useTasksByList(currentListData.id || "");
   // 准备Select组件的选项数据
   const selectOptions = todoListData.map((list: any) => ({
     value: list.id,
     label: list.title,
   }));
   // 构建dropdown菜单项目 - 包含清单选择器和当前清单的任务
-  const menuItems: MenuProps["items"] = [
-    // 自定义渲染包含Select组件的菜单项
-    {
-      key: "list-selector",
-      label: (
-        <div className="p-2 w-full">
-          <Typography.Text strong className="block mb-2">
-            选择清单：
-          </Typography.Text>
-          <Select
-            value={activeListId}
-            onChange={(value) => setActiveListId(value)}
-            options={selectOptions}
-            style={{ width: "100%" }}
-            placeholder="请选择清单"
-            allowClear={false}
-          />
-        </div>
-      ),
-      disabled: true,
-    },
-    // 添加分隔线
-    { type: "divider" },
-    // 添加当前清单的任务列表
-    {
-      type: "group",
-      label: `${currentListData.title} 的任务`,
-      children: currentListTasks.map((todo: any) => ({
-        key: `todo-${todo.id}`,
+  const menuItems: MenuProps["items"] = useMemo(() => {
+    const items = [
+      // 自定义渲染包含Select组件的菜单项
+      {
+        key: "list-selector",
         label: (
-          <div className="w-full text-left flex items-center gap-2">
-            {todo.completed ? (
-              <CheckOutlined className="text-green-500" />
-            ) : (
-              <div className="w-5 h-5 border border-gray-300 rounded-full" />
-            )}
-            <span
-              className={todo.completed ? "line-through text-gray-500" : ""}
-            >
-              {todo.title}
-            </span>
+          <div className="p-2 w-full">
+            <Typography.Text strong className="block mb-2">
+              选择清单：
+            </Typography.Text>
+            <Select
+              value={focusActiveListId}
+              onChange={(value) => setFocusActiveListId(value)}
+              options={selectOptions}
+              style={{ width: "100%" }}
+              placeholder="请选择清单"
+              allowClear={false}
+            />
           </div>
         ),
-        // 修改onClick事件，将当前点击的todo保存到selectedTodo变量中
-        onClick: () => {
-          console.log("选择任务:", todo.title);
-          setSelectedTodo(todo);
-          form.setFieldsValue({ taskTitle: todo.title });
-        },
-      })),
-    },
-  ];
+        disabled: true,
+      },
+      // 添加分隔线
+      { type: "divider" },
+      // 添加当前清单的任务列表
+      {
+        type: "group",
+        label: `${currentListData.title || "选择的"} 清单的任务`,
+        children: currentListTasks.map((todo: any) => ({
+          key: `todo-${todo.id}`,
+          label: (
+            <div className="w-full text-left flex items-center gap-2">
+              {todo.completed ? (
+                <CheckOutlined className="text-green-500" />
+              ) : (
+                <div className="w-5 h-5 border border-gray-300 rounded-full" />
+              )}
+              <span
+                className={todo.completed ? "line-through text-gray-500" : ""}
+              >
+                {todo.title}
+              </span>
+            </div>
+          ),
+          // 修改onClick事件，将当前点击的todo保存到selectedTodo变量中
+          onClick: () => {
+            console.log("选择任务:", todo.title);
+            setSelectedTodo(todo);
+            form.setFieldsValue({ taskTitle: todo.title });
+          },
+        })),
+      },
+    ];
 
-  if (currentListTasks.length === 0) {
-    // 如果当前清单没有任务，添加提示
-    menuItems.push({
-      key: "no-todos",
-      label: "此清单暂无任务",
-      disabled: true,
-    });
-  }
+    if (currentListTasks.length === 0) {
+      // 如果当前清单没有任务，添加提示
+      items.push({
+        key: "no-todos",
+        label: "此清单暂无任务",
+        disabled: true,
+      });
+    }
+
+    return items;
+  }, [
+    currentListTasks,
+    currentListData,
+    focusActiveListId,
+    selectOptions,
+    setSelectedTodo,
+    form,
+  ]);
 
   // 当初始记录数据变化时，更新表单值
   useEffect(() => {
@@ -139,6 +147,7 @@ export const FocusEditModal: React.FC<FocusEditModalProps> = ({
       if (mode === "edit" && record) {
         const modeValue = record.mode || "normal";
         setCurrentMode(modeValue); // 更新当前模式状态
+        console.log(record);
         form.setFieldsValue({
           mode: modeValue,
           startTime: record.start_time ? dayjs(record.start_time) : null,
@@ -148,13 +157,16 @@ export const FocusEditModal: React.FC<FocusEditModalProps> = ({
         });
         // 编辑模式下，如果是番茄计时，尝试计算番茄数量
         if (modeValue === "pomodoro" && record.start_time && record.end_time) {
-          const durationMinutes = dayjs(record.end_time).diff(dayjs(record.start_time), 'minute');
+          const durationMinutes = dayjs(record.end_time).diff(
+            dayjs(record.start_time),
+            "minute",
+          );
           const calculatedCount = Math.round(durationMinutes / 25);
           setPomodoroCount(calculatedCount > 0 ? calculatedCount : 1);
         }
       } else if (mode === "add") {
         // 只有当modal首次打开时才设置默认值，避免任务变化时重置模式
-        if (!form.getFieldValue('mode')) {
+        if (!form.getFieldValue("mode")) {
           const defaultMode = "normal";
           setCurrentMode(defaultMode); // 更新当前模式状态
           form.setFieldsValue({
@@ -176,15 +188,17 @@ export const FocusEditModal: React.FC<FocusEditModalProps> = ({
   }, [isOpen, mode, record, selectedTodo, form]);
 
   // 处理番茄数量变化
-  const handlePomodoroCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePomodoroCountChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const value = parseInt(e.target.value) || 1;
     setPomodoroCount(Math.max(1, value)); // 确保至少为1
-    
+
     // 更新结束时间
-    const startTime = form.getFieldValue('startTime');
+    const startTime = form.getFieldValue("startTime");
     if (startTime) {
       form.setFieldsValue({
-        endTime: dayjs(startTime).add(value * 25, 'minute')
+        endTime: dayjs(startTime).add(value * 25, "minute"),
       });
     }
   };
@@ -194,19 +208,19 @@ export const FocusEditModal: React.FC<FocusEditModalProps> = ({
     const newMode = e.target.value;
     setCurrentMode(newMode); // 更新状态，触发重新渲染
     form.setFieldsValue({ mode: newMode });
-    
+
     // 如果切换到番茄计时模式，计算结束时间
     if (newMode === "pomodoro") {
-      const startTime = form.getFieldValue('startTime') || dayjs();
+      const startTime = form.getFieldValue("startTime") || dayjs();
       form.setFieldsValue({
-        endTime: dayjs(startTime).add(pomodoroCount * 25, 'minute')
+        endTime: dayjs(startTime).add(pomodoroCount * 25, "minute"),
       });
     }
     // 如果切换到正常模式，设置默认30分钟
     else {
-      const startTime = form.getFieldValue('startTime') || dayjs();
+      const startTime = form.getFieldValue("startTime") || dayjs();
       form.setFieldsValue({
-        endTime: dayjs(startTime).add(30, 'minute')
+        endTime: dayjs(startTime).add(30, "minute"),
       });
     }
   };
@@ -215,11 +229,11 @@ export const FocusEditModal: React.FC<FocusEditModalProps> = ({
   const handleStartTimeChange = (date: Dayjs | null) => {
     if (date) {
       form.setFieldsValue({ startTime: date });
-      
+
       // 根据模式更新结束时间
       if (currentMode === "pomodoro") {
         form.setFieldsValue({
-          endTime: dayjs(date).add(pomodoroCount * 25, 'minute')
+          endTime: dayjs(date).add(pomodoroCount * 25, "minute"),
         });
       }
     }
@@ -301,7 +315,6 @@ export const FocusEditModal: React.FC<FocusEditModalProps> = ({
       message.error("删除专注记录失败，请稍后重试");
     }
   };
-
   // 自定义Modal底部按钮
   const footer = (
     <div className="flex justify-between w-full">
@@ -354,11 +367,8 @@ export const FocusEditModal: React.FC<FocusEditModalProps> = ({
         </Form.Item>
 
         {/* 番茄计时数量输入框 - 仅在选择番茄计时模式时显示 */}
-        {currentMode === 'pomodoro' && (
-          <Form.Item
-            label="番茄数量"
-            help="每个番茄25分钟"
-          >
+        {currentMode === "pomodoro" && (
+          <Form.Item label="番茄数量" help="每个番茄25分钟">
             <Input
               type="number"
               min="1"
@@ -366,7 +376,7 @@ export const FocusEditModal: React.FC<FocusEditModalProps> = ({
               value={pomodoroCount}
               onChange={handlePomodoroCountChange}
               addonAfter="个番茄"
-              style={{ width: '150px' }}
+              style={{ width: "150px" }}
             />
           </Form.Item>
         )}
@@ -380,7 +390,7 @@ export const FocusEditModal: React.FC<FocusEditModalProps> = ({
             >
               <DatePicker
                 showTime
-                format={mode === "add" ? "YYYY-MM-DD HH:mm" : "HH:mm"}
+                format={"YYYY-MM-DD HH:mm"}
                 placeholder="选择开始时间"
                 onChange={handleStartTimeChange}
               />
@@ -416,7 +426,7 @@ export const FocusEditModal: React.FC<FocusEditModalProps> = ({
             >
               <DatePicker
                 showTime
-                format={mode === "add" ? "YYYY-MM-DD HH:mm" : "HH:mm"}
+                format={"YYYY-MM-DD HH:mm"}
                 placeholder="选择结束时间"
               />
             </Form.Item>

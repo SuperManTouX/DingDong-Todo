@@ -95,6 +95,15 @@ export const useGlobalSettingsStore = create<GlobalSettingsState>()(
 
 // 在应用启动时添加响应式监听
 export const initializeResponsiveListener = () => {
+  // 防抖函数
+  const debounce = (func: Function, delay: number) => {
+    let timeoutId: NodeJS.Timeout;
+    return (...args: any[]) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => func.apply(null, args), delay);
+    };
+  };
+
   // 检查屏幕宽度并设置状态的函数
   const checkScreenWidth = () => {
     const screenWidth = window.innerWidth;
@@ -103,14 +112,17 @@ export const initializeResponsiveListener = () => {
     useGlobalSettingsStore.getState().setIsMobile(isMobile);
   };
 
-  // 初始化时检查一次
+  // 创建防抖版本的checkScreenWidth
+  const debouncedCheckScreenWidth = debounce(checkScreenWidth, 100);
+
+  // 初始化时检查一次（不使用防抖）
   checkScreenWidth();
 
-  // 添加resize事件监听器
-  window.addEventListener("resize", checkScreenWidth);
+  // 添加resize事件监听器，使用防抖版本
+  window.addEventListener("resize", debouncedCheckScreenWidth);
 
   // 返回清理函数
   return () => {
-    window.removeEventListener("resize", checkScreenWidth);
+    window.removeEventListener("resize", debouncedCheckScreenWidth);
   };
 };

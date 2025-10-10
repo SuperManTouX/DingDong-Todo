@@ -25,6 +25,7 @@ import EditTodo from "@/pages/TodoPage/EditTodo";
 import { useSelectTodo } from "@/store/todoStore";
 import { useGlobalSettingsStore } from "@/store/globalSettingsStore";
 import TodoTask from "@/pages/TodoPage/TodoTask";
+import { websocketService } from "@/services/websocketService";
 
 const { Title, Paragraph } = Typography;
 const { Search } = Input;
@@ -35,7 +36,7 @@ const { Search } = Input;
  */
 export default function SearchResultPage() {
   const navigate = useNavigate();
-  const { setActiveListId, loadTasksByType, selectTodo } = useTodoStore();
+  const { setActiveListId, loadTasksByType, selectTodoId } = useTodoStore();
   const [searchParams] = useSearchParams();
 
   const initialKeyword = searchParams.get("keyword") || "";
@@ -45,8 +46,48 @@ export default function SearchResultPage() {
   const [hasSearched, setHasSearched] = useState(false);
   const { isTodoDrawerOpen, setIsTodoDrawerOpen, isMobile } =
     useGlobalSettingsStore();
-  const selectedTodo = selectTodo();
-  console.log("selectedTodo", selectedTodo);
+  // 使用state存储任务数据
+  const [selectedTodo, setSelectedTodo] = useState<any>();
+  // 异步获取任务的函数
+  const fetchTodo = async () => {
+    if (!selectTodoId) return null;
+    try {
+      const { getTodoById } = await import("@/services/todoService");
+      const todoData = await getTodoById(selectTodoId);
+      setSelectedTodo(todoData);
+      return todoData;
+    } catch (error) {
+      console.error(`获取任务 ${selectTodoId} 失败:`, error);
+      return null;
+    }
+  };
+
+  // 当selectTodoId变化时获取任务数据
+  useEffect(() => {
+    fetchTodo();
+  }, [selectTodoId, setSelectedTodo]);
+
+  // 监听WebSocket任务更新事件，当当前编辑的任务发生变化时自动刷新
+  useEffect(() => {
+    const handleTaskUpdate = async () => {
+      if (selectTodoId) {
+        // 只有在当前有选中任务的情况下才刷新
+        await fetchTodo();
+      }
+    };
+
+    // 订阅任务更新、创建和删除事件
+    websocketService.subscribe("task:updated", handleTaskUpdate);
+    websocketService.subscribe("task:created", handleTaskUpdate);
+    websocketService.subscribe("task:deleted", handleTaskUpdate);
+
+    // 组件卸载时取消订阅
+    return () => {
+      websocketService.unsubscribe("task:updated", handleTaskUpdate);
+      websocketService.unsubscribe("task:created", handleTaskUpdate);
+      websocketService.unsubscribe("task:deleted", handleTaskUpdate);
+    };
+  }, [selectTodoId]); // 仅依赖selectTodoId，避免不必要的重订阅
 
   // 执行搜索
   const performSearch = useCallback(
@@ -208,7 +249,6 @@ export default function SearchResultPage() {
       <Layout>
         {selectedTodo && (
           <EditTodo
-            key={selectedTodo.id}
             asDrawer={isMobile}
             open={isMobile ? isTodoDrawerOpen : true}
             onClose={isMobile ? () => setIsTodoDrawerOpen(false) : undefined}

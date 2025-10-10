@@ -45,13 +45,6 @@ const AppWithTheme: React.FC = () => {
     };
   }, [userId]);
 
-  // 初始化响应式监听器
-  useEffect(() => {
-    const cleanup = initializeResponsiveListener();
-    return cleanup;
-  }, []);
-  const { isMobile, setCollapsed } = useGlobalSettingsStore();
-
   // 防抖函数
   const debounce = useCallback((func: Function, delay: number) => {
     let timeoutId: NodeJS.Timeout;
@@ -60,6 +53,13 @@ const AppWithTheme: React.FC = () => {
       timeoutId = setTimeout(() => func.apply(null, args), delay);
     };
   }, []);
+
+  // 初始化响应式监听器（带防抖）
+  useEffect(() => {
+    const cleanup = initializeResponsiveListener();
+    return cleanup;
+  }, []);
+  const { isMobile, setCollapsed } = useGlobalSettingsStore();
 
   // 创建防抖版本的setCollapsed
   const debouncedSetCollapsed = useRef(
@@ -84,9 +84,9 @@ const AppWithTheme: React.FC = () => {
 };
 
 createRoot(document.getElementById("root")!).render(
-  // <StrictMode>
-  <HotkeysProvider>
-    <AppWithTheme />
-  </HotkeysProvider>,
-  // </StrictMode>,
+  <StrictMode>
+    <HotkeysProvider>
+      <AppWithTheme />
+    </HotkeysProvider>
+  </StrictMode>,
 );

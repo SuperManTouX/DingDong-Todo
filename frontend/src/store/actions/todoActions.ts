@@ -305,12 +305,7 @@ export const todoActions = {
               userId,
             })
               .then(() => {
-                set(
-                  produce((draftState: TodoState) => {
-                    draftState.needsTableReload = true;
-                  }),
-                );
-                // 标记需要通知表格刷新
+                
 
                 // 通过WebSocket发送任务更新通知
                 websocketService.emit("task:updated", {
@@ -405,6 +400,12 @@ export const todoActions = {
             await moveTaskToGroup(action.todoId, action.groupId, action.listId)
               .then(() => {
                 message.success(MESSAGES.SUCCESS.TASK_MOVE);
+                // 通过WebSocket发送任务
+                websocketService.emit("task:updated", {
+                  taskId: action.todoId,
+                  userId: userId,
+                  timestamp: new Date().toISOString(),
+                });
               })
               .catch((error) => {
                 console.error(
@@ -422,6 +423,12 @@ export const todoActions = {
             await moveTaskToList(action.todoId, action.listId)
               .then(() => {
                 message.success(MESSAGES.SUCCESS.TASK_MOVE);
+                // 通过WebSocket发送任务
+                websocketService.emit("task:updated", {
+                  taskId: action.todoId,
+                  userId: userId,
+                  timestamp: new Date().toISOString(),
+                });
               })
               .catch((error) => {
                 console.error(
@@ -435,18 +442,7 @@ export const todoActions = {
         }
       }
 
-      // 检查是否需要通知表格刷新
-      const currentState = get();
-      if (currentState.needsTableReload) {
-        // 通知所有订阅者刷新表格
-        tableEvents.notify();
-        // 重置刷新标记
-        set(
-          produce((draftState: TodoState) => {
-            draftState.needsTableReload = false;
-          }),
-        );
-      }
+      
     } catch (error) {
       console.error(`任务操作失败 (${action.type}):`, error);
       // 可以在这里添加用户友好的错误提示

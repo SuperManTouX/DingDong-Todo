@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { useTasksByList } from "@/hooks/useTasksByList";
 import {
   Dropdown,
   Layout,
@@ -18,6 +19,7 @@ import { useTodoStore } from "@/store/todoStore";
 import type { TodoListData } from "@/types";
 import dayjs from "dayjs";
 import { focusService } from "@/services/focusService";
+import { websocketService } from "@/services/websocketService";
 
 interface FocusTimerProps {
   onStartFocus: () => void;
@@ -49,19 +51,15 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   const [focusRecordId, setFocusRecordId] = useState<string | null>(null); // 专注记录ID
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   // 从todoStore中获取数据
-  const {
-    todoListData,
-    activeListId,
-    setActiveListId,
-    getActiveListData,
-    getActiveListTasks,
-  } = useTodoStore();
-
-  // 获取当前激活列表的数据
-  const currentListData = getActiveListData();
-
-  // 获取当前激活列表的任务
-  const currentListTasks = getActiveListTasks();
+  const { todoListData, getActiveListData } = useTodoStore();
+  
+  // 设置默认的listId为第一个可用的清单，避免初始为undefined
+  const [focusActiveListId, setFocusActiveListId] = useState(todoListData[0]?.id || null);
+  // 获取当前激活列表的数据，添加空值检查
+  const currentListData = getActiveListData(focusActiveListId) || {};
+  // 使用自定义hook获取任务列表
+  const { tasks: currentListTasks } = useTasksByList(currentListData.id || '');
+  console.log("currentListTasks", currentListTasks);
 
   // 准备Select组件的选项数据
   const selectOptions = todoListData.map((list: TodoListData) => ({
@@ -70,66 +68,70 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   }));
 
   // 构建dropdown菜单项目 - 包含清单选择器和当前清单的任务
-  const menuItems: MenuProps["items"] = [
-    // 自定义渲染包含Select组件的菜单项
-    {
-      key: "list-selector",
-      label: (
-        <div className="p-2 w-full">
-          <Typography.Text strong className="block mb-2">
-            选择清单：
-          </Typography.Text>
-          <Select
-            value={activeListId}
-            onChange={(value) => setActiveListId(value)}
-            options={selectOptions}
-            style={{ width: "100%" }}
-            placeholder="请选择清单"
-            allowClear={false}
-          />
-        </div>
-      ),
-      disabled: true,
-    },
-    // 添加分隔线
-    { type: "divider" },
-    // 添加当前清单的任务列表
-    {
-      type: "group",
-      label: `${currentListData.title} 的任务`,
-      children: currentListTasks.map((todo) => ({
-        key: `todo-${todo.id}`,
+  const menuItems: MenuProps["items"] = useMemo(() => {
+    const items = [
+      // 自定义渲染包含Select组件的菜单项
+      {
+        key: "list-selector",
         label: (
-          <div className="w-full text-left flex items-center gap-2">
-            {todo.completed ? (
-              <CheckOutlined className="text-green-500" />
-            ) : (
-              <div className="w-5 h-5 border border-gray-300 rounded-full" />
-            )}
-            <span
-              className={todo.completed ? "line-through text-gray-500" : ""}
-            >
-              {todo.title}
-            </span>
+          <div className="p-2 w-full">
+            <Typography.Text strong className="block mb-2">
+              选择清单：
+            </Typography.Text>
+            <Select
+              value={focusActiveListId}
+              onChange={(value) => setFocusActiveListId(value)}
+              options={selectOptions}
+              style={{ width: "100%" }}
+              placeholder="请选择清单"
+              allowClear={false}
+            />
           </div>
         ),
-        // 修改onClick事件，将当前点击的todo保存到selectedTodo变量中
-        onClick: () => {
-          console.log("选择任务:", todo.title);
-          setSelectedTodo(todo);
-        },
-      })),
-    },
-  ];
+        disabled: true,
+      },
+      // 添加分隔线
+      { type: "divider" },
+      // 添加当前清单的任务列表
+      {
+        type: "group",
+        label: `${currentListData.title || '选择的'} 清单的任务`,
+        children: currentListTasks.map((todo) => ({
+          key: `todo-${todo.id}`,
+          label: (
+            <div className="w-full text-left flex items-center gap-2">
+              {todo.completed ? (
+                <CheckOutlined className="text-green-500" />
+              ) : (
+                <div className="w-5 h-5 border border-gray-300 rounded-full" />
+              )}
+              <span
+                className={todo.completed ? "line-through text-gray-500" : ""}
+              >
+                {todo.title}
+              </span>
+            </div>
+          ),
+          // 修改onClick事件，将当前点击的todo保存到selectedTodo变量中
+          onClick: () => {
+            console.log("选择任务:", todo.title);
+            setSelectedTodo(todo);
+          },
+        })),
+      },
+    ];
 
-  if (currentListTasks.length === 0) {
-    // 如果当前清单没有任务，添加提示
-    menuItems.push({
-      key: "no-todos",
-      label: "此清单暂无任务",
-      disabled: true,
-    });
-  }
+    if (currentListTasks.length === 0) {
+      // 如果当前清单没有任务，添加提示
+      items.push({
+        key: "no-todos",
+        label: "此清单暂无任务",
+        disabled: true,
+      });
+    }
+
+    return items;
+  }, [currentListTasks, currentListData, focusActiveListId, selectOptions, setSelectedTodo]);
 
   // 处理计时逻辑
   useEffect(() => {
@@ -247,28 +249,30 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
         const startTimeISO = dayjs(startTimestamp).toISOString();
         const endTimeISO = dayjs(endTime).toISOString();
         // 调用API创建专注记录
-        const createFocusRecord = async () => {
-          try {
-            if (selectedTodo?.id) {
-              const mode = activeFocusKey === "1" ? "pomodoro" : "normal";
-              await focusService.createFocusRecord({
-                task_id: selectedTodo.id,
-                start_time: startTimeISO,
-                end_time: endTimeISO,
-                mode: mode,
-                completed: false,
-              });
-              message.success("创建专注记录成功:");
-            } else {
-              message.warning("请先选择一个任务");
-              fetchAllFocusRecords();
-              onStopFocus(); // 自动结束专注
-            }
-          } catch (error) {
-            console.error("创建专注记录失败:", error);
-            message.error("创建专注记录失败，请重试");
-          }
-        };
+              const createFocusRecord = async () => {
+                try {
+                  if (selectedTodo?.id) {
+                    const mode = activeFocusKey === "1" ? "pomodoro" : "normal";
+                    const response = await focusService.createFocusRecord({
+                      task_id: selectedTodo.id,
+                      start_time: startTimeISO,
+                      end_time: endTimeISO,
+                      mode: mode,
+                      completed: false,
+                    });
+                    message.success("创建专注记录成功:");
+                    // 更新focusRecordId，用于WebSocket事件匹配
+                    setFocusRecordId(response.id);
+                  } else {
+                    message.warning("请先选择一个任务");
+                    fetchAllFocusRecords();
+                    onStopFocus(); // 自动结束专注
+                  }
+                } catch (error) {
+                  console.error("创建专注记录失败:", error);
+                  message.error("创建专注记录失败，请重试");
+                }
+              };
         createFocusRecord();
       }
       // 重置暂停状态
@@ -352,6 +356,67 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     if (isPaused) return "继续";
     return "暂停";
   };
+
+  // WebSocket事件订阅
+  useEffect(() => {
+    // 订阅专注记录创建事件
+    const handleFocusCreated = (data: any) => {
+      console.log('收到专注记录创建事件:', data);
+      // 可以在这里更新UI或执行其他逻辑
+      if (data.task_id === selectedTodo?.id) {
+        message.success('检测到新的专注记录');
+        // 如果需要，可以更新focusRecordId
+        setFocusRecordId(data.id);
+      }
+    };
+
+    // 订阅专注记录更新事件
+    const handleFocusUpdated = (data: any) => {
+      console.log('收到专注记录更新事件:', data);
+      // 如果更新的是当前正在处理的专注记录
+      if (data.id === focusRecordId) {
+        // 更新相关状态
+        if (data.end_time) {
+          setEndTimestamp(new Date(data.end_time).getTime());
+          // 如果计时器仍在运行，停止它
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+          }
+          onStopFocus();
+          message.success('专注记录已更新');
+        }
+      }
+    };
+
+    // 订阅专注记录删除事件
+    const handleFocusDeleted = (data: any) => {
+      console.log('收到专注记录删除事件:', data);
+      // 如果删除的是当前正在处理的专注记录
+      if (data.id === focusRecordId) {
+        // 清理计时器和状态
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+        clearStatus();
+        onStopFocus();
+        message.info('专注记录已删除');
+      }
+    };
+
+    // 订阅WebSocket事件
+    websocketService.subscribe('focus:created', handleFocusCreated);
+    websocketService.subscribe('focus:updated', handleFocusUpdated);
+    websocketService.subscribe('focus:deleted', handleFocusDeleted);
+
+    // 组件卸载时取消订阅
+    return () => {
+      websocketService.unsubscribe('focus:created', handleFocusCreated);
+      websocketService.unsubscribe('focus:updated', handleFocusUpdated);
+      websocketService.unsubscribe('focus:deleted', handleFocusDeleted);
+    };
+  }, [focusRecordId, selectedTodo?.id, onStopFocus]);
 
   // 格式化时间显示
   const formatTime = (seconds: number): string => {

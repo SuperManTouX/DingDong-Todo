@@ -90,11 +90,10 @@ export const useTodoStore = create<TodoState>()(
             state.todoListData.find((group) => group.id === todo.listId) || null
           );
         },
-        getActiveListData: () => {
+        getActiveListData: (listId = get().activeListId) => {
           const state = get();
           return (
-            state.todoListData.find((list) => list.id === state.activeListId) ||
-            ({} as any)
+            state.todoListData.find((list) => list.id === listId) || ({} as any)
           );
         },
         // 计算属性，返回当前状态中的任务（保持同步）

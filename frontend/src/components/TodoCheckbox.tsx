@@ -92,7 +92,8 @@ const TodoCheckbox: React.FC<TodoCheckboxProps> = memo(
     const handleChange = useCallback(
       async (e: React.ChangeEvent<HTMLInputElement>) => {
         const checked = e.currentTarget.checked;
-
+        // 阻止冒泡
+        e.stopPropagation();
         try {
           // 更新本地状态以立即反映变化
           await dispatchTodo({
@@ -100,8 +101,6 @@ const TodoCheckbox: React.FC<TodoCheckboxProps> = memo(
             todoId: todo.id,
             completed: checked,
           });
-          await loadTasksByType(activeListId);
-          // 不再直接调用PTableDOM.reload()，由事件系统处理
 
           if (checked) {
             message.info({
