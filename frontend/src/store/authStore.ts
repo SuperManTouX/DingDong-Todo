@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { login as apiLogin, register as apiRegister, logout as apiLogout, getUserInfo } from "../services/authService";
+import sseService from "../services/sseService";
 
 interface User {
   id: string;
@@ -38,7 +39,9 @@ export const useAuthStore = create<AuthState>()(
             userId: response.user.id, 
             isAuthenticated: true 
           });console.log(response);
-          
+          // 登录成功后建立SSE连接
+          console.log("登录成功，建立SSE连接");
+          sseService.connect();
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : "登录失败";
           throw new Error(errorMessage);
@@ -53,6 +56,9 @@ export const useAuthStore = create<AuthState>()(
             userId: response.user.id, 
             isAuthenticated: true 
           });
+          // 注册成功后建立SSE连接
+          console.log("注册成功，建立SSE连接");
+          sseService.connect();
           return response.user;
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : "注册失败";
@@ -65,6 +71,9 @@ export const useAuthStore = create<AuthState>()(
           await apiLogout();
         } finally {
           set({ user: null, isAuthenticated: false, userId: "" });
+          // 登出时断开SSE连接
+          console.log("登出，断开SSE连接");
+          sseService.disconnect();
         }
       },
 

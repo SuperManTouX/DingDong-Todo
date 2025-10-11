@@ -10,4 +10,18 @@ export default defineConfig({
         },
     },
   plugins: [react()],
+  server: {
+    // 配置代理，将请求转发到后端服务
+    proxy: {
+      '/events': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+      // 添加其他可能需要的API代理
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+    }
+  }
 })

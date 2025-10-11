@@ -14,7 +14,6 @@ import type { TodoState } from "../types";
 import type { Todo } from "@/types";
 import { message } from "@/utils/antdStatic";
 import { MESSAGES } from "@/constants/messages";
-import { websocketService } from "@/services/websocketService";
 
 // 创建一个简单的事件系统用于通知表格刷新
 export const tableEvents = {
@@ -52,7 +51,7 @@ export const todoActions = {
         tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       }
 
-      // 先更新本地状态，提供即时反馈
+      // 先更新本地状态，提供即时反馈（乐观更新）
       let localCreatedTask: Todo | null = null;
       set(
         produce((draftState: TodoState) => {
@@ -117,6 +116,17 @@ export const todoActions = {
             }
             case "changed": {
               if (action.todo.id) {
+                // 需要级联更新的属性
+                const cascadingProperties = [
+                  "listId",
+                  "groupId",
+                  "completed",
+                  "isPinned",
+                  "pinnedAt",
+                  "deletedAt",
+                  "parentId",
+                ];
+
                 const todoIndex = draftState.tasks.findIndex(
                   (task) => task.id === action.todo.id,
                 );
@@ -152,6 +162,25 @@ export const todoActions = {
                       `任务 ${action.todo.id} 已添加到tasks中，因为状态变为未完成`,
                     );
                   }
+
+                  // 同时处理子任务，将子任务也添加到tasks数组
+                  draftState.tasks.forEach((task) => {
+                    if (task.parentId === action.todo.id && !task.completed) {
+                      const childTaskIndex = draftState.tasks.findIndex(
+                        (t) => t.id === task.id,
+                      );
+                      if (childTaskIndex === -1) {
+                        // 如果子任务不在tasks数组中，添加进去
+                        draftState.tasks.push({
+                          ...task,
+                          updatedAt: new Date().toISOString(),
+                        });
+                        console.log(
+                          `子任务 ${task.id} 已添加到tasks中，因为父任务状态变为未完成`,
+                        );
+                      }
+                    }
+                  });
                 } else {
                   // 其他情况，正常更新tasks中的任务（如果存在）
                   if (taskInTasksArray) {
@@ -194,7 +223,7 @@ export const todoActions = {
             }
             case "moveToGroup": {
               if (action.todoId && action.groupId !== undefined) {
-                // 更新本地状态
+                // 更新本地状态 - 只更新当前任务，子任务由SSE处理
                 draftState.tasks = draftState.tasks.map((task) => {
                   if (
                     task.id === action.todoId ||
@@ -208,23 +237,22 @@ export const todoActions = {
                   }
                   return task;
                 });
+                // 触发表格刷新事件
+                tableEvents.notify();
               }
               break;
             }
             case "moveToList": {
               if (action.todoId && action.listId) {
-                // 从本地直接删除任务和它的子任务
-                draftState.tasks = draftState.tasks.filter(
-                  (task) =>
-                    task.id !== action.todoId &&
-                    task.parentId !== action.todoId,
-                );
-                // 同时从pinnedTasks中删除
-                draftState.pinnedTasks = draftState.pinnedTasks.filter(
-                  (task) =>
-                    task.id !== action.todoId &&
-                    task.parentId !== action.todoId,
-                );
+                // 从本地删除任务及其所有子任务
+                draftState.tasks = draftState.tasks.filter((task) => {
+                  // 排除目标任务及其所有子任务
+                  return (
+                    task.id !== action.todoId && task.parentId !== action.todoId
+                  );
+                });
+                // 触发表格刷新事件
+                tableEvents.notify();
               }
               break;
             }
@@ -257,13 +285,6 @@ export const todoActions = {
                     }
                   }),
                 );
-
-                // 通过WebSocket发送任务创建通知
-                websocketService.emit("task:created", {
-                  taskId: createdTask.id,
-                  userId: userId,
-                  timestamp: new Date().toISOString(),
-                });
               }
             } catch (error) {
               console.error("创建任务API调用失败:", error);
@@ -278,22 +299,15 @@ export const todoActions = {
         case "completedChange": {
           if (action.todoId && typeof action.completed === "boolean") {
             // 使用专门的toggleTaskCompleted方法
-            await toggleTaskCompleted(action.todoId, action.completed)
-              .then(() => {
-                // 通过WebSocket发送任务更新通知
-                websocketService.emit("task:updated", {
-                  taskId: action.todoId,
-                  userId: userId,
-                  timestamp: new Date().toISOString(),
-                });
-              })
-              .catch((error) => {
+            await toggleTaskCompleted(action.todoId, action.completed).catch(
+              (error) => {
                 console.error(
                   `切换任务完成状态API调用失败 (ID: ${action.todoId}):`,
                   error,
                 );
                 throw error;
-              });
+              },
+            );
           }
           break;
         }
@@ -305,14 +319,7 @@ export const todoActions = {
               userId,
             })
               .then(() => {
-                
-
-                // 通过WebSocket发送任务更新通知
-                websocketService.emit("task:updated", {
-                  taskId: action.todo.id,
-                  userId: userId,
-                  timestamp: new Date().toISOString(),
-                });
+                // 无需WebSocket通知，使用SSE代替
               })
               .catch((error) => {
                 console.error(
@@ -331,12 +338,7 @@ export const todoActions = {
             // 发送API请求，但不等待响应
             deleteTodo(action.deleteId)
               .then(() => {
-                // 通过WebSocket发送任务删除通知
-                websocketService.emit("task:deleted", {
-                  taskId: action.deleteId,
-                  userId: userId,
-                  timestamp: new Date().toISOString(),
-                });
+                // 无需WebSocket通知，使用SSE代替
               })
               .catch((error) => {
                 console.error(
@@ -396,16 +398,11 @@ export const todoActions = {
         }
         case "moveToGroup": {
           if (action.todoId && action.groupId !== undefined) {
-            // 发送API请求
+            // 发送API请求 - 后端会通过SSE发送update_with_children事件处理子任务
             await moveTaskToGroup(action.todoId, action.groupId, action.listId)
               .then(() => {
                 message.success(MESSAGES.SUCCESS.TASK_MOVE);
-                // 通过WebSocket发送任务
-                websocketService.emit("task:updated", {
-                  taskId: action.todoId,
-                  userId: userId,
-                  timestamp: new Date().toISOString(),
-                });
+                // 无需WebSocket通知，使用SSE代替
               })
               .catch((error) => {
                 console.error(
@@ -419,16 +416,11 @@ export const todoActions = {
         }
         case "moveToList": {
           if (action.todoId && action.listId) {
-            // 发送API请求
+            // 发送API请求 - 后端会通过SSE发送update_with_children事件处理子任务
             await moveTaskToList(action.todoId, action.listId)
               .then(() => {
                 message.success(MESSAGES.SUCCESS.TASK_MOVE);
-                // 通过WebSocket发送任务
-                websocketService.emit("task:updated", {
-                  taskId: action.todoId,
-                  userId: userId,
-                  timestamp: new Date().toISOString(),
-                });
+                // 无需WebSocket通知，使用SSE代替
               })
               .catch((error) => {
                 console.error(
@@ -441,8 +433,6 @@ export const todoActions = {
           break;
         }
       }
-
-      
     } catch (error) {
       console.error(`任务操作失败 (${action.type}):`, error);
       // 可以在这里添加用户友好的错误提示

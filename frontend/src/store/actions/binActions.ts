@@ -6,7 +6,6 @@ import {
   moveTaskToBin,
   restoreFromBin,
 } from "@/services/binService";
-import { websocketService } from "@/services/websocketService";
 import { useAuthStore } from "@/store/authStore";
 
 export const binActions = {
@@ -31,12 +30,6 @@ export const binActions = {
       moveTaskToBin(todo.id).catch((error) => {
         console.error("移动到回收站失败:", error);
         // 这里暂时不回滚状态，让用户可以重试
-      });
-      // 通过WebSocket发送任务更新通知
-      websocketService.emit("task:deleted", {
-        taskId: todo.id,
-        userId: useAuthStore().userId,
-        timestamp: new Date().toISOString(),
       });
     } catch (error) {
       console.error("移动到回收站本地操作失败:", error);

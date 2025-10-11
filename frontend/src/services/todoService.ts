@@ -30,8 +30,19 @@ export const createTodo = (
 
 // 使用统一请求处理封装 - 更新待办事项（更新后清除相关缓存）
 export const updateTodo = (id: string, todo: Partial<Todo>) => {
+  // 需要级联更新的属性
+  const cascadingProperties = ['listId', 'groupId', 'completed', 'isPinned', 'pinnedAt', 'deletedAt', 'parentId'];
+  
+  // 检查是否包含需要级联更新的属性
+  const hasCascadingProperties = cascadingProperties.some(prop => prop in todo);
+  
+  // 如果包含需要级联更新的属性，添加update_with_children标志到请求体
+  const requestBody = hasCascadingProperties 
+    ? { ...todo, update_with_children: true }
+    : todo;
+  
   return request(
-    () => api.put<Todo>(`/todos/${id}`, todo),
+    () => api.put<Todo>(`/todos/${id}`, requestBody),
     `更新待办事项 ${id} 失败`,
     {
       invalidateCache: ["/todos", `/todos/${id}`], // 清除相关缓存
@@ -154,8 +165,9 @@ export const deleteTodo = (id: string) => {
 
 // 使用统一请求处理封装 - 切换任务完成状态（更新后清除相关缓存）
 export const toggleTaskCompleted = (id: string, completed: boolean) => {
+  // 添加update_with_children标志，确保子任务也会被级联更新
   return request(
-    () => api.patch<Todo>(`/todos/${id}/completed`, { completed }),
+    () => api.patch<Todo>(`/todos/${id}/completed`, { completed, update_with_children: true }),
     `${completed ? "完成" : "取消完成"}任务 ${id} 失败`,
     {
       invalidateCache: ["/todos", `/todos/${id}`], // 清除相关缓存

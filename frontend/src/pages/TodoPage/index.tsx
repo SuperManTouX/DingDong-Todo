@@ -36,9 +36,9 @@ const Index: React.FC = () => {
 
   // 使用自定义hook加载待办数据
   useTodoDataLoader();
-
+  // 展示清单的信息
   const activeListData = getActiveListData();
-  const selectedTodo = useSelectTodo();
+  // 展示清单的标题
   let activeListTitle: string =
     activeListData.emoji + activeListData.title || "";
   //多种情况的Title

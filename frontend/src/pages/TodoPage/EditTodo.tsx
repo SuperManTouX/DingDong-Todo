@@ -1,16 +1,17 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { Col, Dropdown, Row, Select, Tag, theme, Layout, Drawer } from "antd";
 import { ActionType } from "@ant-design/pro-components";
 import { message } from "@/utils/antdStatic";
 import { Priority } from "@/constants";
 import { PlusOutlined } from "@ant-design/icons";
-import { useTodoStore, dispatchTodo, moveTaskToList } from "@/store/todoStore";
+import { useTodoStore, dispatchTodo } from "@/store/todoStore";
 import { useThemeStore } from "@/store/themeStore";
 import TimeCountDownNode from "@/pages/TodoPage/TimeCountDownNode";
 import RichNote from "@/components/RichNote";
 import TodoCheckbox from "@/components/TodoCheckbox";
 import TaskDateTimePicker from "@/components/TaskDateTimePicker";
-import { websocketService } from "@/services/websocketService";
+import sseService, { TodoUpdateEvent } from "@/services/sseService";
+import { debounce } from "lodash";
 
 // 解构Layout组件
 const { Header, Content, Footer } = Layout;
@@ -29,69 +30,55 @@ export default function EditTodo({
   onClose,
   PTableDOM,
 }: EditTodoProps) {
-  const { todoTags, todoListData, selectTodoId } = useTodoStore();
+  const { todoTags, todoListData, selectTodoId, selectTodo } = useTodoStore();
   const { currentTheme } = useThemeStore();
   const { token } = theme.useToken();
 
   // 使用state存储任务数据
-  const [selectTodo, setSelectTodo] = useState<any>();
-  // 异步获取任务的函数
-  const fetchTodo = async () => {
-    if (!selectTodoId) return null;
-    try {
-      const { getTodoById } = await import("@/services/todoService");
-      const todoData = await getTodoById(selectTodoId);
-      setSelectTodo(todoData);
-      return todoData;
-    } catch (error) {
-      console.error(`获取任务 ${selectTodoId} 失败:`, error);
-      return null;
-    }
-  };
+  const [EselectTodo, setEselectTodo] = useState<any>();
+  const [titleValue, setTitleValue] = useState<string>("");
+  const [textValue, setTextValue] = useState<string>("");
 
+  // 创建防抖版本的dispatchTodo
+  const debouncedDispatchTodo = useCallback(
+    debounce((action) => {
+      dispatchTodo(action);
+    }, 300), // 300ms的防抖延迟
+    [],
+  );
+  console.log(textValue);
   // 当selectTodoId变化时获取任务数据
   useEffect(() => {
-    fetchTodo();
-  }, [selectTodoId, setSelectTodo]);
-
-  // 监听WebSocket任务更新事件，当当前编辑的任务发生变化时自动刷新
-  useEffect(() => {
-    const handleTaskUpdate = async () => {
-      if (selectTodoId) {
-        // 只有在当前有选中任务的情况下才刷新
-        await fetchTodo();
-      }
-    };
-
-    // 订阅任务更新、创建和删除事件
-    websocketService.subscribe("task:updated", handleTaskUpdate);
-    websocketService.subscribe("task:created", handleTaskUpdate);
-    websocketService.subscribe("task:deleted", handleTaskUpdate);
-
-    // 组件卸载时取消订阅
-    return () => {
-      websocketService.unsubscribe("task:updated", handleTaskUpdate);
-      websocketService.unsubscribe("task:created", handleTaskUpdate);
-      websocketService.unsubscribe("task:deleted", handleTaskUpdate);
-    };
-  }, [selectTodoId]); // 仅依赖selectTodoId，避免不必要的重订阅
+    const s = selectTodo();
+    // 当selectTodoId存在时，使用store中的selectTodo更新本地state
+    if (selectTodoId) {
+      setEselectTodo(s);
+      setTitleValue(s.title || "");
+      setTextValue(s.text || "");
+    } else {
+      // 清除任务数据
+      setEselectTodo(undefined);
+      setTitleValue("");
+      setTextValue("");
+    }
+  }, [selectTodoId, EselectTodo, setEselectTodo, setTitleValue]);
 
   // 处理标签点击添加
   const handleTagClick = (tagId: string) => {
     // 如果标签已经存在，则不重复添加
-    if (selectTodo?.tags?.includes(tagId)) {
+    if (EselectTodo?.tags?.includes(tagId)) {
       message.info("该标签已添加");
       return;
     }
 
     // 添加新标签
-    const updatedTags = [...(selectTodo?.tags || []), tagId];
+    const updatedTags = [...(EselectTodo?.tags || []), tagId];
     dispatchTodo({
       type: "changed",
       todo: {
-        ...selectTodo,
+        ...EselectTodo,
         tags: updatedTags,
-        listId: selectTodo?.listId,
+        listId: EselectTodo?.listId,
       },
     });
     // 查找标签名称并显示成功消息
@@ -199,19 +186,19 @@ export default function EditTodo({
 
   // 渲染头部内容
   const renderHeaderContent = () =>
-    selectTodo ? (
+    EselectTodo ? (
       <React.Fragment>
         <Row justify="start" align="middle">
-          <TodoCheckbox todo={selectTodo} PTableDOM={PTableDOM} />
-          <TaskDateTimePicker todo={selectTodo} />
+          <TodoCheckbox todo={EselectTodo} PTableDOM={PTableDOM} />
+          <TaskDateTimePicker todo={EselectTodo} />
           <TimeCountDownNode
-            deadline={selectTodo?.deadline}
-            datetimeLocal={selectTodo?.datetimeLocal}
+            deadline={EselectTodo?.deadline}
+            datetimeLocal={EselectTodo?.datetimeLocal}
           />
         </Row>
         <Select
           className="p-select"
-          value={selectTodo?.priority}
+          value={EselectTodo?.priority}
           style={{
             width: 60,
             border: "none",
@@ -223,7 +210,7 @@ export default function EditTodo({
             dispatchTodo({
               type: "changed",
               todo: {
-                ...selectTodo,
+                ...EselectTodo,
                 priority: priority,
               },
             });
@@ -242,19 +229,21 @@ export default function EditTodo({
 
   // 渲染主要内容（富文本和标签）
   const renderMainContent = () =>
-    selectTodo ? (
+    EselectTodo ? (
       <React.Fragment>
         {/*待办标题*/}
         <input
           type="text"
           className="w-100"
-          value={selectTodo?.title}
+          value={titleValue}
           onChange={(e) => {
-            dispatchTodo({
+            setTitleValue(e.target.value);
+            // 使用防抖版本的dispatchTodo
+            debouncedDispatchTodo({
               type: "changed",
               todo: {
-                ...selectTodo,
-                title: e.currentTarget.value,
+                ...EselectTodo,
+                title: e.target.value,
               },
             });
           }}
@@ -272,12 +261,13 @@ export default function EditTodo({
         />
         {/*富文本内容编辑框*/}
         <RichNote
-          value={selectTodo?.text || ""}
+          key={EselectTodo.id}
+          value={textValue || ""}
           onChange={(text) => {
             dispatchTodo({
               type: "changed",
               todo: {
-                ...selectTodo,
+                ...EselectTodo,
                 text: text,
               },
             });
@@ -285,7 +275,7 @@ export default function EditTodo({
           placeholder="开始编写待办详情..."
         />
         {/*标签列表*/}
-        {selectTodo?.tags?.map((tagId) => {
+        {EselectTodo?.tags?.map((tagId) => {
           // 查找标签信息，如果找不到则提供默认值
           const tagItem = todoTags.find((t) => t.id === tagId);
 
@@ -299,18 +289,18 @@ export default function EditTodo({
               closeIcon
               onClose={() => {
                 // 从tags数组中移除当前点击的标签
-                const updatedTags = selectTodo?.tags
+                const updatedTags = EselectTodo?.tags
                   ?.filter((id) => id !== tagId)
                   .filter(Boolean);
                 dispatchTodo({
                   type: "changed",
                   todo: {
-                    ...selectTodo,
+                    ...EselectTodo,
                     tags: updatedTags,
                   },
                 });
-                setSelectTodo({
-                  ...selectTodo,
+                setEselectTodo({
+                  ...EselectTodo,
                   tags: updatedTags,
                 });
                 message.info(`已移除标签: ${tagName}`);
@@ -346,11 +336,11 @@ export default function EditTodo({
 
   // 渲染底部内容（清单选择）
   const renderFooter = () =>
-    selectTodo ? (
+    EselectTodo ? (
       <Row justify="start" align="middle">
         <span style={{ marginRight: "12px" }}>所属清单：</span>
         <Select
-          value={selectTodo?.listId}
+          value={EselectTodo?.listId}
           style={{
             width: 200,
             color: currentTheme.textColor,
@@ -362,10 +352,10 @@ export default function EditTodo({
             option?.label?.toLowerCase().includes(input.toLowerCase())
           }
           onChange={(newListId) => {
-            if (newListId !== selectTodo?.listId) {
+            if (newListId !== EselectTodo?.listId) {
               dispatchTodo({
                 type: "moveToList",
-                todoId: selectTodo?.id,
+                todoId: EselectTodo?.id,
                 listId: newListId,
               });
             }
@@ -397,6 +387,6 @@ export default function EditTodo({
     );
   }
   // 如果没有选中的任务，返回null
-  if (!selectTodo) return <Layout></Layout>;
+  if (!EselectTodo) return <Layout></Layout>;
   return <Layout>{renderContent()}</Layout>;
 }
