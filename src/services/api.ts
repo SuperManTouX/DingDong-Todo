@@ -1,9 +1,8 @@
 import axios from "axios";
-import { API_URL } from '@/constants/config';
 
 // 创建axios实例
 const api = axios.create({
-  baseURL: API_URL, // 从配置文件获取后端服务地址
+  baseURL: 'http://localhost:3000', // 直接使用后端URL，取消/api路径
   timeout: 10000, // 请求超时时间
   headers: {
     "Content-Type": "application/json",
@@ -30,12 +29,15 @@ api.interceptors.response.use(
     return response.data;
   },
   (error) => {
-    // // 统一错误处理
-    // if (error.response?.status === 401) {
-    //   // 未授权，清除token并跳转登录
-    //   localStorage.removeItem("token");
-    //   window.location.href = '/login';
-    // }
+    // 统一错误处理
+    if (error.response?.status === 401) {
+      // 未授权，清除token并跳转登录
+      localStorage.removeItem("token");
+      // 避免重复跳转
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
     return Promise.reject(error);
   },
 );

@@ -9,7 +9,7 @@ import {
   Select,
 } from "antd";
 import { MESSAGES } from "@/constants/messages";
-import { useRef, useState,useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useTodoStore } from "@/store/todoStore";
 import { useGlobalSettingsStore } from "@/store/globalSettingsStore";
 import {
@@ -49,9 +49,9 @@ export default function ListGroupManager() {
   const [listId, setListId] = useState("");
 
   // 用于存储选择的radio值和目标清单ID
-  const radioValueRef = useRef<string>('move');
-  const [targetListId, setTargetListId] = useState('');
-  
+  const radioValueRef = useRef<string>("move");
+  const [targetListId, setTargetListId] = useState("");
+
   // 标签模态框状态
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
   const [tagMode, setTagMode] = useState<"add" | "edit">("add");
@@ -119,7 +119,7 @@ export default function ListGroupManager() {
   const handleTagCancel = () => {
     setIsTagModalOpen(false);
   };
-    // 显示模态框 - 统一处理添加和编辑
+  // 显示模态框 - 统一处理添加和编辑
   const showModal = (
     type: "add" | "edit" = "add",
     groupData?: TodoListData,
@@ -186,47 +186,46 @@ export default function ListGroupManager() {
       title: "删除清单",
       content: (
         <div>
-          
           <p>请选择删除清单的方式：</p>
-          <Radio.Group 
-            optionType="button" 
-            buttonStyle="solid" 
-            
+          <Radio.Group
+            optionType="button"
+            buttonStyle="solid"
             defaultValue="move"
             onChange={(e) => {
               radioValueRef.current = e.target.value;
             }}
             options={[
-                {
-                  label: "将任务移动到其他清单",
-                  value: "move"
-                },
-                {
-                  label: "将任务移入回收站",
-                  value: "moveAndDelete"
-                },
-                
-              ]}
+              {
+                label: "将任务移动到其他清单",
+                value: "move",
+              },
+              {
+                label: "将任务移入回收站",
+                value: "delete",
+              },
+            ]}
           />
-          {radioValueRef.current === 'move' || radioValueRef.current === 'moveAndDelete' ? (
-              <Select
-                className="mt-2 w-full"
-                placeholder="选择目标清单"
-                disabled={todoListData.filter(l => l.id !== listId).length === 0}
-                style={{ display: 'block', marginTop: '8px' }}
-                defaultValue={todoListData.filter(l => l.id !== listId)[0]?.id}
-                onChange={(value) => {
-                  setTargetListId(value);
-                }}
-                options={todoListData
-                  .filter(l => l.id !== listId)
-                  .map(l => ({
-                    label: `${l.emoji || ''} ${l.title}`,
-                    value: l.id
-                  }))
-                }
-              />
-            ) : null}
+          {radioValueRef.current === "move" ||
+          radioValueRef.current === "delete" ? (
+            <Select
+              className="mt-2 w-full"
+              placeholder="选择目标清单"
+              disabled={
+                todoListData.filter((l) => l.id !== listId).length === 0
+              }
+              style={{ display: "block", marginTop: "8px" }}
+              defaultValue={todoListData.filter((l) => l.id !== listId)[0]?.id}
+              onChange={(value) => {
+                setTargetListId(value);
+              }}
+              options={todoListData
+                .filter((l) => l.id !== listId)
+                .map((l) => ({
+                  label: `${l.emoji || ""} ${l.title}`,
+                  value: l.id,
+                }))}
+            />
+          ) : null}
         </div>
       ),
       okText: "确认删除",
@@ -234,14 +233,12 @@ export default function ListGroupManager() {
       cancelText: "取消",
       async onOk() {
         try {
-          
-         
-          
           await dispatchList({
             type: "deletedList",
             listId: listId,
-            targetListId: targetListId===''?todoListData[0]?.id:targetListId ,// 传递targetListId参数
-            mode:radioValueRef.current,
+            targetListId:
+              targetListId === "" ? todoListData[0]?.id : targetListId, // 传递targetListId参数
+            mode: radioValueRef.current,
           });
           message.success(MESSAGES.SUCCESS.LIST_DELETED);
 
@@ -696,9 +693,7 @@ export default function ListGroupManager() {
           />
         </div>
         {tagMode === "add" && (
-          <p className="text-secondary">
-            添加后可以在侧边栏看到新的标签。
-          </p>
+          <p className="text-secondary">添加后可以在侧边栏看到新的标签。</p>
         )}
       </Modal>
     ),

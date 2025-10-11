@@ -27,7 +27,6 @@ import ContextMenu from "../../components/ContextMenu";
 import TodoTask from "./TodoTask";
 import type { Todo } from "@/types";
 import { getCompletedTasks } from "@/services/todoService";
-import { websocketService } from "../../services/websocketService";
 
 const { Header, Content, Footer } = Layout;
 
@@ -65,29 +64,7 @@ export default function FilteredTodoList({
   const [completedTasksPage, setCompletedTasksPage] = useState(1);
   const [completedTasksPageSize] = useState(10);
 
-  // 订阅WebSocket事件以刷新表格
-  useEffect(() => {
-    if (!PTableDOM.current) return;
 
-    const refreshTable = () => {
-      if (PTableDOM.current) {
-        PTableDOM.current.reload();
-      }
-      console.log("WebSocket事件触发表格刷新");
-    };
-
-    // 订阅WebSocket任务更新事件
-    websocketService.subscribe("task:updated", refreshTable);
-    websocketService.subscribe("task:created", refreshTable);
-    websocketService.subscribe("task:deleted", refreshTable);
-
-    // 组件卸载时取消订阅
-    return () => {
-      websocketService.unsubscribe("task:updated", refreshTable);
-      websocketService.unsubscribe("task:created", refreshTable);
-      websocketService.unsubscribe("task:deleted", refreshTable);
-    };
-  }, [PTableDOM]);
 
   // 下拉菜单配置
   const menuProps = {

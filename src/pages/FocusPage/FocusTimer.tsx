@@ -19,7 +19,6 @@ import { useTodoStore } from "@/store/todoStore";
 import type { TodoListData } from "@/types";
 import dayjs from "dayjs";
 import { focusService } from "@/services/focusService";
-import { websocketService } from "@/services/websocketService";
 
 interface FocusTimerProps {
   onStartFocus: () => void;
@@ -357,66 +356,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     return "暂停";
   };
 
-  // WebSocket事件订阅
-  useEffect(() => {
-    // 订阅专注记录创建事件
-    const handleFocusCreated = (data: any) => {
-      console.log('收到专注记录创建事件:', data);
-      // 可以在这里更新UI或执行其他逻辑
-      if (data.task_id === selectedTodo?.id) {
-        message.success('检测到新的专注记录');
-        // 如果需要，可以更新focusRecordId
-        setFocusRecordId(data.id);
-      }
-    };
-
-    // 订阅专注记录更新事件
-    const handleFocusUpdated = (data: any) => {
-      console.log('收到专注记录更新事件:', data);
-      // 如果更新的是当前正在处理的专注记录
-      if (data.id === focusRecordId) {
-        // 更新相关状态
-        if (data.end_time) {
-          setEndTimestamp(new Date(data.end_time).getTime());
-          // 如果计时器仍在运行，停止它
-          if (timerRef.current) {
-            clearInterval(timerRef.current);
-            timerRef.current = null;
-          }
-          onStopFocus();
-          message.success('专注记录已更新');
-        }
-      }
-    };
-
-    // 订阅专注记录删除事件
-    const handleFocusDeleted = (data: any) => {
-      console.log('收到专注记录删除事件:', data);
-      // 如果删除的是当前正在处理的专注记录
-      if (data.id === focusRecordId) {
-        // 清理计时器和状态
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-          timerRef.current = null;
-        }
-        clearStatus();
-        onStopFocus();
-        message.info('专注记录已删除');
-      }
-    };
-
-    // 订阅WebSocket事件
-    websocketService.subscribe('focus:created', handleFocusCreated);
-    websocketService.subscribe('focus:updated', handleFocusUpdated);
-    websocketService.subscribe('focus:deleted', handleFocusDeleted);
-
-    // 组件卸载时取消订阅
-    return () => {
-      websocketService.unsubscribe('focus:created', handleFocusCreated);
-      websocketService.unsubscribe('focus:updated', handleFocusUpdated);
-      websocketService.unsubscribe('focus:deleted', handleFocusDeleted);
-    };
-  }, [focusRecordId, selectedTodo?.id, onStopFocus]);
+  // WebSocket事件订阅已移除
 
   // 格式化时间显示
   const formatTime = (seconds: number): string => {

@@ -13,7 +13,7 @@ import {
   initializeResponsiveListener,
   useGlobalSettingsStore,
 } from "./store/globalSettingsStore";
-import { websocketService } from "./services/websocketService";
+import sseService from "./services/sseService";
 
 // 初始化主题
 initializeTheme();
@@ -28,22 +28,15 @@ const AppWithTheme: React.FC = () => {
     const token = localStorage.getItem("token");
     if (token) {
       loadUserInfo();
+      // 移除自动建立SSE连接，改为在authStore中登录成功后建立
+      // sseService.connect();
     }
-  }, [loadUserInfo]);
-
-  // 用户ID变化时，初始化或断开WebSocket连接
-  const userId = useAuthStore((state) => state.userId);
-  useEffect(() => {
-    if (userId) {
-      console.log(`初始化 WebSocket 连接，用户ID: ${userId}`);
-      websocketService.connect(userId);
-    }
-
+    
+    // 组件卸载时断开SSE连接
     return () => {
-      // 组件卸载或用户ID变化时断开连接
-      websocketService.disconnect();
+      sseService.disconnect();
     };
-  }, [userId]);
+  }, [loadUserInfo]);
 
   // 防抖函数
   const debounce = useCallback((func: Function, delay: number) => {

@@ -101,7 +101,7 @@ const TodoCheckbox: React.FC<TodoCheckboxProps> = memo(
             todoId: todo.id,
             completed: checked,
           });
-
+          PTableDOM.current.reload();
           if (checked) {
             message.info({
               content: (

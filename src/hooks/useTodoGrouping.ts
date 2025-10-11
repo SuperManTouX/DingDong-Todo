@@ -25,7 +25,8 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
   const { activeListId } = useTodoStore.getState();
   // 根据activeListId确定分组模式和过滤逻辑
   let groupMode: "normal" | "time" | "list" = "normal";
-  let filteredTasks = [...tasks];
+  let uncompletedTasks = tasks.filter((task) => !task.completed);
+  let filteredTasks = [...uncompletedTasks];
 
   let isCompletedMode = false;
 

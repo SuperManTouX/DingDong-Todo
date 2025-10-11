@@ -81,34 +81,48 @@ const RichNote: React.FC<RichNoteProps> = ({
   const parsedValue = useMemo(() => {
     if (!value) return initialValue;
     try {
-      // 尝试解析为JSON
-      const parsed = JSON.parse(value);
+      // 首先检查是否已经是JSON格式
+      // 简单判断：如果以{或[开头，且以}或]结尾，尝试解析为JSON
+      const trimmedValue = value.trim();
+      let parsed;
+      
+      // 只在可能是JSON格式时才尝试解析
+      if ((trimmedValue.startsWith('{') && trimmedValue.endsWith('}')) || 
+          (trimmedValue.startsWith('[') && trimmedValue.endsWith(']'))) {
+        try {
+          parsed = JSON.parse(value);
+        } catch (jsonError) {
+          // 不是有效的JSON，作为纯文本处理
+          console.warn("输入不是有效的JSON，将作为纯文本处理");
+          return [{ type: "paragraph", children: [{ text: value }] }];
+        }
+        
+        // 检查是否是带有格式的内容
+        if (parsed.formattedContent) {
+          return parsed.formattedContent;
+        }
 
-      // 检查是否是带有格式的内容
-      if (parsed.formattedContent) {
-        return parsed.formattedContent;
+        // 检查是否是简单文本的JSON结构
+        if (parsed.type === "simple_text" && typeof parsed.content === "string") {
+          return [{ type: "paragraph", children: [{ text: parsed.content }] }];
+        }
+
+        // 如果解析结果是字符串，使用该字符串
+        if (typeof parsed === "string") {
+          return [{ type: "paragraph", children: [{ text: parsed }] }];
+        }
+
+        // 其他JSON结构可能是直接的formattedContent
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
       }
-
-      // 检查是否是简单文本的JSON结构
-      if (parsed.type === "simple_text" && typeof parsed.content === "string") {
-        return [{ type: "paragraph", children: [{ text: parsed.content }] }];
-      }
-
-      // 如果解析结果是字符串，使用该字符串
-      if (typeof parsed === "string") {
-        return [{ type: "paragraph", children: [{ text: parsed }] }];
-      }
-
-      // 其他JSON结构可能是直接的formattedContent
-      if (Array.isArray(parsed)) {
-        return parsed;
-      }
-
+      
       // 默认回退到纯文本处理
       return [{ type: "paragraph", children: [{ text: value }] }];
     } catch (error) {
       console.warn("解析文本失败，将作为纯文本处理:", error);
-      // 如果不是有效的JSON，则作为纯文本处理
+      // 如果发生任何错误，始终作为纯文本处理
       return [{ type: "paragraph", children: [{ text: value }] }];
     }
   }, [value]);

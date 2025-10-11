@@ -25,7 +25,6 @@ import EditTodo from "@/pages/TodoPage/EditTodo";
 import { useSelectTodo } from "@/store/todoStore";
 import { useGlobalSettingsStore } from "@/store/globalSettingsStore";
 import TodoTask from "@/pages/TodoPage/TodoTask";
-import { websocketService } from "@/services/websocketService";
 
 const { Title, Paragraph } = Typography;
 const { Search } = Input;
@@ -66,28 +65,6 @@ export default function SearchResultPage() {
   useEffect(() => {
     fetchTodo();
   }, [selectTodoId, setSelectedTodo]);
-
-  // 监听WebSocket任务更新事件，当当前编辑的任务发生变化时自动刷新
-  useEffect(() => {
-    const handleTaskUpdate = async () => {
-      if (selectTodoId) {
-        // 只有在当前有选中任务的情况下才刷新
-        await fetchTodo();
-      }
-    };
-
-    // 订阅任务更新、创建和删除事件
-    websocketService.subscribe("task:updated", handleTaskUpdate);
-    websocketService.subscribe("task:created", handleTaskUpdate);
-    websocketService.subscribe("task:deleted", handleTaskUpdate);
-
-    // 组件卸载时取消订阅
-    return () => {
-      websocketService.unsubscribe("task:updated", handleTaskUpdate);
-      websocketService.unsubscribe("task:created", handleTaskUpdate);
-      websocketService.unsubscribe("task:deleted", handleTaskUpdate);
-    };
-  }, [selectTodoId]); // 仅依赖selectTodoId，避免不必要的重订阅
 
   // 执行搜索
   const performSearch = useCallback(
