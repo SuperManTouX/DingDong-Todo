@@ -15,140 +15,153 @@ export interface ListUpdateEvent {
   listId?: string;
   list?: any;
   targetListId?: string;
-  mode?: 'move' | 'moveAndDelete';
+  mode?: "move" | "moveAndDelete";
   timestamp: Date;
-}
-
-// 为SSE服务添加清单更新监听功能
-type SseServiceWithListSupport = typeof sseService & {
-  onListUpdate?: (callback: (event: ListUpdateEvent) => void) => () => void;
-  handleListUpdate?: (event: ListUpdateEvent) => void;
-};
-
-const enhancedSseService = sseService as SseServiceWithListSupport;
-
-// 如果SSE服务还没有清单更新相关方法，添加它们
-if (!enhancedSseService.handleListUpdate) {
-  enhancedSseService.handleListUpdate = (event: ListUpdateEvent) => {
-    // 这个方法会被SSE服务在收到清单更新事件时调用
-    console.log("收到清单更新事件:", event);
-    // 这里可以添加额外的处理逻辑
-  };
-}
-
-if (!enhancedSseService.onListUpdate) {
-  enhancedSseService.onListUpdate = (callback: (event: ListUpdateEvent) => void) => {
-    // 临时实现：将回调添加到标签更新监听器中
-    // 实际项目中应该在SSE服务中实现完整的清单更新监听机制
-    return enhancedSseService.onTagUpdate?.(callback as any) || (() => {});
-  };
 }
 
 export const listActions = {
   // 本地更新函数 - 用于乐观更新UI
-  updateListLocally: (action: ListGroupAction, set: any, get: () => TodoState): void => {
+  updateListLocally: (
+    action: ListUpdateEvent,
+    set: any,
+    get: () => TodoState,
+  ): void => {
     const authState = useAuthStore.getState();
     const { userId } = authState;
     if (!userId) return;
 
     try {
       switch (action.type) {
-        case "addedList": {
+        case "create": {
           set(
             produce((draftState: TodoState) => {
-              // 创建临时ID，等API响应后再更新
-              const tempId = `temp-${Date.now()}`;
-              draftState.todoListData.push({
-                id: tempId,
-                title: action.title,
-                emoji: action.emoji,
-                color: action.color,
-                userId,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                isPending: true, // 标记为待处理状态
-              });
-            }),
-          );
-          break;
-        }
-        case "updatedList": {
-          set(
-            produce((draftState: TodoState) => {
-              const listIndex = draftState.todoListData.findIndex(
-                (list) => list.id === action.listId,
-              );
-              if (listIndex !== -1) {
-                // 保存原始数据，以便在API失败时回滚
-                draftState.todoListData[listIndex] = {
-                  ...draftState.todoListData[listIndex],
-                  title: action.title,
-                  emoji: action.emoji,
-                  color: action.color,
-                  updatedAt: new Date().toISOString(),
-                  isPending: true,
-                };
+              // 如果直接传入list对象，使用list对象数据
+              if (action.list) {
+                // 检查是否已存在相同ID的列表
+                const existingIndex = draftState.todoListData.findIndex(
+                  (list) => list.id === action.list.id,
+                );
+
+                if (existingIndex !== -1) {
+                  // 如果已存在相同ID的列表，更新它
+                  draftState.todoListData[existingIndex] = {
+                    ...draftState.todoListData[existingIndex],
+                    ...action.list,
+                    isPending: false,
+                  };
+                } else {
+                  // 否则添加新列表
+                  draftState.todoListData.push({
+                    ...action.list,
+                    userId,
+                    isPending: false,
+                  });
+                }
               }
             }),
           );
           break;
         }
-        case "deletedList": {
+        case "update": {
           set(
             produce((draftState: TodoState) => {
+              console.log(action);
+              // 如果直接传入list对象，使用list对象数据
+              if (action.list && action.list.id) {
+                const listIndex = draftState.todoListData.findIndex(
+                  (list) => list.id === action.list.id,
+                );
+                if (listIndex !== -1) {
+                  draftState.todoListData[listIndex] = {
+                    ...draftState.todoListData[listIndex],
+                    ...action.list,
+
+                    isPending: false,
+                  };
+                }
+              } else if (action.listId) {
+                const listIndex = draftState.todoListData.findIndex(
+                  (list) => list.id === action.listId,
+                );
+                if (listIndex !== -1) {
+                  // 保存原始数据，以便在API失败时回滚
+                  draftState.todoListData[listIndex] = {
+                    ...draftState.todoListData[listIndex],
+                    title: action.title,
+                    emoji: action.emoji,
+                    color: action.color,
+
+                    isPending: true,
+                  };
+                }
+              }
+            }),
+          );
+          break;
+        }
+        case "delete": {
+          set(
+            produce((draftState: TodoState) => {
+              const listId = action.listId || action.list?.id || "";
+
+              if (!listId) {
+                console.warn("删除操作缺少listId或list对象");
+                return;
+              }
+
               // 保存被删除的列表信息，以便在API失败时回滚
               const listToDelete = draftState.todoListData.find(
-                (list) => list.id === action.listId,
+                (list) => list.id === listId,
               );
               if (listToDelete) {
                 // 如果提供了targetListId和mode，根据mode决定如何处理任务
                 if (action.targetListId) {
-                  if (action.mode === 'moveAndDelete') {
+                  if (action.mode === "moveAndDelete") {
                     // moveAndDelete模式：移动任务并标记为已删除
-                    draftState.tasks = draftState.tasks.map(task => 
-                      task.listId === action.listId 
-                        ? { 
-                            ...task, 
+                    draftState.tasks = draftState.tasks.map((task) =>
+                      task.listId === listId
+                        ? {
+                            ...task,
                             listId: action.targetListId,
-                            deletedAt: new Date().toISOString(),
-                            groupId: undefined // 清除groupId
+
+                            groupId: undefined, // 清除groupId
                           }
-                        : task
+                        : task,
                     );
                   } else {
                     // move模式：只移动任务到目标清单
-                    draftState.tasks = draftState.tasks.map(task => 
-                      task.listId === action.listId 
-                        ? { 
-                            ...task, 
+                    draftState.tasks = draftState.tasks.map((task) =>
+                      task.listId === listId
+                        ? {
+                            ...task,
                             listId: action.targetListId,
-                            groupId: undefined // 清除groupId
+                            groupId: undefined, // 清除groupId
                           }
-                        : task
+                        : task,
                     );
                   }
                 } else {
                   // 否则将任务标记为已删除，而不是从state中移除
-                  draftState.tasks = draftState.tasks.map(task => 
-                    task.listId === action.listId 
-                      ? { 
-                          ...task, 
-                          deletedAt: new Date().toISOString(), 
-                          listId: '',
-                          groupId: undefined // 清除groupId
+                  draftState.tasks = draftState.tasks.map((task) =>
+                    task.listId === listId
+                      ? {
+                          ...task,
+                          deletedAt: new Date().toISOString(),
+                          listId: "",
+                          groupId: undefined, // 清除groupId
                         }
-                      : task
+                      : task,
                   );
                 }
-                
+
                 // 直接从UI中移除清单（乐观更新）
                 draftState.todoListData = draftState.todoListData.filter(
-                  (list) => list.id !== action.listId,
+                  (list) => list.id !== listId,
                 );
-                
+
                 // 同时删除关联的分组
                 draftState.groups = draftState.groups.filter(
-                  (group) => group.listId !== action.listId,
+                  (group) => group.listId !== listId,
                 );
               }
             }),
@@ -177,8 +190,8 @@ export const listActions = {
     try {
       // 根据操作类型发送API请求
       switch (action.type) {
-        case "addedList": {
-          const listData = {
+        case "create": {
+          const listData = action.list || {
             title: action.title,
             emoji: action.emoji,
             color: action.color,
@@ -194,19 +207,7 @@ export const listActions = {
                 list: createdList,
                 timestamp: new Date(),
               };
-              enhancedSseService.handleListUpdate?.(event);
-              
-              // 更新本地状态，替换临时ID
-              set(
-                produce((draftState: TodoState) => {
-                  const tempIndex = draftState.todoListData.findIndex(
-                    (list) => list.title === action.title && list.isPending,
-                  );
-                  if (tempIndex !== -1) {
-                    draftState.todoListData[tempIndex] = createdList;
-                  }
-                }),
-              );
+
               message.success("清单创建成功");
             })
             .catch((error) => {
@@ -223,65 +224,61 @@ export const listActions = {
             });
           break;
         }
-        case "updatedList": {
-          const updateData = {
+        case "update": {
+          const listId = action.list?.id || action.listId;
+          if (!listId) {
+            console.error("更新清单缺少ID");
+            return;
+          }
+
+          const updateData = action.list || {
             title: action.title,
             emoji: action.emoji,
             color: action.color,
           };
 
           // 发送API请求，但不阻塞UI
-          updateTodoList(action.listId, updateData)
+          updateTodoList(listId, updateData)
             .then((updatedList) => {
               // API调用成功后，通过SSE通知更新本地状态
               const event: ListUpdateEvent = {
                 type: "update",
-                listId: action.listId,
+                listId: listId,
                 list: updatedList,
                 timestamp: new Date(),
               };
-              enhancedSseService.handleListUpdate?.(event);
-              
-              // 更新本地状态，移除pending标记
-              set(
-                produce((draftState: TodoState) => {
-                  const listIndex = draftState.todoListData.findIndex(
-                    (list) => list.id === action.listId,
-                  );
-                  if (listIndex !== -1) {
-                    draftState.todoListData[listIndex] = {
-                      ...updatedList,
-                      isPending: false,
-                    };
-                  }
-                }),
-              );
+
               message.success("清单更新成功");
             })
             .catch((error) => {
-              console.error(`更新清单API调用失败 (ID: ${action.listId}):`, error);
+              console.error(`更新清单API调用失败 (ID: ${listId}):`, error);
               // API失败后，可以选择回滚本地状态
               message.error("更新清单失败");
             });
           break;
         }
-        case "deletedList": {
+        case "delete": {
+          const listId = action.list?.id || action.listId;
+          if (!listId) {
+            console.error("删除清单缺少ID");
+            return;
+          }
+
           // 发送API请求，但不阻塞UI
-          deleteTodoList(action.listId, action.targetListId, action.mode)
+          deleteTodoList(listId, action.targetListId, action.mode)
             .then(() => {
               // API调用成功后，通过SSE通知更新本地状态
               const event: ListUpdateEvent = {
                 type: "delete",
-                listId: action.listId,
+                listId: listId,
                 targetListId: action.targetListId,
                 mode: action.mode,
                 timestamp: new Date(),
               };
-              enhancedSseService.handleListUpdate?.(event);
               message.success("清单删除成功");
             })
             .catch((error) => {
-              console.error(`删除清单API调用失败 (ID: ${action.listId}):`, error);
+              console.error(`删除清单API调用失败 (ID: ${listId}):`, error);
               // API失败后，可能需要回滚本地状态
               message.error("删除清单失败");
             });

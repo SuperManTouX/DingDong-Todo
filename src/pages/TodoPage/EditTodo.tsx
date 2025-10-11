@@ -30,7 +30,8 @@ export default function EditTodo({
   onClose,
   PTableDOM,
 }: EditTodoProps) {
-  const { todoTags, todoListData, selectTodoId, selectTodo } = useTodoStore();
+  const { todoTags, todoListData, selectTodoId, selectTodo, tasks } =
+    useTodoStore();
   const { currentTheme } = useThemeStore();
   const { token } = theme.useToken();
 
@@ -46,22 +47,21 @@ export default function EditTodo({
     }, 300), // 300ms的防抖延迟
     [],
   );
-  console.log(textValue);
   // 当selectTodoId变化时获取任务数据
   useEffect(() => {
     const s = selectTodo();
     // 当selectTodoId存在时，使用store中的selectTodo更新本地state
     if (selectTodoId) {
       setEselectTodo(s);
-      setTitleValue(s.title || "");
-      setTextValue(s.text || "");
+      setTitleValue(s?.title || "");
+      setTextValue(s?.text || "");
     } else {
       // 清除任务数据
       setEselectTodo(undefined);
       setTitleValue("");
       setTextValue("");
     }
-  }, [selectTodoId, EselectTodo, setEselectTodo, setTitleValue]);
+  }, [selectTodoId, EselectTodo, setEselectTodo, setTitleValue, tasks]);
 
   // 处理标签点击添加
   const handleTagClick = (tagId: string) => {

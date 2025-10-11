@@ -528,6 +528,7 @@ button + button {
 }
 .sidebar-nav .ant-menu-item{
     background: transparent !important;
+
 }
 
 .sideNav-icon{
@@ -543,6 +544,9 @@ button + button {
 .ant-menu-item-selected .sideNav-icon{
     opacity: 1 ;
     color: white !important;
+}
+.menu-item-bottom{
+    margin-top: auto !important;
 }
 
 

@@ -1,15 +1,15 @@
 import React, { useState } from "react";
-import { Col, Dropdown, Menu } from "antd";
+import { Col, Dropdown, Menu, Drawer } from "antd";
 import type { MenuProps } from "antd";
 import { useAuthStore } from "@/store/authStore";
 import { useTodoStore } from "@/store/todoStore";
-
 import { useNavigate } from "react-router-dom";
 import { message } from "@/utils/antdStatic";
 import { MESSAGES } from "@/constants/messages";
 import {
   CheckSquareOutlined,
   ClockCircleFilled,
+  NotificationOutlined,
   PieChartOutlined,
   SearchOutlined,
   SettingOutlined,
@@ -28,6 +28,9 @@ const SidebarNav: React.FC = () => {
 
   // 搜索Modal显示状态
   const [searchModalVisible, setSearchModalVisible] = useState(false);
+  // 通知面板显示状态
+  const [notificationVisible, setNotificationVisible] = useState(false);
+  
   const menuItems: MenuProps["items"] = [
     {
       key: "todos",
@@ -54,6 +57,12 @@ const SidebarNav: React.FC = () => {
       icon: <SearchOutlined className={"sideNav-icon"} />,
       label: "全局搜索",
     },
+    {
+      key: "notification",
+      icon: <NotificationOutlined className={"sideNav-icon"} />,
+      label: "邮件提醒",
+      className: "menu-item-bottom",
+    },
   ];
 
   const navigate = useNavigate();
@@ -65,6 +74,11 @@ const SidebarNav: React.FC = () => {
     // 当点击搜索菜单项时，显示搜索Modal
     if (key === "search") {
       setSearchModalVisible(true);
+      return;
+    }
+    if (key === "notification") {
+      // 切换通知面板的显示状态
+      setNotificationVisible(!notificationVisible);
       return;
     }
 
@@ -100,6 +114,33 @@ const SidebarNav: React.FC = () => {
       setActiveListId(task.listId);
       loadTasksByType(task.listId);
     }
+  };
+
+  // 通知面板内容
+  const NotificationPanel = () => {
+    return (
+      <div style={{
+        width: '100%',
+        height: '100%',
+        padding: '20px',
+        backgroundColor: '#fff',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
+        <h2 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: 'bold' }}>邮件提醒设置</h2>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ padding: '16px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
+            <p>这里可以配置邮件提醒相关的设置</p>
+            <p>1. 设置任务提醒时间</p>
+            <p>2. 查看历史提醒记录</p>
+            <p>3. 管理提醒偏好</p>
+          </div>
+          <div style={{ padding: '16px', backgroundColor: '#e6f7ff', borderRadius: '8px' }}>
+            <p>邮件提醒可以帮助您及时了解任务进度</p>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -145,16 +186,31 @@ const SidebarNav: React.FC = () => {
       {/* 菜单区域 */}
       <Menu
         mode="vertical"
-        className={"sidebar-nav lex-1 h-100 theme-bgcColor-primaryColor"}
+        className={
+          "sidebar-nav d-flex flex-column h-100 theme-bgcColor-primaryColor"
+        }
         items={menuItems}
         onClick={handleMenuClick}
         selectedKeys={[selectedKey]}
       />
+
       <SearchModal
         visible={searchModalVisible}
         onCancel={() => setSearchModalVisible(false)}
         onSelectTask={handleTaskSelect}
       />
+      
+      {/* 通知面板Drawer */}
+      <Drawer
+        title="邮件提醒"
+        placement="right"
+        onClose={() => setNotificationVisible(false)}
+        open={notificationVisible}
+        width={360}
+        extra={null}
+      >
+        <NotificationPanel />
+      </Drawer>
     </Col>
   );
 };

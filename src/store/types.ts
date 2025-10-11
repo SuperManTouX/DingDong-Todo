@@ -33,7 +33,7 @@ export interface TodoState {
   updateGroup: (nGroup: Group) => void;
   deleteGroup: (listId: string, groupName: string) => void;
   getGroupsByListId: (listId: string) => Group[];
-
+  updateParentId: (listId: string, parentId: string) => void;
   // 回收站相关操作
   moveToBin: (todo: Todo) => void; // 将任务移动到回收站
   restoreFromBin: (todoId: string) => void; // 从回收站恢复任务

@@ -79,7 +79,9 @@ export const updateTagLocalState = (
           set(
             produce((draftState: TodoState) => {
               // 检查标签是否已存在，避免重复
-              const exists = draftState.todoTags.some(t => t.id === action.tag!.id);
+              const exists = draftState.todoTags.some(
+                (t) => t.id === action.tag!.id,
+              );
               if (!exists) {
                 draftState.todoTags.push(action.tag!);
               }
@@ -140,7 +142,7 @@ export const sendTagApiRequest = async (
   const authState = useAuthStore.getState();
   const { userId } = authState;
   if (!userId) return null;
-  
+
   try {
     // 只发送API请求，不更新本地状态
     switch (action.type) {
@@ -185,7 +187,7 @@ export const sendTagApiRequest = async (
     );
     throw error; // 向上抛出错误，让调用者知道操作失败
   }
-  
+
   return null;
 };
 
@@ -198,16 +200,16 @@ export const tagActions = {
   ): Promise<void> => {
     // 发送API请求
     const result = await sendTagApiRequest(action);
-    
+
     // 根据API结果更新本地状态
     // 对于创建和更新操作，使用API返回的完整对象
     if (result && (action.type === "addTag" || action.type === "updateTag")) {
       const localAction = {
         type: action.type === "addTag" ? "add" : "update",
-        tag: result
+        tag: result,
       } as TagReducerAction;
       updateTagLocalState(localAction, set, get);
-    } 
+    }
     // 对于删除操作，直接使用payload
     else if (action.type === "deleteTag") {
       updateTagLocalState(action, set, get);
@@ -217,10 +219,10 @@ export const tagActions = {
       updateTagLocalState(action, set, get);
     }
   },
-  
+
   // 仅更新本地状态的方法（供SSE使用）
   updateLocal: updateTagLocalState,
-  
+
   // 仅发送API请求的方法（供需要单独发送请求的场景使用）
-  sendApiRequest: sendTagApiRequest
+  sendApiRequest: sendTagApiRequest,
 };

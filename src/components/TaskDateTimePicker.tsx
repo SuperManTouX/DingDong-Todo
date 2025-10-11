@@ -15,6 +15,7 @@ interface TaskDateTimePickerProps {
 export default function TaskDateTimePicker({ todo }: TaskDateTimePickerProps) {
   // 处理日期变化
   const handleDateChange = (date: Dayjs | null) => {
+    console.log("date", date);
     // 使用ISO格式保存截止日期
     dispatchTodo({
       type: "changed",
@@ -60,6 +61,7 @@ export default function TaskDateTimePicker({ todo }: TaskDateTimePickerProps) {
       reminderDate = reminderDate.subtract(option.hours, "hour");
     if (option.days) reminderDate = reminderDate.subtract(option.days, "day");
 
+    console.log(reminderDate.format("YYYY-MM-DD HH:mm:ss"));
     // 确保提醒时间不早于当前时间
     const now = dayjs();
     if (reminderDate.isBefore(now)) {

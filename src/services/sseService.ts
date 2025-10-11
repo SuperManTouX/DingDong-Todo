@@ -14,7 +14,7 @@ interface ListUpdateEvent {
   list?: any;
   listId?: string;
   targetListId?: string;
-  mode?: 'move' | 'delete';
+  mode?: "move" | "delete";
   timestamp: Date;
 }
 
@@ -38,7 +38,7 @@ interface SseErrorEvent {
 
 // 通用事件接口，包含实体类型标识
 interface EntityUpdateEvent {
-  entity: 'tag' | 'list' | 'todo';
+  entity: "tag" | "list" | "todo";
   type: "create" | "update" | "delete" | "update_with_children";
   [key: string]: any;
 }
@@ -50,6 +50,17 @@ class SseService {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private baseReconnectDelay = 1000; // 初始重连延迟(ms)
+  private statusCheckIntervalId: number | null = null; // 连接状态检查定时器ID
+
+  // 单例模式管理主要的订阅回调
+  private mainCallbacks: Map<string, Function> = new Map();
+
+  // 唯一订阅ID计数器
+  private subscriptionIdCounter = 0;
+
+  // 保存所有订阅的映射关系
+  private subscriptionMap: Map<number, { type: string; callback: Function }> =
+    new Map();
 
   constructor() {
     // 直接使用后端URL
@@ -60,8 +71,11 @@ class SseService {
    */
   connect(): void {
     console.log("尝试建立SSE连接...");
-    // 如果已经连接，则断开连接
-    this.disconnect();
+    // 如果已经连接，则断开旧连接
+    if (this.eventSource) {
+      console.log("发现已有SSE连接，正在断开旧连接...");
+      this.disconnect();
+    }
 
     // 创建新的EventSource连接
     const token = localStorage.getItem("token");
@@ -73,10 +87,10 @@ class SseService {
     try {
       // 构建完整的URL，使用相对路径
       // 注意：EventSource不支持自定义请求头，所以必须通过URL参数传递token
+      // 使用相对路径，依赖前端的代理配置将请求转发到后端
       const url = `/events?token=${encodeURIComponent(token)}`;
       console.log(`正在连接到SSE端点: ${url}`);
       console.log(`当前URL: ${window.location.href}`);
-      console.log(`Token存在，长度: ${token.length}`);
 
       // 创建带认证token的EventSource
       this.eventSource = new EventSource(url);
@@ -85,7 +99,8 @@ class SseService {
       this.eventSource.onmessage = (event) => {
         console.log("收到SSE消息:", event.data);
         try {
-          const data = JSON.parse(event.data) as EntityUpdateEvent;
+          const data = JSON.parse(event.data) as { data: EntityUpdateEvent };
+          // 注意：后端返回的是 { data: actualData } 格式 //并非，data就已经是数据
           this.handleEvent(data);
         } catch (error) {
           console.error("解析SSE事件数据失败:", error, "原始数据:", event.data);
@@ -96,16 +111,23 @@ class SseService {
       this.eventSource.onerror = (error) => {
         console.error("SSE连接错误事件:", error);
         console.log("EventSource状态:", this.eventSource?.readyState);
-        
+
         // 解析错误类型并触发错误事件
-        let errorType: "connection_error" | "auth_error" | "network_error" | "server_error" = "connection_error";
+        let errorType:
+          | "connection_error"
+          | "auth_error"
+          | "network_error"
+          | "server_error" = "connection_error";
         let errorMessage = "SSE连接发生错误";
-        
+
         // 尝试根据连接状态判断错误类型
         if (!navigator.onLine) {
           errorType = "network_error";
           errorMessage = "网络连接已断开，请检查网络设置";
-        } else if (this.eventSource && this.eventSource.readyState === EventSource.CLOSED) {
+        } else if (
+          this.eventSource &&
+          this.eventSource.readyState === EventSource.CLOSED
+        ) {
           // 尝试检测认证错误 - 通过状态检查
           const token = localStorage.getItem("token");
           if (!token || token === "undefined") {
@@ -113,10 +135,10 @@ class SseService {
             errorMessage = "认证信息无效或已过期，请重新登录";
           }
         }
-        
+
         // 创建并触发错误事件
         this.triggerErrorEvent(errorType, errorMessage);
-        
+
         if (
           this.eventSource &&
           this.eventSource.readyState === EventSource.CLOSED
@@ -132,6 +154,9 @@ class SseService {
       this.eventSource.onopen = () => {
         console.log("SSE连接已成功建立");
         this.reconnectAttempts = 0; // 重置重连计数
+
+        // 启动连接状态检查
+        this.startStatusCheck();
       };
     } catch (error) {
       console.error("创建SSE连接失败:", error);
@@ -148,6 +173,12 @@ class SseService {
       clearTimeout(this.reconnectTimeoutId);
       this.reconnectTimeoutId = null;
     }
+    console.log("断开了SSE连接");
+    // 清除状态检查定时器
+    this.stopStatusCheck();
+
+    // 清除所有订阅
+    this.clearAllSubscriptions();
 
     // 关闭EventSource
     if (this.eventSource) {
@@ -157,18 +188,88 @@ class SseService {
   }
 
   /**
+   * 清除所有订阅
+   */
+  private clearAllSubscriptions(): void {
+    this.listeners.clear();
+    this.mainCallbacks.clear();
+    this.subscriptionMap.clear();
+    console.log("已清除所有SSE订阅");
+  }
+
+  /**
+   * 启动连接状态检查
+   */
+  private startStatusCheck(): void {
+    // 清除可能存在的旧定时器
+    this.stopStatusCheck();
+
+    // 每10秒检查一次连接状态
+    this.statusCheckIntervalId = window.setInterval(() => {
+      this.checkConnectionStatus();
+    }, 10000);
+  }
+
+  /**
+   * 停止连接状态检查
+   */
+  private stopStatusCheck(): void {
+    if (this.statusCheckIntervalId) {
+      clearInterval(this.statusCheckIntervalId);
+      this.statusCheckIntervalId = null;
+    }
+  }
+
+  /**
+   * 检查并打印连接状态
+   */
+  private checkConnectionStatus(): void {
+    if (!this.eventSource) {
+      console.log("SSE连接状态: 未连接");
+      return;
+    }
+
+    let statusText = "未知";
+    switch (this.eventSource.readyState) {
+      case EventSource.CONNECTING:
+        statusText = "连接中";
+        break;
+      case EventSource.OPEN:
+        statusText = "已连接";
+        break;
+      case EventSource.CLOSED:
+        statusText = "已关闭";
+        break;
+    }
+
+    console.log(
+      `SSE连接状态: ${statusText} (readyState: ${this.eventSource.readyState})`,
+    );
+
+    // 如果连接已关闭，尝试重新连接
+    if (this.eventSource.readyState === EventSource.CLOSED) {
+      console.warn("检测到SSE连接已关闭，尝试重新连接...");
+      this.handleReconnect();
+    }
+  }
+
+  /**
    * 触发错误事件
    */
-  private triggerErrorEvent(type: "connection_error" | "auth_error" | "network_error" | "server_error", message: string, code?: string): void {
+  private triggerErrorEvent(
+    type: "connection_error" | "auth_error" | "network_error" | "server_error",
+    message: string,
+    code?: string,
+  ): void {
     const errorEvent: SseErrorEvent = {
       type,
       message,
       code,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
-    
+
     console.error("触发SSE错误事件:", errorEvent);
-    
+
     // 调用所有已注册的错误监听器
     const errorListeners = this.listeners.get("error");
     if (errorListeners) {
@@ -195,7 +296,7 @@ class SseService {
       }
     };
   }
-  
+
   /**
    * 处理重连逻辑
    */
@@ -203,7 +304,10 @@ class SseService {
     // 如果达到最大重连尝试次数，则停止重连
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       console.error("达到最大重连次数，停止重连");
-      this.triggerErrorEvent("connection_error", "SSE连接失败，已达到最大重连次数");
+      this.triggerErrorEvent(
+        "connection_error",
+        "SSE连接失败，已达到最大重连次数",
+      );
       return;
     }
 
@@ -222,20 +326,20 @@ class SseService {
    */
   private handleEvent(data: EntityUpdateEvent): void {
     const { entity } = data;
-    
+
     // 根据实体类型分发到对应的事件监听器
     switch (entity) {
-      case 'tag':
+      case "tag":
         this.handleTagUpdate(data as TagUpdateEvent);
         break;
-      case 'list':
+      case "list":
         this.handleListUpdate(data as ListUpdateEvent);
         break;
-      case 'todo':
+      case "todo":
         this.handleTodoUpdate(data as TodoUpdateEvent);
         break;
       default:
-        console.warn('未知的实体类型事件:', data);
+        console.warn("未知的实体类型事件:", data);
     }
   }
 
@@ -245,6 +349,7 @@ class SseService {
   private handleTodoUpdate(event: TodoUpdateEvent): void {
     const listeners = this.listeners.get("todoUpdate");
     if (listeners) {
+      console.log(`执行 ${listeners.length} 个todoUpdate事件监听器`);
       listeners.forEach((listener) => listener(event));
     }
   }
@@ -255,6 +360,7 @@ class SseService {
   private handleTagUpdate(event: TagUpdateEvent): void {
     const listeners = this.listeners.get("tagUpdate");
     if (listeners) {
+      console.log(`执行 ${listeners.length} 个tagUpdate事件监听器`);
       listeners.forEach((listener) => listener(event));
     }
   }
@@ -265,6 +371,7 @@ class SseService {
   private handleListUpdate(event: ListUpdateEvent): void {
     const listeners = this.listeners.get("listUpdate");
     if (listeners) {
+      console.log(`执行 ${listeners.length} 个listUpdate事件监听器`);
       listeners.forEach((listener) => listener(event));
     }
   }
@@ -273,18 +380,34 @@ class SseService {
    * 监听任务更新事件
    */
   onTodoUpdate(callback: (event: TodoUpdateEvent) => void): () => void {
-    if (!this.listeners.has("todoUpdate")) {
-      this.listeners.set("todoUpdate", []);
+    const subscriptionType = "todoUpdate";
+    const subscriptionId = ++this.subscriptionIdCounter;
+
+    if (!this.listeners.has(subscriptionType)) {
+      this.listeners.set(subscriptionType, []);
     }
 
-    const listeners = this.listeners.get("todoUpdate")!;
+    const listeners = this.listeners.get(subscriptionType)!;
     listeners.push(callback);
+
+    // 保存订阅信息
+    this.subscriptionMap.set(subscriptionId, {
+      type: subscriptionType,
+      callback,
+    });
+    console.log(
+      `添加新的${subscriptionType}订阅，ID: ${subscriptionId}, 当前订阅数: ${listeners.length}`,
+    );
 
     // 返回取消订阅函数
     return () => {
       const index = listeners.indexOf(callback);
       if (index !== -1) {
         listeners.splice(index, 1);
+        this.subscriptionMap.delete(subscriptionId);
+        console.log(
+          `取消${subscriptionType}订阅，ID: ${subscriptionId}, 剩余订阅数: ${listeners.length}`,
+        );
       }
     };
   }
@@ -293,18 +416,34 @@ class SseService {
    * 监听标签更新事件
    */
   onTagUpdate(callback: (event: TagUpdateEvent) => void): () => void {
-    if (!this.listeners.has("tagUpdate")) {
-      this.listeners.set("tagUpdate", []);
+    const subscriptionType = "tagUpdate";
+    const subscriptionId = ++this.subscriptionIdCounter;
+
+    if (!this.listeners.has(subscriptionType)) {
+      this.listeners.set(subscriptionType, []);
     }
 
-    const listeners = this.listeners.get("tagUpdate")!;
+    const listeners = this.listeners.get(subscriptionType)!;
     listeners.push(callback);
+
+    // 保存订阅信息
+    this.subscriptionMap.set(subscriptionId, {
+      type: subscriptionType,
+      callback,
+    });
+    console.log(
+      `添加新的${subscriptionType}订阅，ID: ${subscriptionId}, 当前订阅数: ${listeners.length}`,
+    );
 
     // 返回取消订阅函数
     return () => {
       const index = listeners.indexOf(callback);
       if (index !== -1) {
         listeners.splice(index, 1);
+        this.subscriptionMap.delete(subscriptionId);
+        console.log(
+          `取消${subscriptionType}订阅，ID: ${subscriptionId}, 剩余订阅数: ${listeners.length}`,
+        );
       }
     };
   }
@@ -313,20 +452,56 @@ class SseService {
    * 监听清单更新事件
    */
   onListUpdate(callback: (event: ListUpdateEvent) => void): () => void {
-    if (!this.listeners.has("listUpdate")) {
-      this.listeners.set("listUpdate", []);
+    const subscriptionType = "listUpdate";
+    const subscriptionId = ++this.subscriptionIdCounter;
+
+    if (!this.listeners.has(subscriptionType)) {
+      this.listeners.set(subscriptionType, []);
     }
 
-    const listeners = this.listeners.get("listUpdate")!;
+    const listeners = this.listeners.get(subscriptionType)!;
     listeners.push(callback);
+
+    // 保存订阅信息
+    this.subscriptionMap.set(subscriptionId, {
+      type: subscriptionType,
+      callback,
+    });
+    console.log(
+      `添加新的${subscriptionType}订阅，ID: ${subscriptionId}, 当前订阅数: ${listeners.length}`,
+    );
 
     // 返回取消订阅函数
     return () => {
       const index = listeners.indexOf(callback);
       if (index !== -1) {
         listeners.splice(index, 1);
+        this.subscriptionMap.delete(subscriptionId);
+        console.log(
+          `取消${subscriptionType}订阅，ID: ${subscriptionId}, 剩余订阅数: ${listeners.length}`,
+        );
       }
     };
+  }
+
+  /**
+   * 清理指定类型的所有订阅
+   */
+  clearSubscriptionsByType(
+    type: "tagUpdate" | "listUpdate" | "todoUpdate" | "error",
+  ): void {
+    if (this.listeners.has(type)) {
+      const listeners = this.listeners.get(type)!;
+      console.log(`清理所有${type}订阅，共${listeners.length}个`);
+      listeners.length = 0; // 清空数组
+    }
+
+    // 同时清理subscriptionMap
+    for (const [id, sub] of this.subscriptionMap.entries()) {
+      if (sub.type === type) {
+        this.subscriptionMap.delete(id);
+      }
+    }
   }
 }
 
