@@ -7,19 +7,9 @@ import * as path from 'path';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  // 配置CORS
+  // 配置CORS - 简化配置，允许所有localhost来源
   app.enableCors({
-    origin: (origin, callback) => {
-      // 检查是否是localhost的请求
-      if (!origin) return callback(null, true);
-      
-      const match = origin.match(/^http:\/\/localhost:(\d+)$/);
-      if (match) {
-        return callback(null, true);
-      }
-      
-      callback(new Error('Not allowed by CORS'));
-    },
+    origin: ['http://localhost:5173', 'http://localhost:3000'],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true, // 允许携带cookie
   });

@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { LessThanOrEqual } from 'typeorm';
+import { LessThanOrEqual,IsNull,Not } from 'typeorm';
 import { Task } from './todo.entity';
 import { EmailService } from './email.service';
 
@@ -36,7 +36,13 @@ export class ReminderService implements OnModuleInit {
     const now = new Date();
     
     try {
-      // 查找所有需要提醒的任务
+      const totalTasksToRemind = await this.taskRepository.find({
+      where: {
+        reminder_at: Not(IsNull()),
+        is_reminded: false
+      },
+    });
+      // 查找现在需要提醒的任务
       // 条件：
       // 1. reminder_at 不为 null
       // 2. is_reminded 为 false
@@ -48,8 +54,10 @@ export class ReminderService implements OnModuleInit {
         },
         relations: ['user'], // 加载用户信息以获取邮箱
       });
-
-      console.log(`发现 ${tasksToRemind.length} 个需要提醒的任务`);
+console.log(`总共有 ${totalTasksToRemind.length} 个需要提醒的任务`);
+      if (tasksToRemind.length>0) {
+        console.log(`发现 ${tasksToRemind.length} 个需要现在提醒的任务`);
+      }
 
       // 处理每个需要提醒的任务
       for (const task of tasksToRemind) {
