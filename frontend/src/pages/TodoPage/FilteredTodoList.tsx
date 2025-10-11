@@ -49,7 +49,8 @@ export default function FilteredTodoList({
 }) {
   // 获取所有任务，然后根据用户ID过滤
   const tasks = getActiveListTasks();
-  const { pinnedTasks, activeListId, loadCompletedTasks } = useTodoStore();
+  const { activeListId, loadCompletedTasks } = useTodoStore();
+  const pinnedTasks = tasks.filter((task) => task.isPinned);
   // 获取全局设置和操作方法
   const {
     showTaskDetails,
@@ -63,8 +64,6 @@ export default function FilteredTodoList({
   // 分页相关状态
   const [completedTasksPage, setCompletedTasksPage] = useState(1);
   const [completedTasksPageSize] = useState(10);
-
-
 
   // 下拉菜单配置
   const menuProps = {
@@ -194,9 +193,6 @@ export default function FilteredTodoList({
       },
     },
   ];
-
-  // 获取要渲染的已完成任务列表 - 现在使用displayCompletedTasks
-  // const otherTodosList = tasks.filter((t) => t.completed);
 
   // 渲染树形表格的组件
   const renderTreeTable = useCallback(

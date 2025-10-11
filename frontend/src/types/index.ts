@@ -9,7 +9,7 @@ export interface TodoListGroupAction {
 
 // 新增列表组管理相关的Action类型
 export interface AddTodoListGroupAction {
-  type: "addedList";
+  type: "create";
   title: string;
   // 可选的emoji图标
   emoji?: string;
@@ -18,7 +18,7 @@ export interface AddTodoListGroupAction {
 }
 
 export interface UpdateTodoListGroupAction {
-  type: "updatedList";
+  type: "update";
   listId: string;
   title?: string;
   emoji?: string;
@@ -26,8 +26,10 @@ export interface UpdateTodoListGroupAction {
 }
 
 export interface DeleteTodoListGroupAction {
-  type: "deleteList";
+  type: "delete";
   listId: string;
+  targetListId: string;
+  mode: "move" | "delete";
 }
 
 export interface ControllerProps {
@@ -72,6 +74,15 @@ export interface Todo {
   is_reminded?: boolean; // 新增：是否已经提醒
   timeOrderIndex?: number; // 时间分组排序索引
   groupOrderIndex?: number; // 分组排序索引
+}
+export interface SSEUpdateData {
+  action: "update_tree_node_with_children";
+  parent?: Partial<Todo> & Pick<Todo, "id">;
+  childrenChanges?: {
+    add?: Todo[];
+    update?: (Partial<Todo> & Pick<Todo, "id">)[];
+    delete?: Pick<Todo, "id">[];
+  };
 }
 
 interface TodoAddAction {

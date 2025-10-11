@@ -49,7 +49,7 @@ export default function ListGroupManager() {
   const [listId, setListId] = useState("");
 
   // 用于存储选择的radio值和目标清单ID
-  const radioValueRef = useRef<string>("move");
+  const radioValueRef = useRef<"move" | "delete">("move");
   const [targetListId, setTargetListId] = useState("");
 
   // 标签模态框状态
@@ -149,7 +149,7 @@ export default function ListGroupManager() {
         if (mode === "add") {
           // 添加新清单
           dispatchList({
-            type: "addedList",
+            type: "create",
             title: groupName.trim(),
             emoji: selectedEmoji,
             color: selectedColor,
@@ -158,7 +158,7 @@ export default function ListGroupManager() {
         } else if (mode === "edit") {
           // 编辑现有清单
           dispatchList({
-            type: "updatedList",
+            type: "update",
             listId: listId,
             title: groupName.trim(),
             emoji: selectedEmoji,
@@ -233,8 +233,8 @@ export default function ListGroupManager() {
       cancelText: "取消",
       async onOk() {
         try {
-          await dispatchList({
-            type: "deletedList",
+          dispatchList({
+            type: "delete",
             listId: listId,
             targetListId:
               targetListId === "" ? todoListData[0]?.id : targetListId, // 传递targetListId参数

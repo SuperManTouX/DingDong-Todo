@@ -340,10 +340,6 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
           const newIsPinned = !todo.isPinned;
           await togglePinTask(todo.id, newIsPinned);
 
-          // 重新加载数据以反映子任务的变化
-          const { loadTasksByType } = useTodoStore.getState();
-          await loadTasksByType(useTodoStore.getState().activeListId);
-
           message.success(MESSAGES.SUCCESS.TASK_PINNED);
         } catch (error) {
           message.error("更新任务置顶状态失败，请重试");

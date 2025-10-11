@@ -16,6 +16,12 @@ export default defineConfig({
       '/events': {
         target: 'http://localhost:3000',
         changeOrigin: true,
+        // 为SSE连接添加特殊处理
+        ws: true,
+        // 保持连接活性
+        secure: false,
+        // 增加超时时间
+        timeout: 60000,
       },
       // 添加其他可能需要的API代理
       '/api': {
