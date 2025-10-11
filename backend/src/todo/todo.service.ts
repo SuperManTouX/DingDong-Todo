@@ -1,13 +1,14 @@
 import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, TreeRepository, EntityManager, Connection, QueryRunner, Not, Between, MoreThanOrEqual, IsNull } from 'typeorm';
+import { Repository, In, TreeRepository, EntityManager, Connection, QueryRunner, Not, Between,  IsNull } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Task } from './todo.entity';
 import { TaskTag } from '../task-tag/task-tag.entity';
 import { TodoTag } from '../todo-tag/todo-tag.entity';
 import { TodoList } from '../todo-list/todo-list.entity';
 import { TaskGroup } from '../task-group/task-group.entity';
 import { BatchUpdateOrderDto, TaskOrderUpdate } from './dto/batch-update-order.dto';
-import { log } from 'console';
+
 
 @Injectable()
 export class TaskService {
@@ -17,7 +18,7 @@ export class TaskService {
   constructor(
     @InjectRepository(Task) 
     private taskRepository: Repository<Task>,
-    @InjectRepository(TaskTag)
+    @InjectRepository(TaskTag)    
     private taskTagRepository: Repository<TaskTag>,
     @InjectRepository(TodoTag)
     private todoTagRepository: Repository<TodoTag>,
@@ -26,7 +27,9 @@ export class TaskService {
     @InjectRepository(TaskGroup)
     private taskGroupRepository: Repository<TaskGroup>,
     private entityManager: EntityManager,
-    private connection: Connection
+    private connection: Connection,
+    @Inject(EventEmitter2)
+    private eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -262,7 +265,49 @@ export class TaskService {
       this.taskTagsMap.set(id, tags);
     }
     
-    return this.formatTaskResponse(updatedTask);
+    // 获取格式化后的任务
+    const formattedTask = this.formatTaskResponse(updatedTask);
+    
+    // 检查是否为父任务且有子任务，需要更新子任务的某些属性
+    if (updatedTask.parentId === null || updatedTask.parentId === undefined) {
+      const childTasks = await this.taskRepository.find({ where: { parentId: updatedTask.id, userId } });
+      
+      // 如果是父任务，发送包含子任务的SSE事件
+      if (childTasks.length > 0) {
+        this.eventEmitter.emit('todo.updated', {
+          userId,
+          type: 'update_with_children',
+          todo: formattedTask,
+          todoId: updatedTask.id,
+          timestamp: new Date(),
+          action: 'update_tree_node_with_children',
+          parent: formattedTask,
+          childrenChanges: {
+            update: await this.getChildTasksWithFormat(updatedTask.id, userId)
+          }
+        });
+      } else {
+        // 普通任务更新，发送基本的SSE事件
+        this.eventEmitter.emit('todo.updated', {
+          userId,
+          type: 'update',
+          todo: formattedTask,
+          todoId: updatedTask.id,
+          timestamp: new Date()
+        });
+      }
+    } else {
+      // 子任务更新，也需要通知前端
+      this.eventEmitter.emit('todo.updated', {
+        userId,
+        type: 'update',
+        todo: formattedTask,
+        todoId: updatedTask.id,
+        timestamp: new Date()
+      });
+    }
+    
+    return formattedTask;
   }
 
   /**
@@ -274,6 +319,19 @@ export class TaskService {
     
     // 递归处理所有嵌套子任务，将它们标记为已删除
     await this.moveNestedTasksToBin(id, userId);
+    
+    // 发送SSE事件，通知前端删除任务及其子任务
+    this.eventEmitter.emit('todo.updated', {
+      userId,
+      type: 'delete',
+      todoId: id,
+      timestamp: new Date(),
+      action: 'update_tree_node_with_children',
+      parent: null,
+      childrenChanges: {
+        delete: await this.getChildTasksWithFormat(id, userId)
+      }
+    });
     
     return true;
   }
@@ -312,7 +370,24 @@ export class TaskService {
     });
     
     // 返回更新后的任务
-    return this.findOne(taskId, userId);
+    const updatedTask = await this.findOne(taskId, userId);
+    
+    // 发送SSE事件，通知前端任务已移动到新清单
+    this.eventEmitter.emit('todo.updated', {
+      userId,
+      type: 'update',
+      todo: this.formatTaskResponse(updatedTask),
+      todoId: taskId,
+      newListId,
+      timestamp: new Date(),
+      action: 'update_tree_node_with_children',
+      parent: this.formatTaskResponse(updatedTask),
+      childrenChanges: {
+        update: await this.getChildTasksWithFormat(taskId, userId)
+      }
+    });
+    
+    return updatedTask;
   }
 
   /**
@@ -365,7 +440,22 @@ export class TaskService {
     });
     
     // 返回更新后的任务
-    return this.findOne(taskId, userId);
+    const updatedTask = await this.findOne(taskId, userId);
+    
+    // 发送SSE事件，通知前端任务已移动到新分组
+    this.eventEmitter.emit('todo.updated', {
+      userId,
+      type: 'update',
+      todo: this.formatTaskResponse(updatedTask),
+      todoId: taskId,
+      newGroupId,
+      listId,
+      timestamp: new Date(),
+      action: 'update_tree_node_with_children',
+      parent: this.formatTaskResponse(updatedTask)
+    });
+    
+    return updatedTask;
   }
   
   /**
@@ -621,7 +711,19 @@ export class TaskService {
     });
     
     // 格式化返回数据
-    return tasks.map(task => this.formatTaskResponse(task));
+    const formattedTasks = tasks.map(task => this.formatTaskResponse(task));
+    
+    // 发送SSE事件，通知前端置顶任务数据更新
+    this.eventEmitter.emit('todo.updated', {
+      userId,
+      type: 'update_with_children',
+      todos: formattedTasks,
+      listId,
+      timestamp: new Date(),
+      action: 'update_tree_node_with_children'
+    });
+    
+    return formattedTasks;
   }
   
   /**
@@ -673,6 +775,20 @@ export class TaskService {
     
     // 递归处理所有子任务的完成状态
     await this.updateChildTasksCompleted(id, userId, newCompletedState);
+    
+    // 发送SSE事件，通知前端更新树节点
+    this.eventEmitter.emit('todo.updated', {
+      userId,
+      type: 'update_with_children',
+      todo: this.formatTaskResponse(updatedTask),
+      todoId: id,
+      timestamp: new Date(),
+      action: 'update_tree_node_with_children',
+      parent: this.formatTaskResponse(updatedTask),
+      childrenChanges: {
+        update: await this.getChildTasksWithFormat(id, userId)
+      }
+    });
     
     return this.formatTaskResponse(updatedTask);
   }
@@ -800,8 +916,27 @@ export class TaskService {
       // 提交事务
       await queryRunner.commitTransaction();
 
-      // 返回更新后的任务
-      return this.findOne(taskId, userId);
+      // 获取更新后的任务
+      const updatedTask = await this.findOne(taskId, userId);
+      
+      // 发送SSE事件，通知前端更新树节点
+      this.eventEmitter.emit('todo.updated', {
+        userId,
+        type: 'update_with_children',
+        todo: updatedTask,
+        todoId: taskId,
+        timestamp: new Date(),
+        // 添加树节点更新特定的数据结构
+        action: 'update_tree_node_with_children',
+        parent: updatedTask,
+        childrenChanges: {
+          // 这里可以根据实际情况添加子任务的变更信息
+          // 由于我们已经更新了所有子任务，这里可以返回更新的子任务列表
+          update: await this.getChildTasksWithFormat(taskId, userId)
+        }
+      });
+
+      return updatedTask;
     } catch (error) {
       // 回滚事务
       await queryRunner.rollbackTransaction();
@@ -983,11 +1118,32 @@ export class TaskService {
   }
 
   /**
-   * 硬删除单个任务（不经过回收站，直接从数据库删除）
-   * @param id 任务ID
+   * 递归获取格式化的子任务列表
+   * @param parentId 父任务ID
    * @param userId 用户ID
-   * @returns 是否删除成功
+   * @returns 格式化的子任务列表
    */
+  private async getChildTasksWithFormat(parentId: string, userId: string): Promise<any[]> {
+    // 查找当前任务的所有直接子任务
+    const childTasks = await this.taskRepository.find({
+      where: { parentId, userId },
+      relations: ['taskTags'],
+    });
+    
+    const formattedChildren: any[] = [];
+    
+    // 递归处理每个子任务
+    for (const childTask of childTasks) {
+      const formattedChild = this.formatTaskResponse(childTask);
+      formattedChildren.push(formattedChild);
+      
+      // 递归获取子任务的子任务
+      const grandChildren = await this.getChildTasksWithFormat(childTask.id, userId);
+      formattedChildren.push(...grandChildren);
+    }
+    
+    return formattedChildren;
+  }
   async hardDelete(id: string, userId: string): Promise<boolean> {
     // 先验证任务存在且属于当前用户
     await this.findOne(id, userId);
@@ -1053,11 +1209,11 @@ export class TaskService {
         // 查询包含这些标签中任意一个的任务
         const query = this.taskRepository.createQueryBuilder('task')
           .where('task.userId = :userId', { userId })
-          .andWhere('task.isPinned = false')
           .andWhere('task.deletedAt IS NULL')
           .leftJoinAndSelect('task.taskTags', 'taskTags')
           .innerJoin('task.taskTags', 'tt')
           .andWhere('tt.tagId IN (:...tagIds)', { tagIds: allTagIds })
+          // 不添加completed状态过滤，返回所有任务
           .orderBy('task.groupOrderIndex', 'ASC')
           .addOrderBy('task.updatedAt', 'DESC');
           
@@ -1072,10 +1228,8 @@ export class TaskService {
     // 处理其他类型的查询
     const query = this.taskRepository.createQueryBuilder('task')
       .where('task.userId = :userId', { userId })
-      .andWhere('task.isPinned = false')
       .andWhere('task.deletedAt IS NULL')
       .leftJoinAndSelect('task.taskTags', 'taskTags');
-
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const weekAgo = new Date(today);
@@ -1085,12 +1239,12 @@ export class TaskService {
 
     switch (type) {
       case 'today':
-        // 返回今天截止的任务
+        // 返回今天截止的任务，无论是否完成
         query.andWhere('DATE(task.deadline) = DATE(:today)', { today });
         break;
       
       case 'nearlyWeek':
-        // 返回前后七天的任务
+        // 返回前后七天的任务，无论是否完成
         query.andWhere('task.deadline >= :weekAgo AND task.deadline <= :weekLater', { 
           weekAgo, 
           weekLater 
@@ -1098,12 +1252,12 @@ export class TaskService {
         break;
       
       case 'cp':
-        // 返回已完成的任务
+        // 只有在'cp'类型时才返回已完成的任务
         query.andWhere('task.completed = true');
         break;
       
       default:
-        // 如果是普通列表ID，返回该列表的任务
+        // 如果是普通列表ID，返回该列表的所有任务，无论是否完成
         query.andWhere('task.listId = :listId', { listId: type });
     }
 
@@ -1457,7 +1611,7 @@ export class TaskService {
         // 今天完成的任务
         return {
           ...conditions,
-          completedAt: Between(
+          updatedAt: Between(
             new Date(today),
             new Date(today.setHours(23, 59, 59, 999))
           ),
@@ -1475,7 +1629,7 @@ export class TaskService {
         
         return {
           ...conditions,
-          completedAt: Between(sevenDaysAgo, sevenDaysLater),
+          updatedAt: Between(sevenDaysAgo, sevenDaysLater),
           deletedAt: IsNull()
         };
       

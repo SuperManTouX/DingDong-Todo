@@ -1,14 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TodoList } from './todo-list.entity';
 import { User } from '../user/user.entity';
 import { Task } from '../todo/todo.entity';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 @Injectable()
 export class TodoListService {
   constructor(
     @InjectRepository(TodoList) 
     private todoListRepository: Repository<TodoList>,
+    @Inject(EventEmitter2)
+    private eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -47,7 +50,18 @@ export class TodoListService {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
-    return this.todoListRepository.save(newList);
+    const savedList = await this.todoListRepository.save(newList);
+    
+    // 触发清单创建事件
+    this.eventEmitter.emit('list.updated', {
+      type: 'create',
+      listId: savedList.id,
+      userId,
+      timestamp: new Date(),
+      list: savedList
+    });
+    
+    return savedList;
   }
 
   /**
@@ -65,38 +79,49 @@ export class TodoListService {
       list.color = updateData.color;
     }
     list.updatedAt = new Date();
-    return this.todoListRepository.save(list);
+    const updatedList = await this.todoListRepository.save(list);
+    
+    // 触发清单更新事件
+    this.eventEmitter.emit('list.updated', {
+      type: 'update',
+      listId: id,
+      userId,
+      timestamp: new Date(),
+      list: updatedList
+    });
+    
+    return updatedList;
   }
 
   /**
    * 删除清单
-   * @param id 清单ID
-   * @param userId 用户ID
-   * @param targetListId 目标清单ID（可选）
-   * @param mode 处理模式：'move'（仅移动任务）或 'moveAndDelete'（移动后删除）或 undefined（默认模式：直接删除）
-   * 说明：任务将使用软删除（设置deletedAt为当前时间），清单将从数据库中物理删除
    */
-  async delete(id: string, userId: string, targetListId?: string, mode?: 'move' | 'moveAndDelete'): Promise<boolean> {
-    await this.findOne(id, userId); // 验证清单存在且用户有权限
+  async delete(id: string, userId: string, targetListId?: string, mode?: 'move' | 'delete'): Promise<boolean> {
+    // 验证清单是否属于当前用户
+    const list = await this.findOne(id, userId);
     
-    // 获取所有相关任务
+    // 获取清单下的所有任务
     const tasks = await this.todoListRepository.manager.find(Task, {
-      where: { listId: id, userId },
+      where: { listId: id },
     });
     
-    if (targetListId) {
-      // 验证目标清单存在且属于同一用户
-      await this.findOne(targetListId, userId);
-      
-      // 将任务移入目标清单
+    // 根据模式处理任务
+    if (mode === 'move' && targetListId) {
+      // 移动模式：将任务移动到目标清单并清除groupId
       for (const task of tasks) {
         task.listId = targetListId;
-        
-        // 如果模式是 'moveAndDelete'，则在移动后软删除任务
-        if (mode === 'moveAndDelete') {
-          task.deletedAt = new Date();
+        task.groupId = null; // 清除任务的groupId
+        await this.todoListRepository.manager.save(task);
+      }
+    } else if (mode === 'delete') {
+      // 删除模式：将任务标记为已删除
+      for (const task of tasks) {
+        task.deletedAt = new Date();
+        // 如果提供了targetListId，将任务移动到目标清单
+        if (targetListId) {
+          task.listId = targetListId;
+          task.groupId = null; // 清除任务的groupId
         }
-        
         await this.todoListRepository.manager.save(task);
       }
     } else {
@@ -110,6 +135,17 @@ export class TodoListService {
     
     // 从数据库中物理删除清单
     const result = await this.todoListRepository.delete(id);
+    
+    // 触发清单删除事件
+    this.eventEmitter.emit('list.updated', {
+      type: 'delete',
+      listId: id,
+      targetListId: targetListId,
+      mode: mode,
+      userId,
+      timestamp: new Date(),
+    });
+    
     return result.affected !== null && result.affected !== undefined && result.affected > 0;
   }
 }

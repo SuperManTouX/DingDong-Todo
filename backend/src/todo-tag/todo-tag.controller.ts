@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Req, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Req, HttpCode, HttpStatus, Inject } from '@nestjs/common';
 import { TodoTagService } from './todo-tag.service';
 import { TodoTag } from './todo-tag.entity';
 import { AuthGuard } from '@nestjs/passport';
@@ -7,6 +7,9 @@ import { Repository, In } from 'typeorm';
 import { Task } from '../todo/todo.entity';
 import { TaskTag } from '../task-tag/task-tag.entity';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { JwtService } from '@nestjs/jwt';
+import { UserService } from '../user/user.service';
 
 @ApiTags('标签管理')
 @Controller('todo-tags')
@@ -17,6 +20,8 @@ export class TodoTagController {
     private taskTagRepository: Repository<TaskTag>,
     @InjectRepository(Task) 
     private taskRepository: Repository<Task>,
+    @Inject(EventEmitter2)
+    private eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -80,7 +85,17 @@ export class TodoTagController {
   @Post()
   async create(@Body() createDto: { name: string; parentId?: string; color?: string }, @Req() req): Promise<TodoTag> {
     const userId = req.user.id;
-    return this.todoTagService.create(createDto.name, userId, createDto.parentId, createDto.color);
+    const createdTag = await this.todoTagService.create(createDto.name, userId, createDto.parentId, createDto.color);
+    
+    // 触发标签更新事件
+    this.eventEmitter.emit('tag.updated', {
+      type: 'create',
+      tag: createdTag,
+      userId,
+      timestamp: new Date(),
+    });
+    
+    return createdTag;
   }
 
   /**
@@ -108,7 +123,17 @@ export class TodoTagController {
   @Put(':id')
   async update(@Param('id') id: string, @Body() updateDto: { name?: string; color?: string }, @Req() req): Promise<TodoTag> {
     const userId = req.user.id;
-    return this.todoTagService.update(id, { name: updateDto.name, color: updateDto.color }, userId);
+    const updatedTag = await this.todoTagService.update(id, { name: updateDto.name, color: updateDto.color }, userId);
+    
+    // 触发标签更新事件
+    this.eventEmitter.emit('tag.updated', {
+      type: 'update',
+      tag: updatedTag,
+      userId,
+      timestamp: new Date(),
+    });
+    
+    return updatedTag;
   }
 
   /**
@@ -129,6 +154,16 @@ export class TodoTagController {
   async delete(@Param('id') id: string, @Req() req): Promise<{ message: string }> {
     const userId = req.user.id;
     await this.todoTagService.delete(id, userId);
+    
+    // 触发标签更新事件
+    this.eventEmitter.emit('tag.updated', {
+      type: 'delete',
+      tag: null, // 删除操作不返回标签数据
+      tagId: id, // 但需要提供被删除的标签ID
+      userId,
+      timestamp: new Date(),
+    });
+    
     return { message: '标签删除成功' };
   }
 

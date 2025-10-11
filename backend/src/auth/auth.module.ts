@@ -27,6 +27,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],
-  exports: [AuthService],
+  exports: [AuthService, JwtModule], // 导出JwtModule以便其他模块使用JwtService
 })
 export class AuthModule {}

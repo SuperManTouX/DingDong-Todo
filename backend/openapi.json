@@ -1483,7 +1483,7 @@
         ]
       },
       "delete": {
-        "description": "删除指定ID的清单，可选传入targetListId将任务移至其他清单，mode控制任务处理方式",
+        "description": "删除指定ID的清单，支持将关联任务移动到其他清单或标记为已删除",
         "operationId": "TodoListController_delete",
         "parameters": [
           {
@@ -1497,7 +1497,7 @@
           }
         ],
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -1505,17 +1505,21 @@
                 "properties": {
                   "targetListId": {
                     "type": "string",
-                    "description": "目标清单ID（可选）"
+                    "description": "目标清单ID，用于移动任务",
+                    "nullable": true
                   },
                   "mode": {
                     "type": "string",
-                    "description": "处理模式: move(仅移动任务) 或 moveAndDelete(移动后删除)",
+                    "description": "操作模式: move(移动任务) 或 delete(软删除任务)",
                     "enum": [
                       "move",
-                      "moveAndDelete"
+                      "delete"
                     ]
                   }
-                }
+                },
+                "required": [
+                  "mode"
+                ]
               }
             }
           }
@@ -2193,6 +2197,25 @@
         "summary": "获取专注统计",
         "tags": [
           "专注记录"
+        ]
+      }
+    },
+    "/events": {
+      "get": {
+        "description": "建立Server-Sent Events连接，用于接收实时更新事件",
+        "operationId": "SseController_sse",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "SSE连接成功建立"
+          },
+          "401": {
+            "description": "未授权访问"
+          }
+        },
+        "summary": "建立SSE连接",
+        "tags": [
+          "SSE"
         ]
       }
     }

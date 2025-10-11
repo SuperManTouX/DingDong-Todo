@@ -61,9 +61,10 @@ export class FocusRecordService {
   }
 
   // 删除专注记录
-  async delete(id: string, userId: string): Promise<void> {
+  async delete(id: string, userId: string): Promise<{id: string, userId: string}> {
     const focusRecord = await this.findOne(id, userId);
     await this.focusRecordRepository.delete(id);
+    return { id, userId };
   }
 
   // 获取用户指定任务的专注记录
