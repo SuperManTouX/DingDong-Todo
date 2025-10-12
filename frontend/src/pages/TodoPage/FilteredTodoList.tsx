@@ -9,6 +9,7 @@ import {
   Layout,
   Table,
   Pagination,
+  Spin,
 } from "antd";
 import React, { useCallback, useState, useEffect } from "react";
 import type { ColumnsType } from "antd/es/table";
@@ -30,6 +31,22 @@ import { getCompletedTasks } from "@/services/todoService";
 
 const { Header, Content, Footer } = Layout;
 
+// 添加加载指示器样式
+const style = {
+  '.loading-indicator': {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    border: '1px solid #e8e8e8',
+    minHeight: 200,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  '.task-group': {
+    marginBottom: 16,
+  },
+};
+
 // 定义树形表格数据类型
 interface TreeTableData extends Todo {
   key: string;
@@ -49,7 +66,7 @@ export default function FilteredTodoList({
 }) {
   // 获取所有任务，然后根据用户ID过滤
   const tasks = getActiveListTasks();
-  const { activeListId, loadCompletedTasks } = useTodoStore();
+  const { activeListId, loadCompletedTasks, isTasksLoading } = useTodoStore();
   const pinnedTasks = tasks.filter((task) => task.isPinned);
   // 获取全局设置和操作方法
   const {
@@ -130,8 +147,8 @@ export default function FilteredTodoList({
       // 构建树形结构
       const treeData: TreeTableData[] = [];
       todos.forEach((todo) => {
-        if (!todo.parentId) {
-          // 顶级任务直接加入树数据
+        if (!todo.parentId || !taskMap.has(todo.parentId)) {
+          // 顶级任务直接加入树数据，包括parentId为null或父任务不存在的任务
           treeData.push(taskMap.get(todo.id)!);
         } else {
           // 子任务加入父任务的children数组
@@ -296,8 +313,15 @@ export default function FilteredTodoList({
               />
             )}
 
+            {/* 加载指示器 */}
+            {isTasksLoading && (
+              <div className="task-group loading-indicator text-center p-8">
+                <Spin size="large" tip="加载中..." />
+              </div>
+            )}
+
             {/*已置顶分组 - 直接渲染置顶任务列表*/}
-            {pinnedTasks.length > 0 && (
+            {!isTasksLoading && pinnedTasks.length > 0 && (
               <FilterGroup
                 key={"pinned"}
                 title={"⭐已置顶"}
@@ -308,12 +332,12 @@ export default function FilteredTodoList({
             )}
 
             {/*普通渲染模式 - 使用树形表格*/}
-            {groupMode === "none" && tasks.length > 0 && (
+            {!isTasksLoading && groupMode === "none" && tasks.length > 0 && (
               <div className="task-group">{renderTreeTable(tasks)}</div>
             )}
 
             {/*分组模式 - 每个分组使用独立的树形表格*/}
-            {groupMode !== "none" &&
+            {!isTasksLoading && groupMode !== "none" &&
               displayGroups.length > 0 &&
               displayGroups.map((group) => (
                 <FilterGroup
@@ -329,7 +353,7 @@ export default function FilteredTodoList({
               ))}
 
             {/*使用ProTable分页树形表格展示已完成任务，不再虚化显示*/}
-            {(activeListId === "cp" ||
+            {!isTasksLoading && (activeListId === "cp" ||
               activeListId === "bin" ||
               !hideCompletedTasks) && (
               <FilterGroup title="已完成" tasks={[]}>
@@ -339,7 +363,7 @@ export default function FilteredTodoList({
                     request={async (params) => {
                       try {
                         // 使用todoService的getCompletedTasks方法获取数据
-                        const { page, totalPages, total, tasks, pageSize } =
+                        const { page, totalPages, total, tasks, pageSize } = 
                           await getCompletedTasks(
                             activeListId,
                             params.current || 1,
@@ -387,6 +411,20 @@ export default function FilteredTodoList({
                 </div>
               </FilterGroup>
             )}
+            
+            {/* 无任务提示 */}
+            {!isTasksLoading && !pinnedTasks.length && !tasks.length && groupMode === "none" && (
+              <div className="task-group text-center p-8">
+                <Typography.Text type="secondary">暂无任务</Typography.Text>
+              </div>
+            )}
+            
+            {/* 分组模式下无任务提示 */}
+            {!isTasksLoading && groupMode !== "none" && displayGroups.length === 0 && (
+              <div className="task-group text-center p-8">
+                <Typography.Text type="secondary">暂无任务</Typography.Text>
+              </div>
+            )}
           </Space>
         </div>
       </Content>
@@ -407,17 +445,22 @@ export default function FilteredTodoList({
               清空所有回收站todo
             </button>
           ) : (
-            <button
-              type="button"
-              onClick={() => handleDeleteAllCompleted()}
-              className="btn btn-primary btn-sm"
-            >
-              删除所有已完成
-            </button>
+            // <button
+            //   type="button"
+            //   onClick={() => handleDeleteAllCompleted()}
+            //   className="btn btn-primary btn-sm"
+            // >
+            //   删除所有已完成
+            // </button>
+            <span></span>
           )}
           {activeListId !== "bin" && (
             <span>
-              未完成：{displayUncompletedCount + pinnedTasks.length}个
+              未完成：
+              {displayUncompletedCount + pinnedTasks.length
+                ? displayUncompletedCount + pinnedTasks.length
+                : 0}
+              个
             </span>
           )}
         </Row>

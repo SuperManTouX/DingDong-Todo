@@ -74,6 +74,7 @@ export interface Todo {
   is_reminded?: boolean; // 新增：是否已经提醒
   timeOrderIndex?: number; // 时间分组排序索引
   groupOrderIndex?: number; // 分组排序索引
+  deletedAt?: string | null;
 }
 export interface SSEUpdateData {
   action: "update_tree_node_with_children";
@@ -87,15 +88,7 @@ export interface SSEUpdateData {
 
 interface TodoAddAction {
   type: "added";
-  title: string;
-  listId: string;
-  completed: false;
-  parentId?: string | null; // 可选：用于添加子任务
-  depth?: number; // 可选：表示嵌套深度
-  groupId?: string | null;
-  isPinned?: boolean;
-  pinnedAt?: string | null;
-  tags?: string[] | [];
+  newTask: Todo;
 }
 
 interface TodoToggleAction {

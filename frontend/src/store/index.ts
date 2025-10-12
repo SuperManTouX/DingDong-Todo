@@ -93,6 +93,7 @@ export const useTodoStore = create<TodoState>()(
         pinnedTasks: [], // 初始化置顶任务数组
         displayCompletedTasks: [], // 新增：存储已完成的任务
         needsTableReload: false, // 初始化表格刷新标记
+        isTasksLoading: false, // 初始化任务加载状态
 
         selectTodo: () => {
           const state = get();

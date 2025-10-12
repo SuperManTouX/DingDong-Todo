@@ -1,13 +1,19 @@
-import { DeleteOutlined, EditOutlined, RedoOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  EditOutlined,
+  RedoOutlined,
+  RollbackOutlined,
+} from "@ant-design/icons";
 import type { ContextMenuProps, Todo } from "@/types";
 import { Dropdown, type MenuProps, Modal, TreeSelect } from "antd";
 import { message } from "@/utils/antdStatic";
-import { MESSAGES } from "@/constants/messages";
-import { useTodoStore } from "@/store/todoStore";
+import { formatMessage, MESSAGES } from "@/constants/messages";
+import { userId, useTodoStore } from "@/store/todoStore";
 import { togglePinTask } from "@/services/todoService";
 import TagTreeSelect from "./TagTreeSelect";
 import TaskDateTimePicker from "./TaskDateTimePicker";
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useAuthStore } from "@/store/authStore";
 
 // 定义树形表格数据类型
 interface TreeTableData extends Todo {
@@ -24,6 +30,7 @@ interface TreeNode {
 
 export default function ContextMenu({ todo, children }: ContextMenuProps) {
   const { dispatchTodo, todoTags, tasks } = useTodoStore();
+  const { userId } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const dropdownRef = useRef<Dropdown>(null);
@@ -126,47 +133,8 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
         return;
       }
 
-      // 首先获取当前任务和目标父任务的数据
-      const currentTask = store.getTodoById(todo.id);
-      const targetParentTask = targetParentId
-        ? store.getTodoById(targetParentId)
-        : null;
-
       // 更新服务器数据
       await store.updateParentId(todo.id, targetParentId);
-
-      // 服务器更新成功后，在本地更新任务数据，不再调用loadTasksByType
-
-      // 1. 更新当前任务的parentId、listId和groupId
-      const updatedTask = {
-        ...currentTask,
-        parentId: targetParentId,
-        // 如果父任务存在且其listId与当前任务不同，则更新
-        listId:
-          targetParentTask && targetParentTask.listId !== currentTask.listId
-            ? targetParentTask.listId
-            : currentTask.listId,
-        // 如果父任务存在且其groupId与当前任务不同，则更新
-        groupId:
-          targetParentTask && targetParentTask.groupId !== currentTask.groupId
-            ? targetParentTask.groupId
-            : currentTask.groupId,
-      };
-
-      // 2. 计算新的depth
-      if (targetParentId) {
-        // 如果有父任务，新depth为父任务depth+1
-        updatedTask.depth = (targetParentTask?.depth || 0) + 1;
-      } else {
-        // 如果没有父任务，depth为0
-        updatedTask.depth = 0;
-      }
-
-      // 3. 更新当前任务的本地数据
-      store.updateTodoLocally(updatedTask);
-
-      // 4. 递归更新所有子任务的depth
-      updateChildTasksDepth(todo.id, updatedTask.depth);
 
       message.success(value ? "任务层级移动成功" : "任务层级已移至顶级");
 
@@ -178,42 +146,28 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
     }
   };
 
-  // 递归更新子任务的depth
-  const updateChildTasksDepth = (parentId: string, parentDepth: number) => {
-    const state = useTodoStore.getState();
-    const childTasks = state.tasks.filter((task) => task.parentId === parentId);
-
-    childTasks.forEach((childTask) => {
-      // 更新子任务的depth为父任务depth+1
-      const updatedChildTask = {
-        ...childTask,
-        depth: parentDepth + 1,
-      };
-
-      // 更新本地数据
-      state.updateTodoLocally(updatedChildTask);
-
-      // 递归更新子任务的子任务
-      updateChildTasksDepth(childTask.id, updatedChildTask.depth);
-    });
-  };
-
   // 添加子任务
   function handleAddSubTask(todo: Todo): void {
     const { activeListId } = useTodoStore.getState();
     const action: any = {
       type: "added",
-      title: "",
-      completed: false,
-      parentId: todo.id,
-      depth: todo.depth + 1,
-      groupId: todo.groupId,
-      isPinned: todo.isPinned,
-      listId: todo.listId,
+      newTask: {
+        title: "",
+        completed: false,
+        tag: [],
+        parentId: todo.id,
+        depth: todo.depth + 1,
+        groupId: todo.groupId,
+        isPinned: todo.isPinned,
+        pinnedAt: todo.pinnedAt, // 新增：置顶时间，用于多个置顶任务的排序
+        listId: todo.listId,
+        userId: userId,
+      },
     };
     if (activeListId === "today" || activeListId === "nearlyWeek") {
-      action.deadline = todo.deadline;
+      action.newTask.deadline = todo.deadline;
     }
+    console.log(action.newTask);
     dispatchTodo(action);
   }
 
@@ -392,7 +346,30 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
       onClick: async () => {
         try {
           await moveToBin(todo);
-          message.success(MESSAGES.SUCCESS.TASK_DELETED);
+          message.success({
+            content: (
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <span>
+                  {formatMessage(MESSAGES.SUCCESS.TASK_DELETED, {
+                    taskTitle: todo.title,
+                  })}
+                </span>
+                <RollbackOutlined
+                  style={{
+                    marginLeft: 8,
+                    cursor: "pointer",
+                    color: "orange",
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // 撤销删除状态 - 从回收站恢复任务
+                    restoreFromBin(todo.id);
+                  }}
+                />
+              </div>
+            ),
+            duration: 5, // 增加显示时间，给用户更多时间点击撤销
+          });
         } catch (error) {
           message.error("删除任务失败，请重试");
         }
