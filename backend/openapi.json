@@ -557,14 +557,27 @@
         ]
       }
     },
-    "/todos/demo": {
-      "post": {
+    "/todos/search": {
+      "get": {
         "description": "根据关键词搜索当前用户的任务",
-        "operationId": "TodoController_createDemo",
-        "parameters": [],
+        "operationId": "TodoController_searchTasks",
+        "parameters": [
+          {
+            "name": "keyword",
+            "required": true,
+            "in": "query",
+            "description": "搜索关键词",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
-          "201": {
-            "description": "创建成功"
+          "200": {
+            "description": "搜索成功"
+          },
+          "401": {
+            "description": "未授权"
           }
         },
         "security": [
@@ -573,6 +586,200 @@
           }
         ],
         "summary": "按关键词搜索任务",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/demo": {
+      "post": {
+        "description": "创建带标签的演示任务",
+        "operationId": "TodoController_createDemo",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "创建成功"
+          }
+        },
+        "summary": "创建演示任务",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/bin": {
+      "get": {
+        "description": "获取用户回收站中的所有任务，支持分页",
+        "operationId": "TodoController_getBinTasks",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "页码",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "example": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取回收站任务列表",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/bin/empty": {
+      "delete": {
+        "description": "永久删除回收站中的所有任务",
+        "operationId": "TodoController_emptyBin",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "清空成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "清空回收站",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/{id}/restore": {
+      "post": {
+        "description": "从回收站恢复指定ID的任务",
+        "operationId": "TodoController_restoreTask",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "任务ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "恢复成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "任务不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "恢复已删除任务",
+        "tags": [
+          "任务管理"
+        ]
+      },
+      "patch": {
+        "description": "从回收站恢复指定的已删除任务",
+        "operationId": "TodoController_restore",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "任务ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "恢复成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "回收站中未找到该任务"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "恢复已删除的任务",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/{id}/permanent": {
+      "delete": {
+        "description": "从回收站永久删除指定ID的任务",
+        "operationId": "TodoController_permanentlyDeleteTask",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "任务ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "任务不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "永久删除任务",
         "tags": [
           "任务管理"
         ]
@@ -1037,43 +1244,6 @@
         ]
       }
     },
-    "/todos/{id}/restore": {
-      "patch": {
-        "description": "从回收站恢复指定的已删除任务",
-        "operationId": "TodoController_restore",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "任务ID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "恢复成功"
-          },
-          "401": {
-            "description": "未授权"
-          },
-          "404": {
-            "description": "回收站中未找到该任务"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "恢复已删除的任务",
-        "tags": [
-          "任务管理"
-        ]
-      }
-    },
     "/todos/{id}/hard": {
       "delete": {
         "description": "不经过回收站，直接从数据库删除指定任务及其所有子任务",
@@ -1190,126 +1360,6 @@
         "summary": "按关键词搜索任务",
         "tags": [
           "任务管理"
-        ]
-      }
-    },
-    "/bin": {
-      "get": {
-        "description": "获取当前用户的所有已删除任务列表",
-        "operationId": "BinController_findAll",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "获取成功"
-          },
-          "401": {
-            "description": "未授权"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "获取回收站内容",
-        "tags": [
-          "回收站管理"
-        ]
-      },
-      "delete": {
-        "description": "清空当前用户的所有回收站内容",
-        "operationId": "BinController_emptyBin",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "清空成功"
-          },
-          "401": {
-            "description": "未授权"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "清空回收站",
-        "tags": [
-          "回收站管理"
-        ]
-      }
-    },
-    "/bin/restore/{id}": {
-      "post": {
-        "description": "从回收站恢复指定ID的已删除任务",
-        "operationId": "BinController_restore",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "回收站记录ID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "恢复成功"
-          },
-          "401": {
-            "description": "未授权"
-          },
-          "404": {
-            "description": "记录不存在"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "恢复任务",
-        "tags": [
-          "回收站管理"
-        ]
-      }
-    },
-    "/bin/{id}": {
-      "delete": {
-        "description": "从回收站永久删除指定ID的任务",
-        "operationId": "BinController_permanentlyDelete",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "回收站记录ID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "删除成功"
-          },
-          "401": {
-            "description": "未授权"
-          },
-          "404": {
-            "description": "记录不存在"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "永久删除任务",
-        "tags": [
-          "回收站管理"
         ]
       }
     },

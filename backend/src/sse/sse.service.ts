@@ -8,7 +8,10 @@ import { UserService } from '../user/user.service';
 // 定义SSE事件接口
 export interface SseEvent {
   entity: 'tag' | 'list' | 'todo' | 'system';
-  type: "create" | "update" | "delete" | "update_with_children" | "connected";
+  type?: "create" | "update" | "delete" | "update_with_children" | "connected";
+  action?: "update_tree_node_with_children";
+  parent?: any;
+  childrenChanges?: { add?: any[], update?: any[], delete?: any[] };
   [key: string]: any;
 }
 
@@ -94,12 +97,9 @@ export class SseService {
       if (event.userId === userId) {
         const eventData: SseEvent = {
           entity: 'todo' as const,
-          type: event.type,
-          todo: event.todo,
-          todoId: event.todoId,
-          todoIds: event.todoIds,
-          updateData: event.updateData,
-          timestamp: event.timestamp,
+          action: event.action,
+          parent: event.parent,
+          childrenChanges: event.childrenChanges
         };
         console.log(`向用户 ${userId} 发送任务更新事件:`, eventData);
         subject.next(eventData);
@@ -178,18 +178,18 @@ export class SseService {
    * 启动定期清理过期连接的定时器
    */
   private startConnectionCleanup(): void {
-    // 每小时清理一次过期连接
+    // 每15分钟清理一次过期连接
     setInterval(() => {
       this.cleanupExpiredConnections();
-    }, 60 * 60 * 1000);
+    }, 15 * 60 * 1000);
   }
 
   /**
-   * 清理过期连接（超过24小时无活动的连接）
+   * 清理过期连接（超过15分钟无活动的连接）
    */
   private cleanupExpiredConnections(): void {
     const now = new Date();
-    const expirationTime = new Date(now.getTime() - 24 * 60 * 60 * 1000); // 24小时前
+    const expirationTime = new Date(now.getTime() - 15 * 60 * 1000); // 15分钟前
     
     console.log(`开始清理过期连接，当前连接数: ${this.userConnections.size}`);
     

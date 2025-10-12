@@ -114,6 +114,15 @@ export class TodoController {
     description: '根据关键词搜索当前用户的任务',
   })
   @ApiBearerAuth()
+  @ApiQuery({ name: 'keyword', description: '搜索关键词', required: true })
+  @ApiResponse({ status: 200, description: '搜索成功' })
+  @ApiResponse({ status: 401, description: '未授权' })
+  @UseGuards(AuthGuard('jwt'))
+  @Get('search')
+  async searchTasks(@Query('keyword') keyword: string, @Req() req) {
+    return this.todoService.searchTasks(req.user.id, keyword);
+  }
+
   // 创建演示任务
   @ApiOperation({
     summary: '创建演示任务',
@@ -124,6 +133,80 @@ export class TodoController {
   @HttpCode(HttpStatus.CREATED)
   async createDemo() {
     return this.todoService.createDemo();
+  }
+
+  // 获取回收站任务列表
+  @ApiOperation({
+    summary: '获取回收站任务列表',
+    description: '获取用户回收站中的所有任务，支持分页',
+  })
+  @ApiBearerAuth()
+  @ApiQuery({ name: 'page', description: '页码', required: false, example: 1 })
+  @ApiQuery({ name: 'pageSize', description: '每页数量', required: false, example: 20 })
+  @ApiResponse({ status: 200, description: '获取成功' })
+  @ApiResponse({ status: 401, description: '未授权' })
+  @UseGuards(AuthGuard('jwt'))
+  @Get('bin')
+  async getBinTasks(
+    @Req() req,
+    @Query('page') page: number = 1,
+    @Query('pageSize') pageSize: number = 20
+  ) {
+    // 确保页码和每页数量有效
+    const validPage = Math.max(1, Number(page) || 1);
+    const validPageSize = Math.max(1, Math.min(100, Number(pageSize) || 20));
+    
+    // 使用getTasksByType获取回收站任务，只传递必要的参数
+    return this.todoService.getTasksByType('bin', req.user.id);
+  }
+
+  // 清空回收站
+  @ApiOperation({
+    summary: '清空回收站',
+    description: '永久删除回收站中的所有任务',
+  })
+  @ApiBearerAuth()
+  @ApiResponse({ status: 200, description: '清空成功' })
+  @ApiResponse({ status: 401, description: '未授权' })
+  @UseGuards(AuthGuard('jwt'))
+  @Delete('bin/empty')
+  async emptyBin(@Req() req): Promise<{ success: boolean; message: string }> {
+    // 使用hardDeleteAll方法清空回收站
+    await this.todoService.hardDeleteAll(req.user.id);
+    return { success: true, message: '回收站已清空' };
+  }
+
+  // 恢复任务
+  @ApiOperation({
+    summary: '恢复已删除任务',
+    description: '从回收站恢复指定ID的任务',
+  })
+  @ApiBearerAuth()
+  @ApiParam({ name: 'id', description: '任务ID' })
+  @ApiResponse({ status: 200, description: '恢复成功' })
+  @ApiResponse({ status: 404, description: '任务不存在' })
+  @ApiResponse({ status: 401, description: '未授权' })
+  @UseGuards(AuthGuard('jwt'))
+  @Post(':id/restore')
+  async restoreTask(@Param('id') id: string, @Req() req) {
+    return this.todoService.restore(id, req.user.id);
+  }
+
+  // 永久删除任务
+  @ApiOperation({
+    summary: '永久删除任务',
+    description: '从回收站永久删除指定ID的任务',
+  })
+  @ApiBearerAuth()
+  @ApiParam({ name: 'id', description: '任务ID' })
+  @ApiResponse({ status: 200, description: '删除成功' })
+  @ApiResponse({ status: 404, description: '任务不存在' })
+  @ApiResponse({ status: 401, description: '未授权' })
+  @UseGuards(AuthGuard('jwt'))
+  @Delete(':id/permanent')
+  async permanentlyDeleteTask(@Param('id') id: string, @Req() req): Promise<{ success: boolean; message: string }> {
+    await this.todoService.permanentlyDelete(id, req.user.id);
+    return { success: true, message: '任务已永久删除' };
   }
 
   // 获取单个任务 - 动态路由移到静态路由之后
