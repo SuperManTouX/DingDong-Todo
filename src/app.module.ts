@@ -7,7 +7,6 @@ import { TodoModule } from './todo/todo.module';
 import { TodoListModule } from './todo-list/todo-list.module';
 import { TodoTagModule } from './todo-tag/todo-tag.module';
 import { TaskGroupModule } from './task-group/task-group.module';
-import { BinModule } from './bin/bin.module';
 import { FocusRecordModule } from './focus-record/focus-record.module';
 import { SseModule } from './sse/sse.module';
 import { S3Config } from './config/s3.config';
@@ -61,7 +60,6 @@ function RequestLoggingMiddleware(req: any, res: any, next: () => void) {
     TodoListModule,
     TodoTagModule,
     TaskGroupModule,
-    BinModule,
     FocusRecordModule,
     SseModule,
   ],

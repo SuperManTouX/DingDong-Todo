@@ -138,10 +138,23 @@ export class TaskService {
     this.taskTagsMap.set(taskId, tagsArray);
     
     // 构造返回结果，直接包含标签信息
-    return this.formatTaskResponse({
+    const formattedTask = this.formatTaskResponse({
       ...savedTask,
       tags: tagsArray
     });
+    
+    // 发送SSE事件，通知前端任务已创建
+    // 前端逻辑：直接将add数组中的所有节点添加到tasks数组中，不关心父节点关系
+    this.eventEmitter.emit('todo.updated', {
+      userId: taskData.userId,
+      action: 'update_tree_node_with_children',
+      parent: null, // 根据前端逻辑，这里可以设置为null
+      childrenChanges: {
+        add: [formattedTask] // 所有新创建的任务都放在add数组中
+      }
+    });
+    
+    return formattedTask;
   }
   
   // 辅助方法：确保日期值是ISO 8601格式的字符串
@@ -198,6 +211,7 @@ export class TaskService {
       pinnedAt: task.pinnedAt || null,
       timeOrderIndex: task.timeOrderIndex || 0,
       groupOrderIndex: task.groupOrderIndex || 0,
+      deletedAt: task.deletedAt || null,
       // 注意：根据前端数据结构，createdAt和updatedAt可能不需要返回
     };
   }
@@ -276,10 +290,6 @@ export class TaskService {
       if (childTasks.length > 0) {
         this.eventEmitter.emit('todo.updated', {
           userId,
-          type: 'update_with_children',
-          todo: formattedTask,
-          todoId: updatedTask.id,
-          timestamp: new Date(),
           action: 'update_tree_node_with_children',
           parent: formattedTask,
           childrenChanges: {
@@ -290,20 +300,18 @@ export class TaskService {
         // 普通任务更新，发送基本的SSE事件
         this.eventEmitter.emit('todo.updated', {
           userId,
-          type: 'update',
-          todo: formattedTask,
-          todoId: updatedTask.id,
-          timestamp: new Date()
+          action: 'update_tree_node_with_children',
+          parent: formattedTask,
+          childrenChanges: { update: [] }
         });
       }
     } else {
       // 子任务更新，也需要通知前端
       this.eventEmitter.emit('todo.updated', {
         userId,
-        type: 'update',
-        todo: formattedTask,
-        todoId: updatedTask.id,
-        timestamp: new Date()
+        action: 'update_tree_node_with_children',
+        parent: formattedTask,
+        childrenChanges: { update: [] }
       });
     }
     
@@ -315,22 +323,32 @@ export class TaskService {
    */
   async delete(id: string, userId: string): Promise<boolean> {
     // 先验证任务存在且属于当前用户
-    await this.findOne(id, userId);
+    const task = await this.findOne(id, userId);
     
     // 递归处理所有嵌套子任务，将它们标记为已删除
     await this.moveNestedTasksToBin(id, userId);
     
-    // 发送SSE事件，通知前端删除任务及其子任务
+    // 获取更新后的任务（已软删除）
+    const deletedTask = await this.taskRepository.findOne({ where: { id, userId } });
+    if (!deletedTask) {
+      return false;
+    }
+    
+    // 获取格式化后的任务
+    const formattedTask = this.formatTaskResponse(deletedTask);
+    
+    // 使用已有的getChildTasksWithFormat方法获取所有子任务
+    const allChildTasks = await this.getChildTasksWithFormat(id, userId);
+    
+    // 过滤出已被软删除的子任务
+    const deletedChildTasks = allChildTasks.filter(task => task.deletedAt !== null);
+    
+    // 发送SSE事件，通知前端任务已被软删除（更新任务状态）
     this.eventEmitter.emit('todo.updated', {
       userId,
-      type: 'delete',
-      todoId: id,
-      timestamp: new Date(),
       action: 'update_tree_node_with_children',
-      parent: null,
-      childrenChanges: {
-        delete: await this.getChildTasksWithFormat(id, userId)
-      }
+      parent: formattedTask,
+      childrenChanges: { update: deletedChildTasks }
     });
     
     return true;
@@ -375,11 +393,6 @@ export class TaskService {
     // 发送SSE事件，通知前端任务已移动到新清单
     this.eventEmitter.emit('todo.updated', {
       userId,
-      type: 'update',
-      todo: this.formatTaskResponse(updatedTask),
-      todoId: taskId,
-      newListId,
-      timestamp: new Date(),
       action: 'update_tree_node_with_children',
       parent: this.formatTaskResponse(updatedTask),
       childrenChanges: {
@@ -445,14 +458,9 @@ export class TaskService {
     // 发送SSE事件，通知前端任务已移动到新分组
     this.eventEmitter.emit('todo.updated', {
       userId,
-      type: 'update',
-      todo: this.formatTaskResponse(updatedTask),
-      todoId: taskId,
-      newGroupId,
-      listId,
-      timestamp: new Date(),
       action: 'update_tree_node_with_children',
-      parent: this.formatTaskResponse(updatedTask)
+      parent: this.formatTaskResponse(updatedTask),
+      childrenChanges: { update: [] }
     });
     
     return updatedTask;
@@ -511,14 +519,48 @@ export class TaskService {
       throw new NotFoundException('任务不存在或您没有权限访问');
     }
     
+    // 获取所有要删除的任务ID（包括子任务）
+    const tasksToDelete = await this.getTasksToDeleteWithId(taskId, userId);
+    
     // 使用事务确保数据一致性
     await this.entityManager.transaction(async (transactionalEntityManager) => {
       await this.permanentlyDeleteNestedTasks(taskId, userId, transactionalEntityManager);
     });
     
+    // 发送SSE事件，通知前端永久删除任务及其子任务
+    this.eventEmitter.emit('todo.updated', {
+      userId,
+      action: 'update_tree_node_with_children',
+      type: 'delete',
+      parent: null,
+      childrenChanges: {
+        delete: tasksToDelete
+      }
+    });
+    
     return true;
   }
   
+  /**
+   * 获取所有要删除的任务ID（包括子任务）
+   */
+  private async getTasksToDeleteWithId(taskId: string, userId: string): Promise<{id: string}[]> {
+    const result: {id: string}[] = [{id: taskId}];
+    
+    // 查找当前任务的所有直接子任务
+    const childTasks = await this.taskRepository.find({
+      where: { parentId: taskId, userId, deletedAt: Not(IsNull()) }
+    });
+    
+    // 递归获取每个子任务的ID
+    for (const childTask of childTasks) {
+      const childIds = await this.getTasksToDeleteWithId(childTask.id, userId);
+      result.push(...childIds);
+    }
+    
+    return result;
+  }
+
   /**
    * 递归永久删除子任务
    */
@@ -618,7 +660,25 @@ export class TaskService {
     });
     
     // 返回恢复后的任务
-    return this.findOne(taskId, userId);
+    const restoredTask = await this.findOne(taskId, userId);
+    
+    // 发送SSE事件，通知前端恢复任务及其子任务
+    // 获取格式化后的任务
+    const formattedTask = this.formatTaskResponse(restoredTask);
+    
+    // 获取恢复的子任务
+    const childTasks = await this.getChildTasksWithFormat(taskId, userId);
+    
+    this.eventEmitter.emit('todo.updated', {
+      userId,
+      action: 'update_tree_node_with_children',
+      parent: formattedTask,
+      childrenChanges: {
+        update: childTasks
+      }
+    });
+    
+    return restoredTask;
   }
   
   /**
@@ -713,16 +773,6 @@ export class TaskService {
     // 格式化返回数据
     const formattedTasks = tasks.map(task => this.formatTaskResponse(task));
     
-    // 发送SSE事件，通知前端置顶任务数据更新
-    this.eventEmitter.emit('todo.updated', {
-      userId,
-      type: 'update_with_children',
-      todos: formattedTasks,
-      listId,
-      timestamp: new Date(),
-      action: 'update_tree_node_with_children'
-    });
-    
     return formattedTasks;
   }
   
@@ -749,6 +799,16 @@ export class TaskService {
     
     // 递归处理所有子任务的置顶状态
     await this.toggleChildTasksPin(id, userId, newPinState);
+    
+    // 发送SSE事件，通知前端更新树节点
+    this.eventEmitter.emit('todo.updated', {
+      userId,
+      action: 'update_tree_node_with_children',
+      parent: this.formatTaskResponse(updatedTask),
+      childrenChanges: {
+        update: await this.getChildTasksWithFormat(id, userId)
+      }
+    });
     
     return this.formatTaskResponse(updatedTask);
   }
@@ -779,10 +839,6 @@ export class TaskService {
     // 发送SSE事件，通知前端更新树节点
     this.eventEmitter.emit('todo.updated', {
       userId,
-      type: 'update_with_children',
-      todo: this.formatTaskResponse(updatedTask),
-      todoId: id,
-      timestamp: new Date(),
       action: 'update_tree_node_with_children',
       parent: this.formatTaskResponse(updatedTask),
       childrenChanges: {
@@ -922,16 +978,9 @@ export class TaskService {
       // 发送SSE事件，通知前端更新树节点
       this.eventEmitter.emit('todo.updated', {
         userId,
-        type: 'update_with_children',
-        todo: updatedTask,
-        todoId: taskId,
-        timestamp: new Date(),
-        // 添加树节点更新特定的数据结构
         action: 'update_tree_node_with_children',
         parent: updatedTask,
         childrenChanges: {
-          // 这里可以根据实际情况添加子任务的变更信息
-          // 由于我们已经更新了所有子任务，这里可以返回更新的子任务列表
           update: await this.getChildTasksWithFormat(taskId, userId)
         }
       });
@@ -1148,10 +1197,24 @@ export class TaskService {
     // 先验证任务存在且属于当前用户
     await this.findOne(id, userId);
     
+    // 获取所有要删除的任务ID（包括子任务）
+    const tasksToDelete = await this.getTasksToDeleteWithId(id, userId);
+    
     // 使用事务确保数据一致性
     await this.entityManager.transaction(async (transactionalEntityManager) => {
       // 递归删除所有子任务
       await this.permanentlyDeleteNestedTasks(id, userId, transactionalEntityManager);
+    });
+    
+    // 发送SSE事件，通知前端硬删除任务及其子任务
+    this.eventEmitter.emit('todo.updated', {
+      userId,
+      action: 'update_tree_node_with_children',
+      type: 'delete',
+      parent: null,
+      childrenChanges: {
+        delete: tasksToDelete
+      }
     });
     
     return true;
@@ -1163,16 +1226,35 @@ export class TaskService {
    * @returns 是否删除成功
    */
   async hardDeleteAll(userId: string): Promise<boolean> {
+    // 查找用户的所有根任务（没有父任务的任务）
+    const rootTasks = await this.taskRepository.find({
+      where: { userId, parentId: IsNull() }
+    });
+    
+    // 获取所有要删除的任务ID
+    const tasksToDelete: {id: string}[] = [];
+    
+    for (const task of rootTasks) {
+      const taskIds = await this.getTasksToDeleteWithId(task.id, userId);
+      tasksToDelete.push(...taskIds);
+    }
+    
     // 使用事务确保数据一致性
     await this.entityManager.transaction(async (transactionalEntityManager) => {
-      // 查找用户的所有根任务（没有父任务的任务）
-      const rootTasks = await transactionalEntityManager.find(Task, {
-        where: { userId, parentId: IsNull() }
-      });
-      
       // 递归删除每个根任务及其所有子任务
       for (const task of rootTasks) {
         await this.permanentlyDeleteNestedTasks(task.id, userId, transactionalEntityManager);
+      }
+    });
+    
+    // 发送SSE事件，通知前端硬删除所有任务
+    this.eventEmitter.emit('todo.updated', {
+      userId,
+      action: 'update_tree_node_with_children',
+      type: 'delete',
+      parent: null,
+      childrenChanges: {
+        delete: tasksToDelete
       }
     });
     
