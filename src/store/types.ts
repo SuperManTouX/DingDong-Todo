@@ -15,6 +15,7 @@ export interface TodoState {
   userId: string | null; // 用户ID字段
   pinnedTasks: Todo[]; // 置顶任务数组
   needsTableReload: boolean; // 标记表格是否需要刷新
+  isTasksLoading: boolean; // 任务加载状态
 
   // 计算属性 - 这些属性在持久化时会被忽略
   activeGroup(): TodoListData;

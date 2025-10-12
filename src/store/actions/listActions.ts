@@ -27,9 +27,10 @@ export const listActions = {
     get: () => TodoState,
   ): void => {
     const authState = useAuthStore.getState();
+
     const { userId } = authState;
     if (!userId) return;
-
+    console.log(action);
     try {
       switch (action.type) {
         case "create": {

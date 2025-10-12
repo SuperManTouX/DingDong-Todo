@@ -26,10 +26,15 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
   // 根据activeListId确定分组模式和过滤逻辑
   let groupMode: "normal" | "time" | "list" = "normal";
   let uncompletedTasks = tasks.filter(
-    (task) => !task.completed && !task.isPinned,
+    (task) => !task.completed && !task.isPinned && !task.deletedAt,
   );
-  let filteredTasks = [...uncompletedTasks];
 
+  let filteredTasks;
+  if (activeListId === "bin") {
+    filteredTasks = [...tasks.filter((task) => task.deletedAt)];
+  } else {
+    filteredTasks = [...uncompletedTasks];
+  }
   let isCompletedMode = false;
 
   // 特殊activeListId处理

@@ -31,7 +31,7 @@ const AppWithTheme: React.FC = () => {
       // 移除自动建立SSE连接，改为在authStore中登录成功后建立
       // sseService.connect();
     }
-    
+
     // 组件卸载时断开SSE连接
     return () => {
       sseService.disconnect();
@@ -77,9 +77,9 @@ const AppWithTheme: React.FC = () => {
 };
 
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <HotkeysProvider>
-      <AppWithTheme />
-    </HotkeysProvider>
-  </StrictMode>,
+  // <StrictMode>
+  <HotkeysProvider>
+    <AppWithTheme />
+  </HotkeysProvider>,
+  // </StrictMode>,
 );

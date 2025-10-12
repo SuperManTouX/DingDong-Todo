@@ -243,7 +243,7 @@ export default function Controller({
     // 如果需要，可以在这里通过dispatchTodo直接添加任务
     dispatchTodo({
       type: "added",
-      ...taskData,
+      newTask: taskData,
     });
 
     setText("");
@@ -251,7 +251,6 @@ export default function Controller({
     setSelectedListId(activeListId);
     setSelectedPriority(0);
     setSelectedDeadline(null);
-    message.success("添加新待办事项，成功！");
   };
 
   return (

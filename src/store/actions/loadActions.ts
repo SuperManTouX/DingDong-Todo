@@ -7,7 +7,7 @@ import {
 import type { TodoState } from "../types";
 import { getAllTags } from "@/services/tagService";
 import { getAllGroups } from "@/services/groupService";
-import { getBinItems } from "@/services/binService";
+import { getBinItems } from "@/services/todoService";
 import { getAllTodoLists } from "@/services/listService";
 import { activeListId } from "@/store/todoStore";
 
@@ -271,14 +271,17 @@ export const loadActions = {
     type: string = get().activeListId,
   ): Promise<any[]> => {
     try {
-      const authState =
-        get().userId ||
+      const authState = get().userId || 
         (await import("@/store/authStore")).useAuthStore.getState().userId;
 
       if (!authState) {
         console.warn("用户未登录，无法加载任务数据");
         return [];
       }
+      
+      // 设置加载状态为true
+      set({ isTasksLoading: true });
+      
       // 调用getTasksByType获取指定类型的任务
       const tasks = await getTasksByType(type);
 
@@ -294,14 +297,15 @@ export const loadActions = {
             pinnedTasks: pinnedTasks || [],
             tasks: uncompletedTasks,
             displayCompletedTasks: completedTasks,
+            isTasksLoading: false, // 加载完成，设置为false
           });
-          console.log(`清单 ${type} 的置顶任务加载成功`);
         } catch (pinnedError) {
           console.error("加载置顶任务数据失败:", pinnedError);
           set({
             pinnedTasks: [],
             tasks: uncompletedTasks,
             displayCompletedTasks: completedTasks,
+            isTasksLoading: false, // 加载完成，设置为false
           });
         }
       } else if (type) {
@@ -310,10 +314,10 @@ export const loadActions = {
           pinnedTasks: [],
           tasks: uncompletedTasks,
           displayCompletedTasks: completedTasks,
+          isTasksLoading: false, // 加载完成，设置为false
         });
       }
 
-      console.log(`${type}类型的任务数据加载成功`);
       return tasks || [];
     } catch (error) {
       console.error(`加载${type}类型任务数据失败:`, error);
@@ -321,6 +325,7 @@ export const loadActions = {
         pinnedTasks: [], // 出错时也清空置顶任务
         tasks: [],
         displayCompletedTasks: [],
+        isTasksLoading: false, // 加载失败，也要设置为false
       });
       return [];
     }

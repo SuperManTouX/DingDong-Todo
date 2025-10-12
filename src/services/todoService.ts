@@ -2,6 +2,62 @@ import api from "./api";
 import { request } from "./baseService";
 import type { Todo } from "@/types";
 
+// 软删除任务（移至回收站） - 替代moveTaskToBin
+// 使用统一请求处理封装 - 软删除待办事项（删除后清除相关缓存）
+export const softDeleteTodo = (id: string) => {
+  return request(
+    () => api.delete<{ message: string; binId: string }>(`/todos/${id}`),
+    `软删除待办事项 ${id} 失败`,
+    {
+      invalidateCache: ["/todos", `/todos/${id}`], // 清除相关缓存
+    },
+  );
+};
+
+// 从回收站恢复任务 - 替代restoreFromBin
+// 使用统一请求处理封装 - 恢复回收站中的任务（恢复后清除相关缓存）
+export const restoreTodoFromBin = (id: string) => {
+  return request(
+    () => api.post<{ message: string; taskId: string }>(`/todos/${id}/restore`),
+    `恢复回收站任务 ${id} 失败`,
+    {
+      invalidateCache: ["/todos"], // 清除待办事项缓存
+    },
+  );
+};
+
+// 硬删除任务（永久删除） - 替代deleteFromBin
+// 使用统一请求处理封装 - 永久删除回收站中的任务
+export const hardDeleteTodo = (id: string) => {
+  return request(
+    () => api.delete<{ message: string }>(`/todos/${id}/permanent`),
+    `永久删除回收站任务 ${id} 失败`,
+    {}, // 硬删除不需要清除待办事项缓存
+  );
+};
+
+// 清空回收站 - 替代emptyBin
+// 使用统一请求处理封装 - 清空回收站中的所有任务
+export const emptyBin = () => {
+  return request(
+    () => api.delete<{ message: string }>("/todos/bin/empty"),
+    "清空回收站失败",
+    {}, // 清空回收站不需要清除待办事项缓存
+  );
+};
+
+// 获取回收站内容 - 替代getBinItems
+// 使用统一请求处理封装 - 获取回收站中的所有任务
+export const getBinItems = () => {
+  return request(
+    () => api.get<Todo[]>("/todos/bin"),
+    "获取回收站内容失败",
+    {
+      cache: false, // 回收站内容不缓存，确保每次都获取最新数据
+    },
+  );
+};
+
 // 使用统一请求处理封装 - 获取所有待办事项（启用缓存）
 export const getAllTodos = () => {
   return request(() => api.get<Todo[]>("/todos"), "获取待办事项失败", {
@@ -154,13 +210,8 @@ export const moveTaskToList = (id: string, listId: string) => {
 
 // 使用统一请求处理封装 - 删除待办事项（删除后清除相关缓存）
 export const deleteTodo = (id: string) => {
-  return request(
-    () => api.delete<void>(`/todos/${id}`),
-    `删除待办事项 ${id} 失败`,
-    {
-      invalidateCache: ["/todos", `/todos/${id}`], // 清除相关缓存
-    },
-  );
+  // 调用软删除函数，保持向后兼容
+  return softDeleteTodo(id);
 };
 
 // 使用统一请求处理封装 - 切换任务完成状态（更新后清除相关缓存）
