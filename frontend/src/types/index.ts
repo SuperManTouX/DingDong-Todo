@@ -224,6 +224,7 @@ export type TagReducerAction =
 
 export interface TodoItemProps {
   todo: TreeTableData;
+  stopPropagation?: boolean;
   other?: boolean;
   onToggleExpand?: () => void;
 }
@@ -250,4 +251,6 @@ export interface SideMenuProps {
 export interface TreeTableData extends Todo {
   key: string;
   children?: TreeTableData[];
+  totalChildren?: number;     // 子节点总数
+  completedChildren?: number; // 已完成的子节点数
 }

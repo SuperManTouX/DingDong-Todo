@@ -124,6 +124,33 @@ export const useTodoStore = create<TodoState>()(
               treeNode.children = childrenTasks.map((child) =>
                 buildSubTaskTree(tasks, child.id, depth + 1),
               );
+              
+              // 计算子节点统计信息
+              let totalChildren = 0;
+              let completedChildren = 0;
+              
+              // 递归计算所有子任务的数量和已完成数量
+              const calculateStats = (nodes: TreeTableData[]) => {
+                nodes.forEach(node => {
+                  // 当前子节点计入总数
+                  totalChildren++;
+                  // 如果当前子节点已完成，计入已完成数量
+                  if (node.completed) {
+                    completedChildren++;
+                  }
+                  // 递归计算子节点的子节点
+                  if (node.children && node.children.length > 0) {
+                    calculateStats(node.children);
+                  }
+                });
+              };
+              
+              // 开始计算统计信息
+              calculateStats(treeNode.children);
+              
+              // 设置统计属性
+              treeNode.totalChildren = totalChildren;
+              treeNode.completedChildren = completedChildren;
             }
 
             return treeNode;

@@ -8,15 +8,21 @@ import TimeCountDownNode from "./TimeCountDownNode";
 import TodoCheckbox from "@/components/TodoCheckbox";
 import { debounce } from "lodash";
 import "@/styles/TodoTask.css";
-import { BellOutlined, RightOutlined } from "@ant-design/icons";
-import React, { useCallback, useEffect, useRef } from "react";
+import {
+  BellOutlined,
+  RightOutlined,
+  SubnodeOutlined,
+} from "@ant-design/icons";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { ActionType } from "@ant-design/pro-components";
+import CustomTreeNodeIcon from "@/icons/CustomTreeNodeIcon";
 
 dayjs.extend(isoWeek);
 export default function TodoTask({
   todo,
   other = false,
   PTableDOM,
+  stopPropagation = false,
 }: TodoItemProps & { PTableDOM?: React.RefObject<ActionType> }) {
   const { dispatchTodo, setSelectTodoId, selectTodoId, todoTags } =
     useTodoStore();
@@ -26,10 +32,10 @@ export default function TodoTask({
 
   // 使用ref存储输入框引用
   const inputRef = useRef<HTMLInputElement>(null);
-  // 使用ref存储本地状态，避免因状态更新导致的组件重新渲染
-  const localTitleRef = useRef<string>(todo.title);
   // 使用ref存储正在编辑的状态
   const isEditingRef = useRef<boolean>(false);
+  //输入框值
+  const [titleValue, setTitleValue] = useState<string>(todo.title);
 
   // 列表项悬停效果样式
   const todoItemHoverStyle: React.CSSProperties = {
@@ -57,21 +63,14 @@ export default function TodoTask({
 
   // 当todo.title变化时（例如从服务器更新），更新本地引用
   useEffect(() => {
-    // 只有当不在编辑状态时才更新本地引用
-    if (!isEditingRef.current) {
-      localTitleRef.current = todo.title;
-      // 如果输入框存在，更新其值
-      if (inputRef.current) {
-        inputRef.current.value = todo.title;
-      }
-    }
+    setTitleValue(todo.title);
   }, [todo.title]);
 
   // 处理输入变化，但不触发组件重新渲染
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const newTitle = e.target.value;
-      localTitleRef.current = newTitle;
+      setTitleValue(newTitle);
       // 调用防抖函数更新全局状态，但不触发本地重渲染
       debouncedTitleUpdate(newTitle, todo.id);
     },
@@ -97,7 +96,6 @@ export default function TodoTask({
     },
     [todoTags],
   );
-  console.log();
   // 渲染编辑输入框
   function renderEditInput() {
     return (
@@ -105,7 +103,7 @@ export default function TodoTask({
         ref={inputRef}
         key={`todo-input-${todo.id}`} // 添加key属性确保输入框稳定性
         type="text"
-        defaultValue={localTitleRef.current} // 使用defaultValue避免受控组件问题
+        value={titleValue} // 使用defaultValue避免受控组件问题
         onChange={handleInputChange}
         onFocus={handleInputFocus}
         // onBlur={handleInputBlur}
@@ -122,14 +120,21 @@ export default function TodoTask({
     );
   }
 
+  if (todo.id === "task-165") {
+    console.log(todo);
+  }
   // SubList函数已移除，子任务现在在TodoList中直接渲染
   // 子任务图标已移除，子任务现在在TodoList中直接渲染;
   return (
     <>
       <li
         className={`cursor-pointer m-0 row d-flex justify-content-between highlight rounded pe-0 ps-0 pt-1 pb-1 ${selectTodoId === todo.id ? "selected-task" : ""}  ${other ? "opacity-25" : ""}`}
-        onClick={() => {
-          if (setSelectTodoId && selectTodoId !== todo.id) {
+        onClick={(e) => {
+          if (stopPropagation) {
+            e.stopPropagation();
+            return;
+          }
+          if (setSelectTodoId) {
             setSelectTodoId(todo.id);
             if (isMobile) {
               // 直接调用store中的方法打开Drawer
@@ -168,6 +173,22 @@ export default function TodoTask({
                 {/*// @ts-ignore*/}
                 {todo.tags?.length > 0 && !showTaskDetails && (
                   <Tag color="magenta">+{todo.tags?.length}</Tag>
+                )}
+                {/*是否有子任务*/}
+                {(todo?.children?.length > 0 ||
+                  (todo as any).totalChildren) && (
+                  <>
+                    <CustomTreeNodeIcon />
+                    {showTaskDetails && (
+                      <span>
+                        {typeof (todo as any).completedChildren === "number" &&
+                        typeof (todo as any).totalChildren === "number"
+                          ? `${(todo as any).completedChildren}/${(todo as any).totalChildren}`
+                          : (todo as any).totalChildren ||
+                            todo?.children?.length}
+                      </span>
+                    )}
+                  </>
                 )}
                 {/*提醒图标*/}
                 {todo.reminder_at !== null && !todo.is_reminded && (

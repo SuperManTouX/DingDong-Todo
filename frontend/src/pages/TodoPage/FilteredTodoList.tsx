@@ -18,40 +18,37 @@ import {
   MenuUnfoldOutlined,
   EllipsisOutlined,
 } from "@ant-design/icons";
+import ContextMenu from "../../components/ContextMenu";
+import TodoTask from "./TodoTask";
 import useTodoOperations from "../../hooks/useTodoOperations";
 import useTodoGrouping from "../../hooks/useTodoGrouping";
 import { useGlobalSettingsStore } from "@/store/globalSettingsStore";
 import { useTodoStore, getActiveListTasks } from "../../store/todoStore";
 import Controller from "./Controller";
 import FilterGroup from "./FilterGroup";
-import ContextMenu from "../../components/ContextMenu";
-import TodoTask from "./TodoTask";
-import type { Todo } from "@/types";
+import TodoTreeTable, {
+  convertToTreeTableData,
+} from "../../components/TodoTreeTable";
+import type { Todo, TreeTableData } from "@/types";
 import { getCompletedTasks } from "@/services/todoService";
 
 const { Header, Content, Footer } = Layout;
 
 // 添加加载指示器样式
 const style = {
-  '.loading-indicator': {
-    backgroundColor: '#f5f5f5',
+  ".loading-indicator": {
+    backgroundColor: "#f5f5f5",
     borderRadius: 8,
-    border: '1px solid #e8e8e8',
+    border: "1px solid #e8e8e8",
     minHeight: 200,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  '.task-group': {
+  ".task-group": {
     marginBottom: 16,
   },
 };
-
-// 定义树形表格数据类型
-interface TreeTableData extends Todo {
-  key: string;
-  children?: TreeTableData[];
-}
 
 export default function FilteredTodoList({
   groupName,
@@ -129,66 +126,6 @@ export default function FilteredTodoList({
     loadCompletedTasks(activeListId, page, pageSize);
   };
 
-  // 将Todo对象转换为树形表格数据格式
-  const convertToTreeTableData = useCallback(
-    (todos: Todo[]): TreeTableData[] => {
-      // 创建ID到任务的映射，用于快速查找父任务
-      const taskMap = new Map<string, TreeTableData>();
-      // 首先创建所有任务对象 - 不再默认初始化children数组
-      todos.forEach((todo) => {
-        const task: TreeTableData = {
-          ...todo,
-          key: todo.id,
-          // 移除默认的空children数组，只在有子任务时才初始化
-        };
-        taskMap.set(todo.id, task);
-      });
-
-      // 构建树形结构
-      const treeData: TreeTableData[] = [];
-      todos.forEach((todo) => {
-        if (!todo.parentId || !taskMap.has(todo.parentId)) {
-          // 顶级任务直接加入树数据，包括parentId为null或父任务不存在的任务
-          treeData.push(taskMap.get(todo.id)!);
-        } else {
-          // 子任务加入父任务的children数组
-          const parentTask = taskMap.get(todo.parentId);
-          if (parentTask) {
-            // 确保children是一个数组，并且不包含当前任务
-            const existingChildren = parentTask.children || [];
-            const currentTask = taskMap.get(todo.id)!;
-            // 检查当前任务是否已存在于子任务数组中
-            if (
-              !existingChildren.find((child) => child.id === currentTask.id)
-            ) {
-              // 创建新的数组而不是修改可能不可扩展的数组
-              parentTask.children = [...existingChildren, currentTask];
-            }
-          }
-        }
-      });
-
-      return treeData;
-    },
-    [],
-  );
-
-  // 处理行展开/折叠
-  const handleExpandChange = useCallback(
-    (expanded: boolean, record: TreeTableData) => {
-      setExpandedRowKeys((prevKeys) => {
-        if (expanded) {
-          // 添加到展开行
-          return [...prevKeys, record.id];
-        } else {
-          // 从展开行移除
-          return prevKeys.filter((key) => key !== record.id);
-        }
-      });
-    },
-    [],
-  );
-
   // 定义表格列
   const columns: ColumnsType<TreeTableData> = [
     {
@@ -211,62 +148,21 @@ export default function FilteredTodoList({
     },
   ];
 
-  // 渲染树形表格的组件
-  const renderTreeTable = useCallback(
-    (tasksToRender: Todo[], usePagination: boolean = false, total?: number) => {
-      const treeData = convertToTreeTableData(tasksToRender);
-      const table = (
-        <Table
-          className="todo-tree-table"
-          columns={columns}
-          dataSource={treeData}
-          pagination={false}
-          expandable={{
-            rowExpandable: (record) =>
-              record.children && record.children.length > 0,
-            expandedRowKeys: expandedRowKeys,
-            onExpand: handleExpandChange,
-            indentSize: 35, // 控制每一层的缩进宽度
-          }}
-          size="small"
-          bordered={false}
-          rowKey="id"
-          style={{ minHeight: "50px" }}
-        />
-      );
-
-      if (usePagination && total !== undefined) {
-        return (
-          <div>
-            {table}
-            <div className="mt-2 text-center">
-              <Pagination
-                current={completedTasksPage}
-                pageSize={completedTasksPageSize}
-                total={total}
-                onChange={handleCompletedTasksPageChange}
-                showSizeChanger
-                showQuickJumper
-                showTotal={(total) => `共 ${total} 条记录`}
-              />
-            </div>
-          </div>
-        );
-      }
-
-      return table;
+  // 处理行展开/折叠
+  const handleExpandChange = useCallback(
+    (expanded: boolean, record: TreeTableData) => {
+      setExpandedRowKeys((prevKeys) => {
+        if (expanded) {
+          // 添加到展开行
+          return [...prevKeys, record.id];
+        } else {
+          // 从展开行移除
+          return prevKeys.filter((key) => key !== record.id);
+        }
+      });
     },
-    [
-      columns,
-      convertToTreeTableData,
-      expandedRowKeys,
-      handleExpandChange,
-      completedTasksPage,
-      completedTasksPageSize,
-      handleCompletedTasksPageChange,
-    ],
+    [],
   );
-
   return (
     <>
       {/*标题栏*/}
@@ -300,7 +196,7 @@ export default function FilteredTodoList({
       </Header>
 
       {/*主内容区*/}
-      <Content className="overflow-y-scroll minHeight-large pe-2 ps-2 custom-scrollbar">
+      <Content className="overflow-y-scroll custom-scrollbar minHeight-large pe-2 ps-2 ">
         <div className="col p-2 pt-0">
           <Space className="w-100" direction="vertical" size="small">
             {/*顶部控制器组件*/}
@@ -327,17 +223,34 @@ export default function FilteredTodoList({
                 title={"⭐已置顶"}
                 tasks={pinnedTasks}
               >
-                <div className="task-group">{renderTreeTable(pinnedTasks)}</div>
+                <div className="task-group">
+                  <TodoTreeTable
+                    tasks={pinnedTasks}
+                    expandedRowKeys={expandedRowKeys}
+                    onExpandChange={handleExpandChange}
+                    PTableDOM={PTableDOM}
+                    filterCompleted={true}
+                  />
+                </div>
               </FilterGroup>
             )}
 
             {/*普通渲染模式 - 使用树形表格*/}
             {!isTasksLoading && groupMode === "none" && tasks.length > 0 && (
-              <div className="task-group">{renderTreeTable(tasks)}</div>
+              <div className="task-group">
+                <TodoTreeTable
+                  tasks={tasks}
+                  expandedRowKeys={expandedRowKeys}
+                  onExpandChange={handleExpandChange}
+                  PTableDOM={PTableDOM}
+                  filterCompleted={true}
+                />
+              </div>
             )}
 
             {/*分组模式 - 每个分组使用独立的树形表格*/}
-            {!isTasksLoading && groupMode !== "none" &&
+            {!isTasksLoading &&
+              groupMode !== "none" &&
               displayGroups.length > 0 &&
               displayGroups.map((group) => (
                 <FilterGroup
@@ -347,84 +260,96 @@ export default function FilteredTodoList({
                   isUngrouped={group.type === "ungrouped"}
                 >
                   <div className="task-group">
-                    {renderTreeTable(group.tasks)}
+                    <TodoTreeTable
+                      tasks={group.tasks}
+                      expandedRowKeys={expandedRowKeys}
+                      onExpandChange={handleExpandChange}
+                      PTableDOM={PTableDOM}
+                      filterCompleted={true}
+                    />
                   </div>
                 </FilterGroup>
               ))}
 
             {/*使用ProTable分页树形表格展示已完成任务，不再虚化显示*/}
-            {!isTasksLoading && (activeListId === "cp" ||
-              activeListId === "bin" ||
-              !hideCompletedTasks) && (
-              <FilterGroup title="已完成" tasks={[]}>
-                <div style={{ opacity: ".4" }}>
-                  <ProTable
-                    columns={columns}
-                    request={async (params) => {
-                      try {
-                        // 使用todoService的getCompletedTasks方法获取数据
-                        const { page, totalPages, total, tasks, pageSize } = 
-                          await getCompletedTasks(
-                            activeListId,
-                            params.current || 1,
-                            params.pageSize || 10,
-                          );
+            {!isTasksLoading &&
+              (activeListId === "cp" ||
+                activeListId === "bin" ||
+                !hideCompletedTasks) && (
+                <FilterGroup title="已完成" tasks={[]}>
+                  <div style={{ opacity: ".4" }}>
+                    <ProTable
+                      columns={columns}
+                      request={async (params) => {
+                        try {
+                          // 使用todoService的getCompletedTasks方法获取数据
+                          const { page, totalPages, total, tasks, pageSize } =
+                            await getCompletedTasks(
+                              activeListId,
+                              params.current || 1,
+                              params.pageSize || 10,
+                            );
 
-                        // 将获取的任务转换为树形结构
-                        const treeData = convertToTreeTableData(tasks);
+                          // 将获取的任务转换为树形结构
+                          const treeData = convertToTreeTableData(tasks);
 
-                        // 由于getCompletedTasks直接返回任务数组，需要构造ProTable需要的数据格式
-                        // 假设API返回的数据包含总任务数，这里可以根据实际情况调整
-                        return {
-                          data: treeData,
-                          success: true,
-                          total: total, // 这里应该从API响应中获取实际总数
-                        };
-                      } catch (error) {
-                        console.error("获取已完成任务失败:", error);
-                        return {
-                          data: [],
-                          success: false,
-                          total: 0,
-                        };
-                      }
-                    }}
-                    actionRef={PTableDOM}
-                    expandable={{
-                      rowExpandable: (record) =>
-                        record.children && record.children.length > 0,
-                      expandedRowKeys: expandedRowKeys,
-                      onExpand: handleExpandChange,
-                      indentSize: 35,
-                    }}
-                    rowKey="id"
-                    options={false}
-                    pagination={{
-                      pageSize: 10,
-                      showSizeChanger: true,
-                      showQuickJumper: true,
-                      showTotal: (total) => `共 ${total} 条记录`,
-                    }}
-                    className="todo-tree-table"
-                    search={false} // 禁用查询框
-                  />
-                </div>
-              </FilterGroup>
-            )}
-            
+                          // 由于getCompletedTasks直接返回任务数组，需要构造ProTable需要的数据格式
+                          // 假设API返回的数据包含总任务数，这里可以根据实际情况调整
+                          return {
+                            data: treeData,
+                            success: true,
+                            total: total, // 这里应该从API响应中获取实际总数
+                          };
+                        } catch (error) {
+                          console.error("获取已完成任务失败:", error);
+                          return {
+                            data: [],
+                            success: false,
+                            total: 0,
+                          };
+                        }
+                      }}
+                      actionRef={PTableDOM}
+                      expandable={{
+                        rowExpandable: (record) =>
+                          record.children && record.children.length > 0,
+                        expandedRowKeys: expandedRowKeys,
+                        onExpand: handleExpandChange,
+                        indentSize: 35,
+                      }}
+                      rowKey="id"
+                      options={false}
+                      pagination={{
+                        pageSize: 10,
+                        showSizeChanger: true,
+                        showQuickJumper: true,
+                        showTotal: (total) => `共 ${total} 条记录`,
+                      }}
+                      className="todo-tree-table"
+                      search={false} // 禁用查询框
+                    />
+                  </div>
+                </FilterGroup>
+              )}
+
             {/* 无任务提示 */}
-            {!isTasksLoading && !pinnedTasks.length && !tasks.length && groupMode === "none" && (
-              <div className="task-group text-center p-8">
-                <Typography.Text type="secondary">暂无任务</Typography.Text>
-              </div>
-            )}
-            
+            {!isTasksLoading &&
+              !pinnedTasks.length &&
+              !tasks.length &&
+              groupMode === "none" && (
+                <div className="task-group text-center p-8">
+                  <Typography.Text type="secondary">暂无任务</Typography.Text>
+                </div>
+              )}
+
             {/* 分组模式下无任务提示 */}
-            {!isTasksLoading && groupMode !== "none" && displayGroups.length === 0 && (
-              <div className="task-group text-center p-8">
-                <Typography.Text type="secondary">暂无任务</Typography.Text>
-              </div>
-            )}
+            {!isTasksLoading &&
+              groupMode !== "none" &&
+              displayGroups.length === 0 && (
+                <div className="task-group text-center p-8">
+                  <Typography.Text type="secondary">暂无任务</Typography.Text>
+                </div>
+              )}
           </Space>
         </div>
       </Content>

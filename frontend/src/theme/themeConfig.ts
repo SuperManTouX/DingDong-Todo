@@ -138,6 +138,9 @@ export const generateAntdThemeConfig = (currentTheme: ThemeConfig) => {
         colorTextBase: currentTheme.textColor,
         colorPrimary: currentTheme.primaryColor,
       },
+      Drawer: {
+        colorBgElevated: currentTheme.bgLayoutColor,
+      },
     },
   };
 };
