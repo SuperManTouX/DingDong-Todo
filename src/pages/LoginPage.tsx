@@ -14,18 +14,15 @@ const LoginPage: React.FC = () => {
   const [form] = Form.useForm();
   const navigate = useNavigate();
 
-  const handleLogin = async (values: {
-    username: string;
-    password: string;
-  }) => {
+  const handleLogin = async (values: { username: string; password: string }) => {
     try {
       setLoading(true);
       await login(values.username, values.password);
-      message.success("登录成功");
-
-      navigate("/");
+      navigate('/', { replace: true });
     } catch (error) {
-      message.error("登录失败：" + (error as Error).message);
+      // 移除重复的错误消息显示，因为authService中已经处理了
+      // 但保留错误捕获以避免未捕获的Promise错误
+      console.log('登录错误已在authService中处理:', error);
     } finally {
       setLoading(false);
     }

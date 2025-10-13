@@ -63,7 +63,6 @@ export default function EditTodo({
   // 当selectTodoId变化时获取任务数据
   useEffect(() => {
     const s = selectTodo();
-    console.log("s", s);
     // 当selectTodoId存在时，使用store中的selectTodo更新本地state
     if (selectTodoId) {
       setEselectTodo(s);
@@ -121,7 +120,6 @@ export default function EditTodo({
     if (activeListId === "today" || activeListId === "nearlyWeek") {
       action.newTask.deadline = todo.deadline;
     }
-    console.log(action.newTask);
     dispatchTodo(action);
   };
   // 生成Dropdown菜单的items
@@ -272,12 +270,15 @@ export default function EditTodo({
         <Row justify="start" align="middle">
           <Col>
             {EselectTodo?.parentId && (
-              <Typography.Link onClick={(e) => {
-                e.preventDefault();
-                setSelectTodoId(EselectTodo.parentId);
-              }}>
+              <Typography.Link
+                onClick={(e) => {
+                  e.preventDefault();
+                  setSelectTodoId(EselectTodo.parentId);
+                }}
+              >
                 <Typography.Text underline>
-                  {tasks.find(t => t.id === EselectTodo.parentId)?.title || "父任务"}
+                  {tasks.find((t) => t.id === EselectTodo.parentId)?.title ||
+                    "父任务"}
                 </Typography.Text>
               </Typography.Link>
             )}

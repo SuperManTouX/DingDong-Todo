@@ -9,6 +9,8 @@ import Index from "../pages/TodoPage";
 import { Index as FocusPage } from "@/pages/FocusPage/index.tsx";
 import SearchResultPage from "../pages/SearchResultPage";
 
+// 添加路由配置日志
+
 const router = createBrowserRouter([
   {
     path: "/login",
@@ -58,6 +60,9 @@ const router = createBrowserRouter([
   },
 ]);
 
-export const AppRouter = () => {
+// 包装路由组件添加调试日志
+const AppRouterWithDebug: React.FC = () => {
   return <RouterProvider router={router} />;
 };
+
+export const AppRouter = AppRouterWithDebug;

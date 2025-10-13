@@ -8,11 +8,7 @@ import TimeCountDownNode from "./TimeCountDownNode";
 import TodoCheckbox from "@/components/TodoCheckbox";
 import { debounce } from "lodash";
 import "@/styles/TodoTask.css";
-import {
-  BellOutlined,
-  RightOutlined,
-  SubnodeOutlined,
-} from "@ant-design/icons";
+import { BellOutlined } from "@ant-design/icons";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { ActionType } from "@ant-design/pro-components";
 import CustomTreeNodeIcon from "@/icons/CustomTreeNodeIcon";
@@ -120,11 +116,6 @@ export default function TodoTask({
     );
   }
 
-  if (todo.id === "task-165") {
-    console.log(todo);
-  }
-  // SubList函数已移除，子任务现在在TodoList中直接渲染
-  // 子任务图标已移除，子任务现在在TodoList中直接渲染;
   return (
     <>
       <li

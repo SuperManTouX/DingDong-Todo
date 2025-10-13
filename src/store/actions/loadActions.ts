@@ -271,23 +271,23 @@ export const loadActions = {
     type: string = get().activeListId,
   ): Promise<any[]> => {
     try {
-      const authState = get().userId || 
+      const authState =
+        get().userId ||
         (await import("@/store/authStore")).useAuthStore.getState().userId;
 
       if (!authState) {
         console.warn("用户未登录，无法加载任务数据");
         return [];
       }
-      
+
       // 设置加载状态为true
       set({ isTasksLoading: true });
-      
+
       // 调用getTasksByType获取指定类型的任务
       const tasks = await getTasksByType(type);
 
       // 分离已完成的任务和未完成的任务
       const completedTasks = tasks.filter((task) => task.completed) || [];
-      const uncompletedTasks = tasks.filter((task) => !task.completed) || [];
 
       // 同时加载置顶任务（仅对todolist类型）
       if (type && type.includes("todolist-")) {
@@ -295,7 +295,7 @@ export const loadActions = {
           const pinnedTasks = await getListPinnedTodos(type);
           set({
             pinnedTasks: pinnedTasks || [],
-            tasks: uncompletedTasks,
+            tasks: tasks,
             displayCompletedTasks: completedTasks,
             isTasksLoading: false, // 加载完成，设置为false
           });
@@ -303,7 +303,7 @@ export const loadActions = {
           console.error("加载置顶任务数据失败:", pinnedError);
           set({
             pinnedTasks: [],
-            tasks: uncompletedTasks,
+            tasks: tasks,
             displayCompletedTasks: completedTasks,
             isTasksLoading: false, // 加载完成，设置为false
           });
@@ -312,7 +312,7 @@ export const loadActions = {
         // 非todolist类型时清空置顶任务
         set({
           pinnedTasks: [],
-          tasks: uncompletedTasks,
+          tasks: tasks,
           displayCompletedTasks: completedTasks,
           isTasksLoading: false, // 加载完成，设置为false
         });

@@ -17,7 +17,7 @@ const CustomTreeNodeIcon = ({ style }: { style?: CSSProperties }) => {
         r="4"
         fill="none"
         stroke="#333"
-        stroke-width="2"
+        strokeWidth="2"
       />
       <circle
         cx="38"
@@ -25,7 +25,7 @@ const CustomTreeNodeIcon = ({ style }: { style?: CSSProperties }) => {
         r="4"
         fill="none"
         stroke="#333"
-        stroke-width="2"
+        strokeWidth="2"
       />
       <circle
         cx="38"
@@ -33,7 +33,7 @@ const CustomTreeNodeIcon = ({ style }: { style?: CSSProperties }) => {
         r="4"
         fill="none"
         stroke="#333"
-        stroke-width="2"
+        strokeWidth="2"
       />
       <circle
         cx="38"
@@ -41,21 +41,21 @@ const CustomTreeNodeIcon = ({ style }: { style?: CSSProperties }) => {
         r="4"
         fill="none"
         stroke="#333"
-        stroke-width="2"
+        strokeWidth="2"
       />
       <path
         d="M34 38L22 38V10H34"
         stroke="#333"
-        stroke-width="2"
-        stroke-linecap="square"
-        stroke-linejoin="round"
+        strokeWidth="2"
+        strokeLinecap="square"
+        strokeLinejoin="round"
       />
       <path
         d="M14 24L34 24"
         stroke="#333"
-        stroke-width="2"
-        stroke-linecap="square"
-        stroke-linejoin="round"
+        strokeWidth="2"
+        strokeLinecap="square"
+        strokeLinejoin="round"
       />
     </svg>
   );
