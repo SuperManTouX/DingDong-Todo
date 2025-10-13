@@ -65,7 +65,6 @@ button + button {
 
 #root {
     height: 100%;
-    overflow: auto;
 }
 :root{
     --gradient-yellow: linear-gradient(to bottom, rgb(243,194,104), rgb(244,170,139))
@@ -581,6 +580,27 @@ button + button {
 }
 .ant-pro-card{
     background-color: transparent !important;
+}
+.ant-drawer-body{
+    padding: 0 !important;
+    height: 80%;
+}
+
+.ant-drawer-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.ant-drawer-body::-webkit-scrollbar-track {
+    background: var(--theme--colorBgSecondary);
+}
+
+.ant-drawer-body::-webkit-scrollbar-thumb {
+    background: var(--theme--colorTextTertiary);
+    border-radius: 3px;
+}
+
+.ant-drawer-body::-webkit-scrollbar-thumb:hover {
+    background: var(--theme--colorTextSecondary);
 }
 
 

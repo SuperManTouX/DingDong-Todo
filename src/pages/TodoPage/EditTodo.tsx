@@ -1,19 +1,30 @@
 import React, { useMemo, useState, useEffect, useCallback } from "react";
-import { Col, Dropdown, Row, Select, Tag, theme, Layout, Drawer } from "antd";
-import { ActionType } from "@ant-design/pro-components";
+import {
+  Col,
+  Dropdown,
+  Row,
+  Select,
+  Tag,
+  theme,
+  Layout,
+  Drawer,
+  Button,
+  Typography,
+} from "antd";
+import type { ActionType } from "@ant-design/pro-components";
 import { message } from "@/utils/antdStatic";
 import { Priority } from "@/constants";
 import { PlusOutlined } from "@ant-design/icons";
-import { useTodoStore, dispatchTodo } from "@/store/todoStore";
+import { useTodoStore, dispatchTodo, setSelectTodoId } from "@/store/todoStore";
 import { useThemeStore } from "@/store/themeStore";
 import TimeCountDownNode from "@/pages/TodoPage/TimeCountDownNode";
 import RichNote from "@/components/RichNote";
 import TodoCheckbox from "@/components/TodoCheckbox";
 import TaskDateTimePicker from "@/components/TaskDateTimePicker";
-import sseService, { TodoUpdateEvent } from "@/services/sseService";
 import { debounce } from "lodash";
-import { Todo, TreeTableData } from "@/types";
-
+import type { Todo, TreeTableData } from "@/types";
+import TodoTreeTable from "@/components/TodoTreeTable";
+import { useAuthStore } from "@/store/authStore";
 // 解构Layout组件
 const { Header, Content, Footer } = Layout;
 
@@ -31,22 +42,17 @@ export default function EditTodo({
   onClose,
   PTableDOM,
 }: EditTodoProps) {
-  const {
-    todoTags,
-    todoListData,
-    selectTodoId,
-    selectTodo,
-    tasks,
-    selectTreeData,
-  } = useTodoStore();
+  const { todoTags, todoListData, selectTodoId, selectTodo, tasks } =
+    useTodoStore();
+  const { userId } = useAuthStore();
   const { currentTheme } = useThemeStore();
   const { token } = theme.useToken();
 
   // 使用state存储任务数据
-  const [EselectTodo, setEselectTodo] = useState<any>();
+  const [EselectTodo, setEselectTodo] = useState<TreeTableData>();
   const [titleValue, setTitleValue] = useState<string>("");
   const [textValue, setTextValue] = useState<string>("");
-
+  const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
   // 创建防抖版本的dispatchTodo
   const debouncedDispatchTodo = useCallback(
     debounce((action) => {
@@ -57,7 +63,7 @@ export default function EditTodo({
   // 当selectTodoId变化时获取任务数据
   useEffect(() => {
     const s = selectTodo();
-    console.log(s);
+    console.log("s", s);
     // 当selectTodoId存在时，使用store中的selectTodo更新本地state
     if (selectTodoId) {
       setEselectTodo(s);
@@ -93,7 +99,31 @@ export default function EditTodo({
     const tagItem = todoTags.find((t) => t.id === tagId);
     message.info(`已添加标签: ${tagItem?.name || "未知标签"}`);
   };
+  // 添加子任务
+  const handleAddSubTask = (todo: Todo): void => {
+    const { activeListId } = useTodoStore.getState();
 
+    const action: any = {
+      type: "added",
+      newTask: {
+        title: "",
+        completed: false,
+        tag: [],
+        parentId: todo.id,
+        depth: todo.depth + 1,
+        groupId: todo.groupId,
+        isPinned: todo.isPinned,
+        pinnedAt: todo.pinnedAt, // 新增：置顶时间，用于多个置顶任务的排序
+        listId: todo.listId,
+        userId: userId,
+      },
+    };
+    if (activeListId === "today" || activeListId === "nearlyWeek") {
+      action.newTask.deadline = todo.deadline;
+    }
+    console.log(action.newTask);
+    dispatchTodo(action);
+  };
   // 生成Dropdown菜单的items
   const dropdownItems = todoTags.map((tag) => ({
     key: tag.id,
@@ -129,7 +159,7 @@ export default function EditTodo({
         // 作为Drawer时，Header内容放在Drawer的title中
         <React.Fragment>
           <Content
-            className={" pt-0"}
+            className={"pt-0"}
             style={{
               padding: "16px 24px",
               color: currentTheme.textColor,
@@ -137,7 +167,7 @@ export default function EditTodo({
             }}
           >
             <Row className={"h-100"} justify="start">
-              <Col className="w-100">{renderMainContent()}</Col>
+              <Col className=" w-100">{renderMainContent()}</Col>
             </Row>
           </Content>
           <Footer
@@ -166,7 +196,7 @@ export default function EditTodo({
             </Row>
           </Header>
           <Content
-            className=""
+            className="overflow-y-scroll custom-scrollbar"
             style={{
               padding: "16px 24px",
               color: currentTheme.textColor,
@@ -239,6 +269,20 @@ export default function EditTodo({
   const renderMainContent = () =>
     EselectTodo ? (
       <React.Fragment>
+        <Row justify="start" align="middle">
+          <Col>
+            {EselectTodo?.parentId && (
+              <Typography.Link onClick={(e) => {
+                e.preventDefault();
+                setSelectTodoId(EselectTodo.parentId);
+              }}>
+                <Typography.Text underline>
+                  {tasks.find(t => t.id === EselectTodo.parentId)?.title || "父任务"}
+                </Typography.Text>
+              </Typography.Link>
+            )}
+          </Col>
+        </Row>
         {/*待办标题*/}
         <input
           type="text"
@@ -337,6 +381,39 @@ export default function EditTodo({
             <PlusOutlined /> New Tag
           </Tag>
         </Dropdown>
+
+        {/* 子任务列表 */}
+        {EselectTodo?.children && EselectTodo.children.length > 0 && (
+          <>
+            <TodoTreeTable
+              tasks={EselectTodo.children}
+              stopPropagation={true}
+              expandedRowKeys={expandedRowKeys}
+              onExpandChange={(expanded, record) => {
+                setExpandedRowKeys((prevKeys) => {
+                  if (expanded) {
+                    return [...prevKeys, record.id];
+                  } else {
+                    return prevKeys.filter((key) => key !== record.id);
+                  }
+                });
+              }}
+              usePagination={false}
+            />
+          </>
+        )}
+        <Row justify={"start"}>
+          <Col span={4}>
+            <Button
+              onClick={() => handleAddSubTask(EselectTodo)}
+              className={"w-100"}
+              color="pink"
+              variant="text"
+            >
+              <PlusOutlined /> 添加子任务
+            </Button>
+          </Col>
+        </Row>
       </React.Fragment>
     ) : (
       ""
@@ -388,8 +465,9 @@ export default function EditTodo({
         onClose={onClose}
         width={600}
         placement="right"
-        className=""
       >
+        {/*className={"overflow-y-scroll custom-scrollbar"}*/}
+
         {renderContent()}
       </Drawer>
     );

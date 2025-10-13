@@ -8,18 +8,12 @@ import type { ContextMenuProps, Todo } from "@/types";
 import { Dropdown, type MenuProps, Modal, TreeSelect } from "antd";
 import { message } from "@/utils/antdStatic";
 import { formatMessage, MESSAGES } from "@/constants/messages";
-import { userId, useTodoStore } from "@/store/todoStore";
+import { useTodoStore } from "@/store/todoStore";
 import { togglePinTask } from "@/services/todoService";
 import TagTreeSelect from "./TagTreeSelect";
 import TaskDateTimePicker from "./TaskDateTimePicker";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useAuthStore } from "@/store/authStore";
-
-// 定义树形表格数据类型
-interface TreeTableData extends Todo {
-  key: string;
-  children?: TreeTableData[];
-}
 
 // 定义TreeSelect需要的数据格式
 interface TreeNode {
@@ -30,10 +24,15 @@ interface TreeNode {
 
 export default function ContextMenu({ todo, children }: ContextMenuProps) {
   const { dispatchTodo, todoTags, tasks } = useTodoStore();
+  // 获取登录的userId
   const { userId } = useAuthStore();
+  // 右键菜单是否开启
   const [isOpen, setIsOpen] = useState(false);
+  // 是否数据正在加载
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  // 右键菜单dom
   const dropdownRef = useRef<Dropdown>(null);
+  // 选择移动目的父项
   const [selectedParentId, setSelectedParentId] = useState<string>(
     todo.parentId,
   );
@@ -78,45 +77,42 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
   }, []);
 
   // 将任务数据转换为TreeSelect需要的格式
-  const convertToTreeSelectData = useCallback(
-    (tasks: Todo[], currentTodoId: string): TreeNode[] => {
-      // 创建ID到任务的映射
-      const taskMap = new Map<string, TreeNode>();
-      const rootNodes: TreeNode[] = [];
+  const convertToTreeSelectData = useCallback((tasks: Todo[]): TreeNode[] => {
+    // 创建ID到任务的映射
+    const taskMap = new Map<string, TreeNode>();
+    const rootNodes: TreeNode[] = [];
 
-      // 首先创建所有节点
-      tasks.forEach((task) => {
-        taskMap.set(task.id, { value: task.id, title: task.title });
-      });
+    // 首先创建所有节点
+    tasks.forEach((task) => {
+      taskMap.set(task.id, { value: task.id, title: task.title });
+    });
 
-      // 构建树形结构
-      tasks.forEach((task) => {
-        const node = taskMap.get(task.id);
-        if (node) {
-          if (!task.parentId) {
-            // 根节点直接加入
-            rootNodes.push(node);
-          } else {
-            // 添加到父节点的children中
-            const parentNode = taskMap.get(task.parentId);
-            if (parentNode) {
-              if (!parentNode.children) {
-                parentNode.children = [];
-              }
-              parentNode.children.push(node);
-            } else {
-              // 如果父节点不存在或被过滤掉，则作为根节点
-              rootNodes.push(node);
+    // 构建树形结构
+    tasks.forEach((task) => {
+      const node = taskMap.get(task.id);
+      if (node) {
+        if (!task.parentId) {
+          // 根节点直接加入
+          rootNodes.push(node);
+        } else {
+          // 添加到父节点的children中
+          const parentNode = taskMap.get(task.parentId);
+          if (parentNode) {
+            if (!parentNode.children) {
+              parentNode.children = [];
             }
+            parentNode.children.push(node);
+          } else {
+            // 如果父节点不存在或被过滤掉，则作为根节点
+            rootNodes.push(node);
           }
         }
-      });
+      }
+    });
 
-      // 在最前面添加"移到顶层"选项
-      return [{ value: "", title: "移到顶层" }, ...rootNodes];
-    },
-    [],
-  );
+    // 在最前面添加"移到顶层"选项
+    return [{ value: "", title: "移到顶层" }, ...rootNodes];
+  }, []);
 
   // 处理任务移动层级
   const handleTaskMove = async (value: string | null) => {
@@ -167,7 +163,6 @@ export default function ContextMenu({ todo, children }: ContextMenuProps) {
     if (activeListId === "today" || activeListId === "nearlyWeek") {
       action.newTask.deadline = todo.deadline;
     }
-    console.log(action.newTask);
     dispatchTodo(action);
   }
 

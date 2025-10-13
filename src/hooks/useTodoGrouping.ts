@@ -26,7 +26,8 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
   // 根据activeListId确定分组模式和过滤逻辑
   let groupMode: "normal" | "time" | "list" = "normal";
   let uncompletedTasks = tasks.filter(
-    (task) => !task.completed && !task.isPinned && !task.deletedAt,
+    // !task.completed && !task.isPinned && !task.deletedAt
+    (task) => !task.isPinned && !task.deletedAt,
   );
 
   let filteredTasks;
@@ -77,9 +78,10 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
   }
 
   // 在已完成模式下，显示所有已完成任务；否则只显示未完成任务
-  const displayTasks = isCompletedMode
-    ? filteredTasks
-    : filteredTasks.filter((task) => !task.completed);
+  // const displayTasks = isCompletedMode
+  //   ? filteredTasks
+  //   : filteredTasks.filter((task) => !task.completed);
+  const displayTasks = filteredTasks;
   const displayGroups: DisplayGroup[] = [];
 
   // 当任务或当前激活列表变化时，重新计算分组
