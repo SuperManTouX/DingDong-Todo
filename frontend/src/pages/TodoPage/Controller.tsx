@@ -72,7 +72,6 @@ export default function Controller({
   const handleDateSelect = (date: any) => {
     if (date) {
       const formattedDate = dayjs(date).format("YYYY-MM-DD");
-      console.log("Selected date:", formattedDate);
       // 设置截止日期状态
       setSelectedDeadline(formattedDate);
       message.info(`已选择截止日期: ${formattedDate}`);
@@ -236,9 +235,6 @@ export default function Controller({
   const enhancedOnAdded = () => {
     // 创建完整的任务对象
     const taskData = createTaskObject();
-
-    // 记录任务数据
-    console.log("添加新待办事项:", taskData);
 
     // 如果需要，可以在这里通过dispatchTodo直接添加任务
     dispatchTodo({

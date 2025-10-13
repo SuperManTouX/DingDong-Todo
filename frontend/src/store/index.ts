@@ -12,7 +12,7 @@ import { getListPinnedTodos } from "@/services/todoService";
 import { SpecialLists } from "@/constants";
 import sseService from "@/services/sseService";
 import type { TodoUpdateEvent } from "@/services/sseService";
-import { Todo, TreeTableData } from "@/types";
+import { type SSEUpdateData, Todo, TreeTableData } from "@/types";
 
 export const useTodoStore = create<TodoState>()(
   // 添加devtools中间件
@@ -72,7 +72,7 @@ export const useTodoStore = create<TodoState>()(
       // 任务实时更新功能
       const subscribeToTodoUpdates = () => {
         // @ts-ignore
-        return sseService.onTodoUpdate((event: TodoUpdateEvent) => {
+        return sseService.onTodoUpdate((event: SSEUpdateData) => {
           console.log("收到任务更新事件:", event);
 
           // 所有情况都使用handleTreeTasksUpdate处理任务更新
@@ -124,14 +124,14 @@ export const useTodoStore = create<TodoState>()(
               treeNode.children = childrenTasks.map((child) =>
                 buildSubTaskTree(tasks, child.id, depth + 1),
               );
-              
+
               // 计算子节点统计信息
               let totalChildren = 0;
               let completedChildren = 0;
-              
+
               // 递归计算所有子任务的数量和已完成数量
               const calculateStats = (nodes: TreeTableData[]) => {
-                nodes.forEach(node => {
+                nodes.forEach((node) => {
                   // 当前子节点计入总数
                   totalChildren++;
                   // 如果当前子节点已完成，计入已完成数量
@@ -144,10 +144,10 @@ export const useTodoStore = create<TodoState>()(
                   }
                 });
               };
-              
+
               // 开始计算统计信息
               calculateStats(treeNode.children);
-              
+
               // 设置统计属性
               treeNode.totalChildren = totalChildren;
               treeNode.completedChildren = completedChildren;
@@ -155,10 +155,9 @@ export const useTodoStore = create<TodoState>()(
 
             return treeNode;
           };
-          const allTasks = [...state.tasks, ...state.pinnedTasks];
-          const task = allTasks.find((t) => t.id === state.selectTodoId);
-
-          return task ? buildSubTaskTree(allTasks, task.id) : null;
+          const task = state.tasks.find((t) => t.id === state.selectTodoId);
+          console.log(state.tasks.filter((t) => t.completed));
+          return task ? buildSubTaskTree(state.tasks, task.id) : null;
         },
 
         // 任务相关操作
@@ -252,6 +251,6 @@ export const useTodoStore = create<TodoState>()(
         disconnectSSE: () => sseService.disconnect(),
       };
     },
-    { name: "TodoStore" },
+    { name: "TodoStore", trace: true },
   ),
 );

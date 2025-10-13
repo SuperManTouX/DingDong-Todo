@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Col, Dropdown, Menu, Drawer } from "antd";
+import { Col, Dropdown, Menu, Drawer, Button } from "antd";
 import type { MenuProps } from "antd";
 import { useAuthStore } from "@/store/authStore";
 import { useTodoStore } from "@/store/todoStore";
@@ -13,6 +13,7 @@ import {
   PieChartOutlined,
   SearchOutlined,
   SettingOutlined,
+  MenuOutlined,
 } from "@ant-design/icons";
 import type { Todo } from "@/types";
 import SearchModal from "@/components/SearchModal";
@@ -21,7 +22,10 @@ import SearchModal from "@/components/SearchModal";
  * 侧边栏导航组件
  * 用于显示应用的主要导航菜单和用户头像
  */
-const SidebarNav: React.FC = () => {
+const SidebarNav: React.FC<{
+  mobileVisible?: boolean;
+  onMobileClose?: () => void;
+}> = ({ mobileVisible, onMobileClose } = {}) => {
   const { user, logout } = useAuthStore();
   const { setUserId, setActiveListId, loadTasksByType } = useTodoStore();
   const [selectedKey, setSelectedKey] = React.useState("todos"); // 默认选中todos菜单项
@@ -71,6 +75,12 @@ const SidebarNav: React.FC = () => {
     // 处理菜单点击事件
     console.log("Menu item clicked:", key);
     setSelectedKey(key); // 更新选中的菜单项
+    
+    // 处理移动端点击菜单后关闭抽屉
+    if (mobileVisible && onMobileClose) {
+      onMobileClose();
+    }
+    
     // 当点击搜索菜单项时，显示搜索Modal
     if (key === "search") {
       setSearchModalVisible(true);
@@ -143,6 +153,82 @@ const SidebarNav: React.FC = () => {
     );
   };
 
+  // 移动端侧边栏内容
+  const renderMobileSidebar = () => (
+    <Drawer
+      title={user ? user.username : "任务管理"}
+      placement="left"
+      onClose={onMobileClose}
+      open={mobileVisible}
+      width="80%"
+      maxWidth={300}
+    >
+      {user && (
+        <div style={{ textAlign: "center", marginBottom: "24px", marginTop: "16px" }}>
+          <img
+            src={user.avatar}
+            alt={user.username}
+            style={{
+              width: 60,
+              height: 60,
+              borderRadius: "50%",
+              cursor: "pointer",
+            }}
+          />
+          <p style={{ marginTop: "8px" }}>{user.username}</p>
+        </div>
+      )}
+      
+      <Menu
+        mode="vertical"
+        className={
+          "sidebar-nav d-flex flex-column h-100 theme-bgcColor-primaryColor"
+        }
+        items={menuItems}
+        onClick={handleMenuClick}
+        selectedKeys={[selectedKey]}
+      />
+      
+      {user && (
+        <div style={{ marginTop: "auto", padding: "16px", textAlign: "center" }}>
+          <Button 
+            type="primary" 
+            danger 
+            onClick={handleLogout}
+            style={{ width: "100%" }}
+          >
+            退出登录
+          </Button>
+        </div>
+      )}
+    </Drawer>
+  );
+
+  // 如果是移动端调用（通过props判断），返回抽屉形式
+  if (mobileVisible !== undefined) {
+    return (
+      <>
+        {renderMobileSidebar()}
+        <SearchModal
+          visible={searchModalVisible}
+          onCancel={() => setSearchModalVisible(false)}
+          onSelectTask={handleTaskSelect}
+        />
+        <Drawer
+          title="邮件提醒"
+          placement="right"
+          onClose={() => setNotificationVisible(false)}
+          open={notificationVisible}
+          width={360}
+          extra={null}
+        >
+          <NotificationPanel />
+        </Drawer>
+      </>
+    );
+  }
+
+  // 桌面端侧边栏
   return (
     <Col
       className={"theme-bgcColor-primaryColor"}

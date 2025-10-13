@@ -1,4 +1,4 @@
-import { Tag } from "@/types";
+import { type SSEUpdateData, Tag } from "@/types";
 import { Todo } from "@/types";
 
 interface TagUpdateEvent {
@@ -70,10 +70,8 @@ class SseService {
    * 连接到SSE端点
    */
   connect(): void {
-    console.log("尝试建立SSE连接...");
     // 如果已经连接，则断开旧连接
     if (this.eventSource) {
-      console.log("发现已有SSE连接，正在断开旧连接...");
       this.disconnect();
     }
 
@@ -89,8 +87,6 @@ class SseService {
       // 注意：EventSource不支持自定义请求头，所以必须通过URL参数传递token
       // 使用相对路径，依赖前端的代理配置将请求转发到后端
       const url = `/events?token=${encodeURIComponent(token)}`;
-      console.log(`正在连接到SSE端点: ${url}`);
-      console.log(`当前URL: ${window.location.href}`);
 
       // 创建带认证token的EventSource
       this.eventSource = new EventSource(url);
@@ -155,6 +151,31 @@ class SseService {
         console.log("SSE连接已成功建立");
         this.reconnectAttempts = 0; // 重置重连计数
 
+        // SSE连接成功时，从store中订阅所有事件
+        try {
+          // 动态导入避免循环依赖
+          import("@/store/index").then(({ useTodoStore }) => {
+            const todoStore = useTodoStore.getState();
+            
+            // 订阅任务更新事件
+            todoStore.subscribeToTodoUpdates();
+            
+            // 订阅标签更新事件（如果存在）
+            if (todoStore.subscribeToTagUpdates) {
+              todoStore.subscribeToTagUpdates();
+            }
+            
+            // 订阅清单更新事件（如果存在）
+            if (todoStore.subscribeToListUpdates) {
+              todoStore.subscribeToListUpdates();
+            }
+            
+            console.log("已订阅所有SSE事件");
+          });
+        } catch (error) {
+          console.error("订阅SSE事件失败:", error);
+        }
+
         // 启动连接状态检查
         this.startStatusCheck();
       };
@@ -194,7 +215,6 @@ class SseService {
     this.listeners.clear();
     this.mainCallbacks.clear();
     this.subscriptionMap.clear();
-    console.log("已清除所有SSE订阅");
   }
 
   /**
@@ -313,7 +333,6 @@ class SseService {
 
     // 计算指数退避延迟
     const delay = this.baseReconnectDelay * Math.pow(2, this.reconnectAttempts);
-    console.log(`将在 ${delay}ms 后尝试重新连接SSE`);
 
     this.reconnectTimeoutId = window.setTimeout(() => {
       this.reconnectAttempts++;
@@ -336,7 +355,7 @@ class SseService {
         this.handleListUpdate(data as ListUpdateEvent);
         break;
       case "todo":
-        this.handleTodoUpdate(data as TodoUpdateEvent);
+        this.handleTodoUpdate(data as SSEUpdateData);
         break;
       default:
         console.warn("未知的实体类型事件:", data);
@@ -346,10 +365,12 @@ class SseService {
   /**
    * 处理任务更新事件
    */
-  private handleTodoUpdate(event: TodoUpdateEvent): void {
+  private handleTodoUpdate(event: SSEUpdateData): void {
     const listeners = this.listeners.get("todoUpdate");
+    console.log(listeners);
+
     if (listeners) {
-      console.log(`执行 ${listeners.length} 个todoUpdate事件监听器`);
+      console.log(listeners);
       listeners.forEach((listener) => listener(event));
     }
   }
@@ -360,7 +381,6 @@ class SseService {
   private handleTagUpdate(event: TagUpdateEvent): void {
     const listeners = this.listeners.get("tagUpdate");
     if (listeners) {
-      console.log(`执行 ${listeners.length} 个tagUpdate事件监听器`);
       listeners.forEach((listener) => listener(event));
     }
   }
@@ -371,7 +391,6 @@ class SseService {
   private handleListUpdate(event: ListUpdateEvent): void {
     const listeners = this.listeners.get("listUpdate");
     if (listeners) {
-      console.log(`执行 ${listeners.length} 个listUpdate事件监听器`);
       listeners.forEach((listener) => listener(event));
     }
   }
@@ -395,9 +414,6 @@ class SseService {
       type: subscriptionType,
       callback,
     });
-    console.log(
-      `添加新的${subscriptionType}订阅，ID: ${subscriptionId}, 当前订阅数: ${listeners.length}`,
-    );
 
     // 返回取消订阅函数
     return () => {
@@ -405,9 +421,6 @@ class SseService {
       if (index !== -1) {
         listeners.splice(index, 1);
         this.subscriptionMap.delete(subscriptionId);
-        console.log(
-          `取消${subscriptionType}订阅，ID: ${subscriptionId}, 剩余订阅数: ${listeners.length}`,
-        );
       }
     };
   }
@@ -431,9 +444,6 @@ class SseService {
       type: subscriptionType,
       callback,
     });
-    console.log(
-      `添加新的${subscriptionType}订阅，ID: ${subscriptionId}, 当前订阅数: ${listeners.length}`,
-    );
 
     // 返回取消订阅函数
     return () => {
@@ -441,9 +451,6 @@ class SseService {
       if (index !== -1) {
         listeners.splice(index, 1);
         this.subscriptionMap.delete(subscriptionId);
-        console.log(
-          `取消${subscriptionType}订阅，ID: ${subscriptionId}, 剩余订阅数: ${listeners.length}`,
-        );
       }
     };
   }
@@ -467,9 +474,6 @@ class SseService {
       type: subscriptionType,
       callback,
     });
-    console.log(
-      `添加新的${subscriptionType}订阅，ID: ${subscriptionId}, 当前订阅数: ${listeners.length}`,
-    );
 
     // 返回取消订阅函数
     return () => {
@@ -477,9 +481,6 @@ class SseService {
       if (index !== -1) {
         listeners.splice(index, 1);
         this.subscriptionMap.delete(subscriptionId);
-        console.log(
-          `取消${subscriptionType}订阅，ID: ${subscriptionId}, 剩余订阅数: ${listeners.length}`,
-        );
       }
     };
   }
@@ -492,7 +493,6 @@ class SseService {
   ): void {
     if (this.listeners.has(type)) {
       const listeners = this.listeners.get(type)!;
-      console.log(`清理所有${type}订阅，共${listeners.length}个`);
       listeners.length = 0; // 清空数组
     }
 

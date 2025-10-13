@@ -57,4 +57,7 @@ export interface TodoState {
     page?: number,
     pageSize?: number,
   ) => Promise<void>;
+  subscribeToTagUpdates: () => () => void;
+  subscribeToListUpdates: () => () => void;
+  subscribeToTodoUpdates: () => () => void;
 }

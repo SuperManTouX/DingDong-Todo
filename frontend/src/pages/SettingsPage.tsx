@@ -224,51 +224,10 @@ const SettingsPage: React.FC = () => {
             ))}
           </Select>
         </div>
-        <Divider />
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <span>自动切换主题</span>
-          <Switch />
-        </div>
+        
       </Card>
 
-      {/* 通知设置 */}
-      <Card title="通知设置" style={{ marginBottom: "16px" }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "16px",
-          }}
-        >
-          <span>启用桌面通知</span>
-          <Switch />
-        </div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <span>每日提醒</span>
-          <Switch />
-        </div>
-      </Card>
-
-      {/* 反馈 */}
-      <Card title="反馈">
-        <TextArea rows={4} placeholder="请输入您的建议或问题..." />
-        <Button type="primary" style={{ marginTop: "16px" }}>
-          提交反馈
-        </Button>
-      </Card>
+      
 
       {/* 修改个人信息弹窗 - 包含头像上传 */}
       <Modal

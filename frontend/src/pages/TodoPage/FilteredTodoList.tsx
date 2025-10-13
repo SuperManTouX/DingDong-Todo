@@ -11,12 +11,13 @@ import {
   Pagination,
   Spin,
 } from "antd";
-import React, { useCallback, useState, useEffect } from "react";
+import React, { useCallback, useState } from "react";
 import type { ColumnsType } from "antd/es/table";
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   EllipsisOutlined,
+  MenuOutlined,
 } from "@ant-design/icons";
 import ContextMenu from "../../components/ContextMenu";
 import TodoTask from "./TodoTask";
@@ -31,6 +32,7 @@ import TodoTreeTable, {
 } from "../../components/TodoTreeTable";
 import type { Todo, TreeTableData } from "@/types";
 import { getCompletedTasks } from "@/services/todoService";
+import SidebarNav from "../../Layout/SidebarNav";
 
 const { Header, Content, Footer } = Layout;
 
@@ -78,6 +80,10 @@ export default function FilteredTodoList({
   // 分页相关状态
   const [completedTasksPage, setCompletedTasksPage] = useState(1);
   const [completedTasksPageSize] = useState(10);
+  // 移动端侧边栏显示状态
+  const [mobileSidebarVisible, setMobileSidebarVisible] = useState(false);
+  // 使用全局设置中的移动端状态
+  const { isMobile } = useGlobalSettingsStore();
 
   // 下拉菜单配置
   const menuProps = {
@@ -111,8 +117,7 @@ export default function FilteredTodoList({
   };
 
   // 使用hooks获取各种功能
-  const { groupMode, displayGroups, displayUncompletedCount } =
-    useTodoGrouping(tasks);
+  const { groupMode, displayGroups, displayUncompletedCount } = useTodoGrouping(tasks);
   const {
     handleAdded,
     handleCompleteAll,
@@ -172,13 +177,25 @@ export default function FilteredTodoList({
       >
         <Row className={"h-100"} align={"middle"} justify="space-between">
           <Col>
-            <Button type="text" onClick={toggleCollapsed}>
-              {collapsed ? (
-                <MenuUnfoldOutlined style={{ cursor: "pointer" }} />
-              ) : (
-                <MenuFoldOutlined style={{ cursor: "pointer" }} />
-              )}
-            </Button>
+            {isMobile ? (
+              // 移动端显示汉堡菜单按钮
+              <Button 
+                type="text" 
+                onClick={() => setMobileSidebarVisible(true)}
+                style={{ marginRight: 16 }}
+              >
+                <MenuOutlined style={{ cursor: "pointer", fontSize: 20 }} />
+              </Button>
+            ) : (
+              // 桌面端显示折叠按钮
+              <Button type="text" onClick={toggleCollapsed}>
+                {collapsed ? (
+                  <MenuUnfoldOutlined style={{ cursor: "pointer" }} />
+                ) : (
+                  <MenuFoldOutlined style={{ cursor: "pointer" }} />
+                )}
+              </Button>
+            )}
             <Typography.Title level={4} className={"h-100 d-inline-block m-0"}>
               {groupName}
             </Typography.Title>
@@ -194,6 +211,14 @@ export default function FilteredTodoList({
           </Col>
         </Row>
       </Header>
+
+      {/*移动端侧边栏Drawer*/}
+      {isMobile && (
+        <SidebarNav 
+          mobileVisible={mobileSidebarVisible}
+          onMobileClose={() => setMobileSidebarVisible(false)}
+        />
+      )}
 
       {/*主内容区*/}
       <Content className="overflow-y-scroll custom-scrollbar minHeight-large pe-2 ps-2 ">

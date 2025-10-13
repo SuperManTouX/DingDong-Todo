@@ -21,7 +21,6 @@ export const useTodoDataLoader = () => {
       useAuthStore.getState().isAuthenticated;
 
     if (isInitialState) {
-      console.log("检测到初始状态，加载数据...");
       loadDataAll();
     }
   }, [loadDataAll]);
