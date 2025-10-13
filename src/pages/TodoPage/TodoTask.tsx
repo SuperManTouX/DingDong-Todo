@@ -87,22 +87,6 @@ export default function TodoTask({
     [],
   );
 
-  // // 处理输入框失焦
-  // const handleInputBlur = useCallback(() => {
-  //   isEditingRef.current = false;
-  //   // 确保最终值同步到全局状态
-  //   debouncedTitleUpdate.cancel(); // 取消可能的延迟更新
-  //   if (localTitleRef.current !== todo.title) {
-  //     dispatchTodo({
-  //       type: "changed",
-  //       todo: {
-  //         id: todo.id,
-  //         title: localTitleRef.current,
-  //       },
-  //     });
-  //   }
-  // }, [debouncedTitleUpdate, dispatchTodo, todo.id, todo.title]);
-
   // 根据tagId获取标签名称
   const getTagName = useCallback(
     (tagId: string) => {
@@ -113,7 +97,7 @@ export default function TodoTask({
     },
     [todoTags],
   );
-
+  console.log();
   // 渲染编辑输入框
   function renderEditInput() {
     return (
@@ -135,7 +119,6 @@ export default function TodoTask({
         }}
         className="border-none bg-transparent focus:ring-0 focus:outline-none"
       />
-      // <span>123</span>
     );
   }
 
@@ -147,7 +130,6 @@ export default function TodoTask({
         className={`cursor-pointer m-0 row d-flex justify-content-between highlight rounded pe-0 ps-0 pt-1 pb-1 ${selectTodoId === todo.id ? "selected-task" : ""}  ${other ? "opacity-25" : ""}`}
         onClick={() => {
           if (setSelectTodoId && selectTodoId !== todo.id) {
-            console.log(todo.id);
             setSelectTodoId(todo.id);
             if (isMobile) {
               // 直接调用store中的方法打开Drawer

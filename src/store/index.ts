@@ -12,6 +12,7 @@ import { getListPinnedTodos } from "@/services/todoService";
 import { SpecialLists } from "@/constants";
 import sseService from "@/services/sseService";
 import type { TodoUpdateEvent } from "@/services/sseService";
+import { Todo, TreeTableData } from "@/types";
 
 export const useTodoStore = create<TodoState>()(
   // 添加devtools中间件
@@ -73,7 +74,7 @@ export const useTodoStore = create<TodoState>()(
         // @ts-ignore
         return sseService.onTodoUpdate((event: TodoUpdateEvent) => {
           console.log("收到任务更新事件:", event);
-          
+
           // 所有情况都使用handleTreeTasksUpdate处理任务更新
           todoActions.handleTreeTasksUpdate(event, set, get);
         });
@@ -95,13 +96,42 @@ export const useTodoStore = create<TodoState>()(
         needsTableReload: false, // 初始化表格刷新标记
         isTasksLoading: false, // 初始化任务加载状态
 
+        // 返回子树
         selectTodo: () => {
           const state = get();
           if (!state.selectTodoId) return null;
-          return (
-            state.tasks.find((todo) => todo.id === state.selectTodoId) ||
-            state.pinnedTasks.find((todo) => todo.id === state.selectTodoId)
-          );
+          // 有子任务时才有children属性
+          const buildSubTaskTree = (
+            tasks: Todo[],
+            parentId: string,
+            depth: number = 0,
+          ): TreeTableData => {
+            const task = tasks.find((t) => t.id === parentId);
+            if (!task) throw new Error(`Task with id ${parentId} not found`);
+
+            // 先获取所有子任务
+            const childrenTasks = tasks.filter((t) => t.parentId === parentId);
+
+            // 构建基础任务对象
+            const treeNode: TreeTableData = {
+              ...task,
+              key: task.id,
+              depth,
+            };
+
+            // 只有当有子任务时才添加 children 属性
+            if (childrenTasks.length > 0) {
+              treeNode.children = childrenTasks.map((child) =>
+                buildSubTaskTree(tasks, child.id, depth + 1),
+              );
+            }
+
+            return treeNode;
+          };
+          const allTasks = [...state.tasks, ...state.pinnedTasks];
+          const task = allTasks.find((t) => t.id === state.selectTodoId);
+
+          return task ? buildSubTaskTree(allTasks, task.id) : null;
         },
 
         // 任务相关操作
