@@ -1,4 +1,10 @@
-import type { TodoListData, Todo, Tag, TodoActionExtended } from "@/types";
+import {
+  TodoListData,
+  Todo,
+  Tag,
+  TodoActionExtended,
+  TreeTableData,
+} from "@/types";
 import type { TagReducerAction, ListGroupAction } from "@/types";
 import type { Group } from "@/types/group";
 
@@ -19,7 +25,7 @@ export interface TodoState {
 
   // 计算属性 - 这些属性在持久化时会被忽略
   activeGroup(): TodoListData;
-  selectTodo(): Todo | null;
+  selectTodo(): TreeTableData | null;
 
   // 处理todo相关的action
   dispatchTodo: (action: TodoActionExtended) => Promise<void>;

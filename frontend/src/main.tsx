@@ -77,9 +77,9 @@ const AppWithTheme: React.FC = () => {
 };
 
 createRoot(document.getElementById("root")!).render(
-  // <StrictMode>
-  <HotkeysProvider>
-    <AppWithTheme />
-  </HotkeysProvider>,
-  // </StrictMode>,
+  <StrictMode>
+    <HotkeysProvider>
+      <AppWithTheme />
+    </HotkeysProvider>
+  </StrictMode>,
 );

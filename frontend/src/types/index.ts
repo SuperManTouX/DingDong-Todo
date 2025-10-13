@@ -223,7 +223,7 @@ export type TagReducerAction =
   | InitializeTagsAction;
 
 export interface TodoItemProps {
-  todo: Todo;
+  todo: TreeTableData;
   other?: boolean;
   onToggleExpand?: () => void;
 }
@@ -245,4 +245,9 @@ export interface ContextMenuProps {
 
 export interface SideMenuProps {
   menuItem: MenuProps["items"];
+}
+// 定义树形表格数据类型
+export interface TreeTableData extends Todo {
+  key: string;
+  children?: TreeTableData[];
 }

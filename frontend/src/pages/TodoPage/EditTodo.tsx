@@ -12,6 +12,7 @@ import TodoCheckbox from "@/components/TodoCheckbox";
 import TaskDateTimePicker from "@/components/TaskDateTimePicker";
 import sseService, { TodoUpdateEvent } from "@/services/sseService";
 import { debounce } from "lodash";
+import { Todo, TreeTableData } from "@/types";
 
 // 解构Layout组件
 const { Header, Content, Footer } = Layout;
@@ -30,8 +31,14 @@ export default function EditTodo({
   onClose,
   PTableDOM,
 }: EditTodoProps) {
-  const { todoTags, todoListData, selectTodoId, selectTodo, tasks } =
-    useTodoStore();
+  const {
+    todoTags,
+    todoListData,
+    selectTodoId,
+    selectTodo,
+    tasks,
+    selectTreeData,
+  } = useTodoStore();
   const { currentTheme } = useThemeStore();
   const { token } = theme.useToken();
 
@@ -50,6 +57,7 @@ export default function EditTodo({
   // 当selectTodoId变化时获取任务数据
   useEffect(() => {
     const s = selectTodo();
+    console.log(s);
     // 当selectTodoId存在时，使用store中的selectTodo更新本地state
     if (selectTodoId) {
       setEselectTodo(s);
@@ -61,7 +69,7 @@ export default function EditTodo({
       setTitleValue("");
       setTextValue("");
     }
-  }, [selectTodoId, EselectTodo, setEselectTodo, setTitleValue, tasks]);
+  }, [selectTodoId, tasks]);
 
   // 处理标签点击添加
   const handleTagClick = (tagId: string) => {

@@ -1,6 +1,6 @@
 import type { TodoState } from "../types";
 import { useTodoStore } from "@/store";
-import type { Todo, TodoListData } from "@/types";
+import type { Todo, TodoListData, TreeTableData } from "@/types";
 import { useAuthStore } from "@/store/authStore";
 import { SpecialLists } from "@/constants";
 
@@ -112,6 +112,15 @@ export const utilsActions = {
   setActiveListId: (id: string, set: any): void => {
     try {
       set({ activeListId: id });
+    } catch (error) {
+      console.error("Error in setActiveListId:", error);
+    }
+  },
+
+  //设置激活的树节点
+  setSelectTreeData: (treeData: TreeTableData, set: any): void => {
+    try {
+      set({ selectTreeData: treeData });
     } catch (error) {
       console.error("Error in setActiveListId:", error);
     }
