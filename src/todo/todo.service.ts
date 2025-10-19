@@ -577,7 +577,8 @@ export class TaskService {
     
     // 永久删除当前任务（先删除关联关系）
     await entityManager.delete('task_tag', { taskId });
-    await entityManager.delete(Task, { id: taskId, userId });
+    // 确保只删除已标记为删除的任务，增加安全保障
+    await entityManager.delete(Task, { id: taskId, userId, deletedAt: Not(IsNull()) });
   }
 
   /**
@@ -1226,9 +1227,9 @@ export class TaskService {
    * @returns 是否删除成功
    */
   async hardDeleteAll(userId: string): Promise<boolean> {
-    // 查找用户的所有根任务（没有父任务的任务）
+    // 查找用户的所有已删除的根任务（没有父任务且已被删除的任务）
     const rootTasks = await this.taskRepository.find({
-      where: { userId, parentId: IsNull() }
+      where: { userId, parentId: IsNull(), deletedAt: Not(IsNull()) }
     });
     
     // 获取所有要删除的任务ID

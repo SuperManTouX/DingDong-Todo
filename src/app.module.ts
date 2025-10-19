@@ -10,6 +10,9 @@ import { TaskGroupModule } from './task-group/task-group.module';
 import { FocusRecordModule } from './focus-record/focus-record.module';
 import { SseModule } from './sse/sse.module';
 import { S3Config } from './config/s3.config';
+import { OssConfig } from './config/oss.config';
+import { MailModule } from './mail/mail.module';
+import { FileModule } from './file/file.module';
 
 // 自定义请求日志中间件
 function RequestLoggingMiddleware(req: any, res: any, next: () => void) {
@@ -62,9 +65,11 @@ function RequestLoggingMiddleware(req: any, res: any, next: () => void) {
     TaskGroupModule,
     FocusRecordModule,
     SseModule,
+    MailModule,
+    FileModule,
   ],
-  providers: [S3Config],
-  exports: [S3Config]
+  providers: [S3Config, OssConfig],
+  exports: [S3Config, OssConfig]
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

@@ -8,7 +8,7 @@ import { UserService } from '../user/user.service';
 // 定义SSE事件接口
 export interface SseEvent {
   entity: 'tag' | 'list' | 'todo' | 'system';
-  type?: "create" | "update" | "delete" | "update_with_children" | "connected";
+  type?: "create" | "update" | "delete" | "update_with_children" | "connected" | "heartbeat";
   action?: "update_tree_node_with_children";
   parent?: any;
   childrenChanges?: { add?: any[], update?: any[], delete?: any[] };
@@ -18,6 +18,7 @@ export interface SseEvent {
 // 定义用户连接信息接口
 interface UserConnection {
   userId: string;
+  connectionId: string; // 添加连接ID，用于标识不同设备的连接
   subject: Subject<SseEvent>;
   cleanup: () => void;
   lastActivity: Date;
@@ -25,8 +26,9 @@ interface UserConnection {
 
 @Injectable()
 export class SseService {
-  // 用户连接映射表
-  private userConnections: Map<string, UserConnection> = new Map();
+  // 修改为支持一个用户多个连接的映射表
+  private userConnections: Map<string, UserConnection[]> = new Map();
+  private heartbeatIntervalId: NodeJS.Timeout | null = null;
   
   constructor(
     @Inject(EventEmitter2)
@@ -36,6 +38,8 @@ export class SseService {
   ) {
     // 启动连接清理定时器
     this.startConnectionCleanup();
+    // 启动心跳定时器
+    this.startHeartbeatInterval();
   }
 
   /**
@@ -46,14 +50,17 @@ export class SseService {
   createSseStream(userId: string): Observable<SseEvent> {
     console.log(`尝试为用户 ${userId} 建立SSE连接`);
     
-    // 检查用户是否已有活跃连接
-    if (this.userConnections.has(userId)) {
-      console.log(`用户 ${userId} 已有活跃连接，关闭旧连接`);
-      // 关闭旧连接
-      this.closeUserConnection(userId);
-    }
+    // 生成唯一的连接ID
+    const connectionId = `${userId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    console.log(`为用户 ${userId} 生成连接ID: ${connectionId}`);
 
     const subject = new Subject<SseEvent>();
+    
+    // 如果用户还没有连接列表，创建一个空数组
+    if (!this.userConnections.has(userId)) {
+      this.userConnections.set(userId, []);
+    }
 
     // 监听tag.updated事件
     const tagListener = (event: any) => {
@@ -66,9 +73,20 @@ export class SseService {
           tagId: event.tagId,
           timestamp: event.timestamp,
         };
-        console.log(`向用户 ${userId} 发送标签更新事件:`, eventData);
-        subject.next(eventData);
-        this.updateUserActivity(userId);
+        
+        // 获取用户的所有活跃连接
+        const userConnectionList = this.userConnections.get(userId);
+        if (userConnectionList) {
+          console.log(`向用户 ${userId} 的 ${userConnectionList.length} 个连接广播标签更新事件`);
+          
+          // 广播事件到用户的所有连接
+          userConnectionList.forEach(conn => {
+            if (!conn.subject.closed) {
+              conn.subject.next(eventData);
+              this.updateUserActivity(userId, conn.connectionId);
+            }
+          });
+        }
       }
     };
 
@@ -85,9 +103,20 @@ export class SseService {
           mode: event.mode,
           timestamp: event.timestamp,
         };
-        console.log(`向用户 ${userId} 发送清单更新事件:`, eventData);
-        subject.next(eventData);
-        this.updateUserActivity(userId);
+        
+        // 获取用户的所有活跃连接
+        const userConnectionList = this.userConnections.get(userId);
+        if (userConnectionList) {
+          console.log(`向用户 ${userId} 的 ${userConnectionList.length} 个连接广播清单更新事件`);
+          
+          // 广播事件到用户的所有连接
+          userConnectionList.forEach(conn => {
+            if (!conn.subject.closed) {
+              conn.subject.next(eventData);
+              this.updateUserActivity(userId, conn.connectionId);
+            }
+          });
+        }
       }
     };
 
@@ -101,19 +130,30 @@ export class SseService {
           parent: event.parent,
           childrenChanges: event.childrenChanges
         };
-        console.log(`向用户 ${userId} 发送任务更新事件:`, eventData);
-        subject.next(eventData);
-        this.updateUserActivity(userId);
+        
+        // 获取用户的所有活跃连接
+        const userConnectionList = this.userConnections.get(userId);
+        if (userConnectionList) {
+          console.log(`向用户 ${userId} 的 ${userConnectionList.length} 个连接广播任务更新事件`);
+          
+          // 广播事件到用户的所有连接
+          userConnectionList.forEach(conn => {
+            if (!conn.subject.closed) {
+              conn.subject.next(eventData);
+              this.updateUserActivity(userId, conn.connectionId);
+            }
+          });
+        }
       }
     };
 
     // 清理函数，在连接关闭时移除监听器
     const cleanup = () => {
-      console.log(`清理用户 ${userId} 的SSE连接`);
+      console.log(`清理用户 ${userId} 的连接 ${connectionId}`);
       this.eventEmitter.off('tag.updated', tagListener);
       this.eventEmitter.off('list.updated', listListener);
       this.eventEmitter.off('todo.updated', todoListener);
-      this.closeUserConnection(userId);
+      this.closeConnection(userId, connectionId);
     };
 
     // 注册事件监听器
@@ -125,13 +165,23 @@ export class SseService {
     // 存储用户连接信息
     const connection: UserConnection = {
       userId,
+      connectionId,
       subject,
       cleanup,
       lastActivity: new Date(),
     };
     
-    this.userConnections.set(userId, connection);
-    console.log(`用户 ${userId} SSE连接已创建，当前活跃连接数: ${this.userConnections.size}`);
+    // 将新连接添加到用户的连接列表中
+    const userConnectionList = this.userConnections.get(userId)!;
+    userConnectionList.push(connection);
+    
+    // 计算所有用户的总连接数
+    let totalConnections = 0;
+    this.userConnections.forEach(connections => {
+      totalConnections += connections.length;
+    });
+    
+    console.log(`用户 ${userId} 的连接 ${connectionId} 已创建，用户当前连接数: ${userConnectionList.length}，总活跃连接数: ${totalConnections}`);
 
     // 发送一个连接确认事件
     subject.next({
@@ -148,29 +198,80 @@ export class SseService {
   }
 
   /**
-   * 关闭用户连接
+   * 关闭特定的用户连接
    */
-  private closeUserConnection(userId: string): void {
-    const connection = this.userConnections.get(userId);
-    if (connection) {
-      // 完成Subject
-      if (!connection.subject.closed) {
-        connection.subject.complete();
+  private closeConnection(userId: string, connectionId: string): void {
+    const userConnectionList = this.userConnections.get(userId);
+    if (userConnectionList) {
+      const connectionIndex = userConnectionList.findIndex(conn => conn.connectionId === connectionId);
+      
+      if (connectionIndex !== -1) {
+        const connection = userConnectionList[connectionIndex];
+        
+        // 完成Subject
+        if (!connection.subject.closed) {
+          connection.subject.complete();
+        }
+        
+        // 从连接列表中移除
+        userConnectionList.splice(connectionIndex, 1);
+        
+        // 如果用户没有连接了，从映射表中删除该用户
+        if (userConnectionList.length === 0) {
+          this.userConnections.delete(userId);
+          console.log(`用户 ${userId} 所有连接已清理，已从映射表中删除`);
+        } else {
+          console.log(`用户 ${userId} 的连接 ${connectionId} 已清理，剩余连接数: ${userConnectionList.length}`);
+        }
+        
+        // 计算所有用户的总连接数
+        let totalConnections = 0;
+        this.userConnections.forEach(connections => {
+          totalConnections += connections.length;
+        });
+        
+        console.log(`剩余总活跃连接数: ${totalConnections}`);
       }
+    }
+  }
+  
+  /**
+   * 关闭用户的所有连接（可选，用于特殊情况）
+   */
+  private closeAllUserConnections(userId: string): void {
+    const userConnectionList = this.userConnections.get(userId);
+    if (userConnectionList) {
+      // 关闭所有连接
+      userConnectionList.forEach(connection => {
+        if (!connection.subject.closed) {
+          connection.subject.complete();
+        }
+      });
       
       // 从映射表中删除
       this.userConnections.delete(userId);
-      console.log(`用户 ${userId} 连接已完全清理，剩余活跃连接数: ${this.userConnections.size}`);
+      console.log(`用户 ${userId} 的所有 ${userConnectionList.length} 个连接已关闭`);
+      
+      // 计算所有用户的总连接数
+      let totalConnections = 0;
+      this.userConnections.forEach(connections => {
+        totalConnections += connections.length;
+      });
+      
+      console.log(`剩余总活跃连接数: ${totalConnections}`);
     }
   }
 
   /**
-   * 更新用户的最后活动时间
+   * 更新特定连接的最后活动时间
    */
-  private updateUserActivity(userId: string): void {
-    const connection = this.userConnections.get(userId);
-    if (connection) {
-      connection.lastActivity = new Date();
+  private updateUserActivity(userId: string, connectionId: string): void {
+    const userConnectionList = this.userConnections.get(userId);
+    if (userConnectionList) {
+      const connection = userConnectionList.find(conn => conn.connectionId === connectionId);
+      if (connection) {
+        connection.lastActivity = new Date();
+      }
     }
   }
 
@@ -185,24 +286,96 @@ export class SseService {
   }
 
   /**
+   * 启动定期发送心跳事件的定时器
+   */
+  private startHeartbeatInterval(): void {
+    // 每30秒发送一次心跳事件
+    this.heartbeatIntervalId = setInterval(() => {
+      this.sendHeartbeatToAllConnections();
+    }, 30 * 1000);
+    console.log('SSE心跳机制已启动，每30秒发送一次心跳事件');
+  }
+
+  /**
+   * 向所有活跃连接发送心跳事件
+   */
+  private sendHeartbeatToAllConnections(): void {
+    const heartbeatEvent: SseEvent = {
+      entity: 'system',
+      type: 'heartbeat',
+      timestamp: new Date(),
+      message: 'SSE心跳事件'
+    };
+
+    let sentCount = 0;
+    
+    // 向所有用户的所有连接发送心跳事件
+    this.userConnections.forEach((userConnectionList, userId) => {
+      userConnectionList.forEach(connection => {
+        if (!connection.subject.closed) {
+          connection.subject.next(heartbeatEvent);
+          this.updateUserActivity(userId, connection.connectionId);
+          sentCount++;
+        }
+      });
+    });
+
+    if (sentCount > 0) {
+      console.log(`已向 ${sentCount} 个活跃连接发送心跳事件`);
+    }
+  }
+
+  /**
    * 清理过期连接（超过15分钟无活动的连接）
    */
   private cleanupExpiredConnections(): void {
     const now = new Date();
     const expirationTime = new Date(now.getTime() - 15 * 60 * 1000); // 15分钟前
     
-    console.log(`开始清理过期连接，当前连接数: ${this.userConnections.size}`);
+    // 计算所有用户的总连接数
+    let totalConnections = 0;
+    this.userConnections.forEach(connections => {
+      totalConnections += connections.length;
+    });
+    
+    console.log(`开始清理过期连接，当前总连接数: ${totalConnections}`);
     
     let cleanedCount = 0;
-    this.userConnections.forEach((connection, userId) => {
-      if (connection.lastActivity < expirationTime) {
-        console.log(`清理过期连接，用户: ${userId}，最后活动时间: ${connection.lastActivity}`);
-        this.closeUserConnection(userId);
-        cleanedCount++;
+    
+    // 遍历所有用户
+    this.userConnections.forEach((userConnectionList, userId) => {
+      // 创建一个副本进行遍历，避免在遍历过程中修改数组
+      [...userConnectionList].forEach(connection => {
+        if (connection.lastActivity < expirationTime) {
+          console.log(`清理过期连接，用户: ${userId}，连接ID: ${connection.connectionId}，最后活动时间: ${connection.lastActivity}`);
+          
+          // 完成Subject
+          if (!connection.subject.closed) {
+            connection.subject.complete();
+          }
+          
+          // 从连接列表中移除
+          const connectionIndex = userConnectionList.findIndex(conn => conn.connectionId === connection.connectionId);
+          if (connectionIndex !== -1) {
+            userConnectionList.splice(connectionIndex, 1);
+            cleanedCount++;
+          }
+        }
+      });
+      
+      // 如果用户没有连接了，从映射表中删除该用户
+      if (userConnectionList.length === 0) {
+        this.userConnections.delete(userId);
       }
     });
     
-    console.log(`连接清理完成，清理了 ${cleanedCount} 个过期连接，剩余 ${this.userConnections.size} 个连接`);
+    // 重新计算剩余连接数
+    totalConnections = 0;
+    this.userConnections.forEach(connections => {
+      totalConnections += connections.length;
+    });
+    
+    console.log(`连接清理完成，清理了 ${cleanedCount} 个过期连接，剩余 ${totalConnections} 个连接`);
   }
 
   /**
@@ -243,6 +416,18 @@ export class SseService {
    * 获取当前活跃连接数
    */
   getActiveConnectionCount(): number {
-    return this.userConnections.size;
+    let totalConnections = 0;
+    this.userConnections.forEach(connections => {
+      totalConnections += connections.length;
+    });
+    return totalConnections;
+  }
+  
+  /**
+   * 获取指定用户的连接数
+   */
+  getUserConnectionCount(userId: string): number {
+    const userConnectionList = this.userConnections.get(userId);
+    return userConnectionList ? userConnectionList.length : 0;
   }
 }

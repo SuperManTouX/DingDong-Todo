@@ -1,17 +1,28 @@
 import { Injectable } from '@nestjs/common';
-import * as OSS from 'ali-oss';
+// 使用正确的导入方式
+let OSS;
+try {
+  OSS = require('ali-oss');
+} catch (error) {
+  console.warn('ali-oss包未正确安装或无法加载');
+  // 创建一个空对象作为备用
+  OSS = {}
+}
 
 @Injectable()
 export class OssConfig {
   private readonly region: string;
   private readonly bucketName: string;
 
+  private readonly endpoint: string;
+
   constructor() {
     // 尝试从环境变量获取配置，提供默认值作为后备
     this.region = process.env.OSS_REGION || 'oss-cn-beijing';
     this.bucketName = process.env.OSS_BUCKET || process.env.OSS_BUCKET_NAME || 'todo-avatar';
+    this.endpoint = process.env.OSS_ENDPOINT || `https://${this.region}.aliyuncs.com`;
     
-    console.log(`OSS配置初始化 - 区域: ${this.region}, Bucket名称: ${this.bucketName}`);
+    console.log(`OSS配置初始化 - 区域: ${this.region}, Bucket名称: ${this.bucketName}, Endpoint: ${this.endpoint}`);
     
     // 检查必需的环境变量是否存在（仅记录警告，不阻止初始化）
     this.checkEnvironmentVariables();
@@ -150,20 +161,45 @@ export class OssConfig {
   /**
    * 创建OSS客户端（使用临时凭证）
    * @param credentials 临时访问凭证
-   * @returns OSS客户端实例
+   * @returns OSS客户端实例或null（如果创建失败）
    */
   createOssClient(credentials: {
     AccessKeyId: string;
     AccessKeySecret: string;
     SecurityToken: string;
   }) {
-    return new OSS({
-      region: this.region,
-      accessKeyId: credentials.AccessKeyId,
-      accessKeySecret: credentials.AccessKeySecret,
-      stsToken: credentials.SecurityToken,
-      bucket: this.bucketName,
-    });
+    try {
+      // 检查OSS是否可用
+      if (typeof OSS !== 'function' && typeof OSS.OSS !== 'function') {
+        console.error('OSS库未正确加载，无法创建客户端');
+        return null;
+      }
+      
+      // 根据OSS库的导出方式创建客户端
+      const OSSConstructor = typeof OSS === 'function' ? OSS : OSS.OSS;
+      
+      // 创建OSS客户端配置，包含所有可能的属性
+      const clientConfig = {
+        accessKeyId: credentials.AccessKeyId,
+        accessKeySecret: credentials.AccessKeySecret,
+        stsToken: credentials.SecurityToken,
+        bucket: this.bucketName,
+        // 同时设置endpoint和region，但在使用时会优先使用endpoint
+        endpoint: this.endpoint,
+        region: this.region
+      };
+      
+      console.log('创建OSS客户端配置:', {
+        endpoint: this.endpoint ? '已设置' : '未设置',
+        region: this.region,
+        bucket: this.bucketName
+      });
+      
+      return new OSSConstructor(clientConfig);
+    } catch (error) {
+      console.error('创建OSS客户端失败:', error.message || error);
+      return null;
+    }
   }
 
   /**
@@ -172,7 +208,12 @@ export class OssConfig {
    * @returns 可访问的URL
    */
   getObjectUrl(objectKey: string): string {
-    return `https://${this.bucketName}.${this.region}.aliyuncs.com/${objectKey}`;
+    // 确保objectKey不以/开头
+    const cleanObjectKey = objectKey.startsWith('/') ? objectKey.substring(1) : objectKey;
+    
+    // 生成标准的阿里云OSS访问URL格式
+    // 根据用户提供的可访问URL示例：https://todo-avatar.oss-cn-beijing.aliyuncs.com/avatars/user-001/1758975264618.jpg
+    return `https://${this.bucketName}.${this.region}.aliyuncs.com/${cleanObjectKey}`;
   }
 
   /**
@@ -187,5 +228,12 @@ export class OssConfig {
    */
   getRegion(): string {
     return this.region;
+  }
+  
+  /**
+   * 获取OSS端点
+   */
+  getEndpoint(): string {
+    return this.endpoint;
   }
 }

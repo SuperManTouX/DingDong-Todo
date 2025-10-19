@@ -446,7 +446,46 @@ VALUES
   ('bin-006', '已完成的健身任务', '完成30天健身挑战', true, 2, '2025-09-01T07:00:00.000Z', '2025-09-05T00:00:00.000Z', NULL, 0, 'todolist-005', 'group-007', 'user-003', '2025-09-01 07:00:00', '2025-09-05 18:30:00', '2025-09-08 08:20:00'),
   ('bin-007', '取消的户外活动', '由于天气原因取消的徒步计划', false, 1, '2025-09-09T09:00:00.000Z', '2025-09-10T00:00:00.000Z', NULL, 0, 'todolist-005', NULL, 'user-003', '2025-09-09 09:00:00', '2025-09-09 09:00:00', '2025-09-09 11:30:00');
 
--- 15. 创建索引以优化查询性能
+-- 15. 创建OSS文件相关表
+-- 创建OSS文件主表
+CREATE TABLE IF NOT EXISTS oss_files (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  file_name VARCHAR(255) NOT NULL COMMENT '文件名',
+  object_key VARCHAR(255) NOT NULL COMMENT 'OSS对象键（缩短长度以避免索引过长）',
+  file_type VARCHAR(50) NOT NULL COMMENT '文件类型/扩展名',
+  file_size BIGINT NOT NULL COMMENT '文件大小（字节）',
+  oss_url VARCHAR(255) NOT NULL COMMENT 'OSS文件完整URL（缩短长度）',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '上传时间',
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  INDEX idx_object_key (object_key(191)),  -- 限制索引长度为191个字符
+  INDEX idx_file_type (file_type)
+) COMMENT 'OSS文件主表';
+
+-- 创建任务附件关联表
+CREATE TABLE IF NOT EXISTS task_attachments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  file_id INT NOT NULL COMMENT '关联oss_files表的ID',
+  task_id VARCHAR(36) NOT NULL COMMENT '关联任务表的ID',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  INDEX idx_task_id (task_id),
+  INDEX idx_file_id (file_id),
+  FOREIGN KEY (file_id) REFERENCES oss_files(id) ON DELETE CASCADE
+) COMMENT '任务附件关联表';
+
+-- 创建用户头像关联表
+CREATE TABLE IF NOT EXISTS user_avatars (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  file_id INT NOT NULL COMMENT '关联oss_files表的ID',
+  user_id VARCHAR(36) NOT NULL COMMENT '关联用户表的ID',
+  is_default BOOLEAN DEFAULT FALSE COMMENT '是否为默认头像',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  INDEX idx_user_id (user_id),
+  INDEX idx_file_id (file_id),
+  INDEX idx_user_default (user_id, is_default) COMMENT '每个用户只能有一个默认头像',
+  FOREIGN KEY (file_id) REFERENCES oss_files(id) ON DELETE CASCADE
+) COMMENT '用户头像关联表';
+
+-- 16. 创建索引以优化查询性能
 ALTER TABLE task ADD INDEX idx_task_user_id (user_id);
 ALTER TABLE task ADD INDEX idx_task_list_id (list_id);
 ALTER TABLE task ADD INDEX idx_task_group_id (group_id);
@@ -457,7 +496,12 @@ ALTER TABLE todo_tag ADD INDEX idx_todo_tag_parent_id (parent_id);
 ALTER TABLE bin ADD INDEX idx_bin_user_id (user_id);
 ALTER TABLE bin ADD INDEX idx_bin_deleted_at (deleted_at);
 
--- 16. 创建专注记录表（在所有依赖表数据插入后创建）
+-- 为OSS相关表添加索引
+ALTER TABLE oss_files ADD INDEX idx_oss_files_created_at (created_at);
+ALTER TABLE task_attachments ADD INDEX idx_task_attachments_created_at (created_at);
+ALTER TABLE user_avatars ADD INDEX idx_user_avatars_created_at (created_at);
+
+-- 17. 创建专注记录表（在所有依赖表数据插入后创建）
 CREATE TABLE IF NOT EXISTS focus_record (
   id VARCHAR(36) NOT NULL PRIMARY KEY,
   user_id VARCHAR(36) NOT NULL,
