@@ -13,11 +13,23 @@ import {
   message,
   Form,
   Space,
+  Dropdown,
+  Menu,
+  Row,
 } from "antd";
-import { UploadOutlined, UserOutlined, EditOutlined } from "@ant-design/icons";
+import {
+  UploadOutlined,
+  UserOutlined,
+  EditOutlined,
+  DeleteOutlined,
+} from "@ant-design/icons";
 import { useThemeStore } from "@/store/themeStore";
 import { useAuthStore } from "@/store/authStore";
-import { uploadAvatar, updateUserProfile } from "@/services/userService";
+import {
+  uploadAvatar,
+  updateUserProfile,
+  deleteUserAvatar,
+} from "@/services/userService";
 import { MAX_UPLOAD_SIZE, SUPPORTED_IMAGE_TYPES } from "@/constants/config";
 import type { UploadProps } from "antd";
 import type { RuleObject } from "antd/es/form";
@@ -77,8 +89,9 @@ const SettingsPage: React.FC = () => {
   // 上传配置
   const uploadProps: UploadProps = {
     name: "avatar",
-    listType: "picture",
-    showUploadList: true,
+    listType: "picture-card",
+    className: "avatar-uploader",
+    showUploadList: false,
     customRequest,
     beforeUpload: (file) => {
       const isSupportedType = SUPPORTED_IMAGE_TYPES.includes(file.type);
@@ -257,21 +270,22 @@ const SettingsPage: React.FC = () => {
         >
           {/* 头像上传区域 */}
           <div style={{ textAlign: "center", marginBottom: "24px" }}>
-            <Avatar
-              size={120}
-              src={tempAvatar || user?.avatar}
-              icon={<UserOutlined />}
-              style={{ marginBottom: "16px" }}
-            />
-            <Upload {...uploadProps}>
-              <Button
-                icon={<UploadOutlined />}
-                loading={avatarUploading}
-                disabled={loading}
-              >
-                上传新头像
-              </Button>
-            </Upload>
+            <Row justify={"center"}>
+              <Avatar
+                size={120}
+                src={tempAvatar || user?.avatar}
+                icon={<UserOutlined />}
+                style={{ marginBottom: "16px" }}
+              />
+              <Upload {...uploadProps}>
+                <div style={{ textAlign: "center" }}>
+                  {tempAvatar || user?.avatar ? null : (
+                    <UploadOutlined style={{ fontSize: 24, color: "#999" }} />
+                  )}
+                  <div style={{ marginTop: 8 }}>点击更换头像</div>
+                </div>
+              </Upload>
+            </Row>
             <Text
               type="secondary"
               style={{ display: "block", marginTop: "8px" }}
@@ -286,7 +300,7 @@ const SettingsPage: React.FC = () => {
                   type="secondary"
                   style={{ display: "block", marginBottom: "8px" }}
                 >
-                  历史头像
+                  历史头像 (右键可删除)
                 </Text>
                 <div
                   style={{
@@ -298,48 +312,100 @@ const SettingsPage: React.FC = () => {
                     maxWidth: "100%",
                   }}
                 >
-                  {avatarHistory.map((avatarInfo, index) => (
-                    <div
-                      key={index}
-                      style={{
-                        flexShrink: 0,
-                        cursor: "pointer",
-                        position: "relative",
-                        opacity: tempAvatar === avatarInfo ? 0.7 : 1,
-                      }}
-                      onClick={() => {
-                        setTempAvatar(avatarInfo.url);
-                        setSelectedAvatarFile(null); // 清除选中的文件，因为现在使用的是历史头像
-                        message.success("已选择历史头像");
-                      }}
-                    >
-                      <Avatar
-                        size={64}
-                        src={avatarInfo.url}
-                        icon={<UserOutlined />}
-                        style={{
-                          border:
-                            tempAvatar === avatarInfo.url
-                              ? "2px solid #1890ff"
-                              : "1px solid #d9d9d9",
-                          transition: "all 0.3s",
-                        }}
-                      />
-                      {tempAvatar === avatarInfo.url && (
+                  {avatarHistory.map((avatarInfo, index) => {
+                    // 创建右键菜单
+                    const menuItems = [
+                      {
+                        key: "1",
+                        label: (
+                          <span
+                            onClick={() => {
+                              setTempAvatar(avatarInfo.url);
+                              setSelectedAvatarFile(null);
+                              message.success("已选择历史头像");
+                            }}
+                          >
+                            使用此头像
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "2",
+                        label: (
+                          <span
+                            onClick={async () => {
+                              try {
+                                await deleteUserAvatar(avatarInfo);
+                                // 删除后如果当前选中的是被删除的头像，清除选中状态
+                                if (tempAvatar === avatarInfo.url) {
+                                  setTempAvatar(user?.avatar || "");
+                                  setSelectedAvatarFile(null);
+                                }
+                                message.success("头像删除成功");
+                              } catch (error) {
+                                console.error("删除头像失败:", error);
+                                message.error("头像删除失败，请重试");
+                              }
+                            }}
+                          >
+                            <DeleteOutlined className="mr-1" /> 删除头像
+                          </span>
+                        ),
+                        danger: true,
+                      },
+                    ];
+
+                    return (
+                      <Dropdown
+                        key={index}
+                        menu={{ items: menuItems }}
+                        trigger={["contextMenu"]}
+                      >
                         <div
                           style={{
-                            position: "absolute",
-                            top: "-8px",
-                            right: "-8px",
-                            width: "16px",
-                            height: "16px",
+                            flexShrink: 0,
+                            position: "relative",
+                            padding: "2px",
+                            cursor: "pointer",
                             borderRadius: "50%",
-                            backgroundColor: "#1890ff",
+                            border:
+                              tempAvatar === avatarInfo.url
+                                ? "2px solid #1890ff"
+                                : "none",
                           }}
-                        />
-                      )}
-                    </div>
-                  ))}
+                          onContextMenu={(e) => e.preventDefault()}
+                        >
+                          <Avatar
+                            size={64}
+                            src={avatarInfo.url}
+                            icon={<UserOutlined />}
+                            style={{
+                              border: "1px solid #d9d9d9",
+                              transition: "all 0.3s",
+                            }}
+                            onClick={() => {
+                              setTempAvatar(avatarInfo.url);
+                              setSelectedAvatarFile(null);
+                              message.success("已选择历史头像");
+                            }}
+                          />
+                          {tempAvatar === avatarInfo.url && (
+                            <div
+                              style={{
+                                position: "absolute",
+                                top: "-8px",
+                                right: "-8px",
+                                width: "16px",
+                                height: "16px",
+                                borderRadius: "50%",
+                                backgroundColor: "#1890ff",
+                              }}
+                            />
+                          )}
+                        </div>
+                      </Dropdown>
+                    );
+                  })}
                 </div>
               </div>
             )}
