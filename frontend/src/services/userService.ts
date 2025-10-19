@@ -4,8 +4,14 @@ import { getUserInfo } from "./authService";
 import { useAuthStore } from "@/store/authStore";
 import { MAX_UPLOAD_SIZE, SUPPORTED_IMAGE_TYPES } from "@/constants/config";
 
-// 开发环境标志
-export const IS_DEV_MODE = import.meta.env.DEV;
+// 头像信息接口
+export interface AvatarInfo {
+  fileName: string;
+  objectKey: string;
+  url: string;
+  createdAt: string;
+  fileSize: number;
+}
 
 /**
  * 更新用户个人信息
@@ -25,22 +31,25 @@ export const updateUserProfile = async (userData: {
 
     // 调用后端API更新用户信息
     const response = await api.put("/users/profile", userData);
-    
+
     console.log("用户个人信息更新成功");
     message.success("个人信息更新成功！");
-    
+
     // 重新获取用户信息，确保前端用户状态与后端同步
     try {
-      console.log('重新获取最新用户信息...');
+      console.log("重新获取最新用户信息...");
       await useAuthStore.getState().loadUserInfo();
-      console.log('成功获取最新用户信息');
+      console.log("成功获取最新用户信息");
     } catch (getUserInfoError) {
-      console.error('重新获取用户信息失败，但个人信息更新已成功:', getUserInfoError);
+      console.error(
+        "重新获取用户信息失败，但个人信息更新已成功:",
+        getUserInfoError,
+      );
     }
-    
+
     return {
       success: true,
-      data: response
+      data: response,
     };
   } catch (error) {
     console.error("更新用户个人信息失败:", error);
@@ -342,15 +351,18 @@ export const uploadAvatar = async (
 
       // Step 3: 存储头像URL到数据库
       await updateUserAvatar(ossCredentialsData.fileUrl);
-      
+
       // 重新获取用户信息，确保前端用户状态与后端同步
       try {
-        console.log('重新获取最新用户信息...');
+        console.log("重新获取最新用户信息...");
         const updatedUserInfo = await getUserInfo();
-        console.log('成功获取最新用户信息');
+        console.log("成功获取最新用户信息");
         // 这里不需要手动更新store，authStore应该已经监听了userInfo的变化
       } catch (getUserInfoError) {
-        console.error('重新获取用户信息失败，但头像上传已成功:', getUserInfoError);
+        console.error(
+          "重新获取用户信息失败，但头像上传已成功:",
+          getUserInfoError,
+        );
         // 不抛出错误，因为头像上传本身已经成功
       }
 
@@ -375,5 +387,50 @@ export const uploadAvatar = async (
     }
 
     return result;
+  }
+};
+
+/**
+ * 删除用户历史头像
+ * @param avatarInfo 头像信息对象
+ * @returns 删除结果
+ */
+export const deleteUserAvatar = async (
+  avatarInfo: AvatarInfo,
+): Promise<{ success: boolean }> => {
+  try {
+    console.log("删除用户历史头像 - 开始", avatarInfo);
+    message.loading("删除中...");
+
+    // 调用后端API删除OSS中的头像文件
+    const response = await api.delete("/users/avatar/history", {
+      data: {
+        objectKey: avatarInfo.objectKey,
+        fileName: avatarInfo.fileName,
+      },
+    });
+
+    console.log("用户历史头像删除成功");
+    message.success("头像删除成功！");
+
+    // 重新获取用户信息，确保前端用户状态与后端同步
+    try {
+      console.log("重新获取最新用户信息...");
+      await useAuthStore.getState().loadUserInfo();
+      console.log("成功获取最新用户信息");
+    } catch (getUserInfoError) {
+      console.error(
+        "重新获取用户信息失败，但头像删除已成功:",
+        getUserInfoError,
+      );
+    }
+
+    return {
+      success: true,
+    };
+  } catch (error) {
+    console.error("删除用户历史头像失败:", error);
+    message.error("删除头像失败，请稍后重试");
+    throw new Error("删除头像失败");
   }
 };
