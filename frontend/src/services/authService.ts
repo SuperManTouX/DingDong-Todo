@@ -11,6 +11,7 @@ interface RegisterParams {
   email: string;
   password: string;
   code: string; // 新增验证码字段
+  nickname?: string; // 新增昵称字段
 }
 
 interface SendCodeParams {
@@ -22,6 +23,7 @@ interface UserInfo {
   username: string;
   email: string;
   avatar?: string;
+  nickname?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -107,10 +109,10 @@ export const register = async (
 };
 
 // 获取用户信息
-export const getUserInfo = async (): Promise<UserInfo> => {
+export const getUserInfo = async () => {
   try {
     const response = await api.get("/auth/profile");
-    return response;
+    return response.data;
   } catch (error: any) {
     // 尝试从错误响应中提取message字段
     const errorMessage =

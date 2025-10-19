@@ -106,11 +106,11 @@ export const useTodoStore = create<TodoState>()(
             parentId: string,
             depth: number = 0,
           ): TreeTableData => {
-            const task = tasks.find((t) => t.id === parentId);
-            if (!task) throw new Error(`Task with id ${parentId} not found`);
+            const task = tasks.find((t) => t.id === parentId && !t.deletedAt);
+            if (!task) throw new Error(`Task with id ${parentId} not found or deleted`);
 
-            // 先获取所有子任务
-            const childrenTasks = tasks.filter((t) => t.parentId === parentId);
+            // 先获取所有未删除的子任务
+            const childrenTasks = tasks.filter((t) => t.parentId === parentId && !t.deletedAt);
 
             // 构建基础任务对象
             const treeNode: TreeTableData = {
@@ -155,8 +155,7 @@ export const useTodoStore = create<TodoState>()(
 
             return treeNode;
           };
-          const task = state.tasks.find((t) => t.id === state.selectTodoId);
-          console.log(state.tasks.filter((t) => t.completed));
+          const task = state.tasks.find((t) => t.id === state.selectTodoId && !t.deletedAt);
           return task ? buildSubTaskTree(state.tasks, task.id) : null;
         },
 

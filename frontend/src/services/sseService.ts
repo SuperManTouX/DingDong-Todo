@@ -30,7 +30,7 @@ interface TodoUpdateEvent {
 
 // 定义SSE错误事件接口
 interface SseErrorEvent {
-  type: "connection_error" | "auth_error" | "network_error" | "server_error";
+  type: "connection_error" | "auth_error" | "network_error" | "server_error" | "heartbeat_timeout";
   message: string;
   code?: string;
   timestamp: Date;
@@ -51,6 +51,8 @@ class SseService {
   private maxReconnectAttempts = 5;
   private baseReconnectDelay = 1000; // 初始重连延迟(ms)
   private statusCheckIntervalId: number | null = null; // 连接状态检查定时器ID
+  private lastHeartbeatTime: number | null = null; // 最后收到心跳的时间戳
+  private readonly HEARTBEAT_TIMEOUT = 60000; // 心跳超时时间（60秒）
 
   // 单例模式管理主要的订阅回调
   private mainCallbacks: Map<string, Function> = new Map();
@@ -150,6 +152,7 @@ class SseService {
       this.eventSource.onopen = () => {
         console.log("SSE连接已成功建立");
         this.reconnectAttempts = 0; // 重置重连计数
+        this.lastHeartbeatTime = Date.now(); // 初始化心跳时间戳
 
         // SSE连接成功时，从store中订阅所有事件
         try {
@@ -197,6 +200,8 @@ class SseService {
     console.log("断开了SSE连接");
     // 清除状态检查定时器
     this.stopStatusCheck();
+    // 重置心跳时间
+    this.lastHeartbeatTime = null;
 
     // 清除所有订阅
     this.clearAllSubscriptions();
@@ -266,10 +271,37 @@ class SseService {
       `SSE连接状态: ${statusText} (readyState: ${this.eventSource.readyState})`,
     );
 
+    // 检查心跳超时
+    this.checkHeartbeatTimeout();
+
     // 如果连接已关闭，尝试重新连接
     if (this.eventSource.readyState === EventSource.CLOSED) {
       console.warn("检测到SSE连接已关闭，尝试重新连接...");
       this.handleReconnect();
+    }
+  }
+
+  /**
+   * 检查心跳是否超时
+   */
+  private checkHeartbeatTimeout(): void {
+    if (this.lastHeartbeatTime && this.eventSource?.readyState === EventSource.OPEN) {
+      const now = Date.now();
+      const timeSinceLastHeartbeat = now - this.lastHeartbeatTime;
+      
+      if (timeSinceLastHeartbeat > this.HEARTBEAT_TIMEOUT) {
+        console.warn(`SSE心跳超时: ${timeSinceLastHeartbeat}ms，超过了${this.HEARTBEAT_TIMEOUT}ms的阈值`);
+        this.triggerErrorEvent(
+          "heartbeat_timeout",
+          "SSE连接心跳超时，请检查网络连接"
+        );
+        // 触发重连
+        this.handleReconnect();
+      } else {
+        // 正常状态，记录距离下次超时的时间
+        const timeToTimeout = this.HEARTBEAT_TIMEOUT - timeSinceLastHeartbeat;
+        console.log(`SSE心跳正常，距离下次检查还剩约${Math.round(timeToTimeout / 1000)}秒`);
+      }
     }
   }
 
@@ -344,6 +376,12 @@ class SseService {
    * 处理接收到的事件数据
    */
   private handleEvent(data: EntityUpdateEvent): void {
+    // 处理心跳事件
+    if (data.entity === 'system' && data.type === 'heartbeat') {
+      this.handleHeartbeatEvent(data);
+      return;
+    }
+
     const { entity } = data;
 
     // 根据实体类型分发到对应的事件监听器
@@ -360,6 +398,14 @@ class SseService {
       default:
         console.warn("未知的实体类型事件:", data);
     }
+  }
+
+  /**
+   * 处理心跳事件
+   */
+  private handleHeartbeatEvent(event: any): void {
+    this.lastHeartbeatTime = Date.now();
+    console.log(`收到SSE心跳事件，时间戳: ${this.lastHeartbeatTime}`);
   }
 
   /**

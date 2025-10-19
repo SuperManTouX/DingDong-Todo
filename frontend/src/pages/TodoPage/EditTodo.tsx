@@ -198,7 +198,7 @@ export default function EditTodo({
             style={{
               padding: "16px 24px",
               color: currentTheme.textColor,
-              minHeight: "calc(100% - 100px)",
+              minHeight: "calc(100% - 102px)",
             }}
           >
             <Row className="h-100" justify="start">

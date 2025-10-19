@@ -32,12 +32,15 @@ const { TextArea } = Input;
  */
 const SettingsPage: React.FC = () => {
   const { currentTheme, setTheme } = useThemeStore();
-  const { user, updateUserInfo } = useAuthStore();
+  const { user, updateUserInfo, avatarHistory } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [form] = Form.useForm();
   const [tempAvatar, setTempAvatar] = useState<string | null>(null);
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(
+    null,
+  ); // 保存选择的文件对象
 
   // 主题选项
   const themeOptions = [
@@ -48,32 +51,26 @@ const SettingsPage: React.FC = () => {
     { value: "yellow", label: "黄色主题" },
   ];
 
-  // 自定义上传请求 - 使用统一的uploadAvatar函数
+  // 自定义上传请求 - 仅在本地生成预览，不立即上传
   const customRequest: UploadProps["customRequest"] = async ({
     file,
     onSuccess,
-    onError,
   }) => {
     try {
-      setAvatarUploading(true);
-      // 使用统一的上传函数处理整个流程
-      const result = await uploadAvatar(file);
+      // 保存选择的文件对象
+      setSelectedAvatarFile(file);
 
-      if (result.success) {
-        // 更新临时头像，等待用户保存个人信息
-        setTempAvatar(result.avatarUrl);
-
+      // 生成本地预览URL
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setTempAvatar(e.target?.result as string);
         onSuccess?.();
-        message.success("头像上传成功！");
-      } else {
-        throw new Error("头像上传失败");
-      }
+        message.success("头像预览生成成功！");
+      };
+      reader.readAsDataURL(file);
     } catch (error) {
-      console.error("头像上传失败:", error);
-      onError?.(error);
-      message.error("头像上传失败，请重试");
-    } finally {
-      setAvatarUploading(false);
+      console.error("生成头像预览失败:", error);
+      message.error("生成头像预览失败，请重试");
     }
   };
 
@@ -104,6 +101,7 @@ const SettingsPage: React.FC = () => {
       form.setFieldsValue({
         username: user.username,
         email: user.email,
+        nickname: user.nickname || "",
         bio: user.bio || "",
       });
     }
@@ -116,44 +114,54 @@ const SettingsPage: React.FC = () => {
   const handleModalCancel = () => {
     setEditModalOpen(false);
     form.resetFields();
-    // 重置临时头像
+    // 重置临时状态
     setTempAvatar(null);
+    setSelectedAvatarFile(null);
   };
 
   // 处理编辑个人信息提交
   const handleEditSubmit = async (values: any) => {
     try {
       setLoading(true);
-      // 调用API更新用户信息
-      console.log("更新用户信息:", values);
+      let avatarUrl = user?.avatar;
 
-      // 调用后端API更新用户信息，包含可能更新的头像
+      // 如果有选择新的头像文件，先上传头像
+      if (selectedAvatarFile) {
+        setAvatarUploading(true);
+        const uploadResult = await uploadAvatar(selectedAvatarFile);
+        if (uploadResult.success) {
+          avatarUrl = uploadResult.avatarUrl;
+        } else {
+          throw new Error("头像上传失败");
+        }
+      } else if (tempAvatar) {
+        // 如果有临时头像URL（可能是选择了历史头像或已上传但未保存的情况）
+        avatarUrl = tempAvatar;
+      }
+
+      // 调用后端API更新用户信息
       await updateUserProfile({
-        username: values.username,
         email: values.email,
+        nickname: values.nickname,
         bio: values.bio,
-        avatar: tempAvatar || user?.avatar,
+        avatar: avatarUrl,
       });
 
       message.success("个人信息更新成功！");
       setEditModalOpen(false);
-      // 重置临时头像
+      // 重置临时状态
       setTempAvatar(null);
+      setSelectedAvatarFile(null);
     } catch (error) {
       console.error("更新个人信息失败:", error);
       message.error("更新失败，请重试");
     } finally {
       setLoading(false);
+      setAvatarUploading(false);
     }
   };
 
-  // 自定义表单校验规则
-  const usernameValidator = (_: RuleObject, value: string) => {
-    if (!value || value.trim().length < 2) {
-      return Promise.reject(new Error("用户名至少需要2个字符"));
-    }
-    return Promise.resolve();
-  };
+  // 用户名现在设为不可编辑，不再需要校验规则
 
   return (
     <div className={"w-100"} style={{ padding: "24px" }}>
@@ -187,6 +195,12 @@ const SettingsPage: React.FC = () => {
               <Text strong>用户名：</Text>
               <Text>{user?.username || "用户"}</Text>
             </div>
+            {user?.nickname && (
+              <div style={{ marginBottom: "8px" }}>
+                <Text strong>昵称：</Text>
+                <Text>{user.nickname}</Text>
+              </div>
+            )}
             <div style={{ marginBottom: "8px" }}>
               <Text strong>邮箱：</Text>
               <Text>{user?.email || "example@example.com"}</Text>
@@ -224,10 +238,7 @@ const SettingsPage: React.FC = () => {
             ))}
           </Select>
         </div>
-        
       </Card>
-
-      
 
       {/* 修改个人信息弹窗 - 包含头像上传 */}
       <Modal
@@ -267,15 +278,85 @@ const SettingsPage: React.FC = () => {
             >
               支持JPG、PNG格式，文件大小不超过{MAX_UPLOAD_SIZE / 1024 / 1024}MB
             </Text>
+
+            {/* 历史头像显示区域 */}
+            {avatarHistory && avatarHistory.length > 0 && (
+              <div style={{ marginTop: "16px" }}>
+                <Text
+                  type="secondary"
+                  style={{ display: "block", marginBottom: "8px" }}
+                >
+                  历史头像
+                </Text>
+                <div
+                  style={{
+                    display: "flex",
+                    overflowX: "auto",
+                    padding: "8px 0",
+                    gap: "12px",
+                    justifyContent: "flex-start",
+                    maxWidth: "100%",
+                  }}
+                >
+                  {avatarHistory.map((avatarInfo, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        flexShrink: 0,
+                        cursor: "pointer",
+                        position: "relative",
+                        opacity: tempAvatar === avatarInfo ? 0.7 : 1,
+                      }}
+                      onClick={() => {
+                        setTempAvatar(avatarInfo.url);
+                        setSelectedAvatarFile(null); // 清除选中的文件，因为现在使用的是历史头像
+                        message.success("已选择历史头像");
+                      }}
+                    >
+                      <Avatar
+                        size={64}
+                        src={avatarInfo.url}
+                        icon={<UserOutlined />}
+                        style={{
+                          border:
+                            tempAvatar === avatarInfo.url
+                              ? "2px solid #1890ff"
+                              : "1px solid #d9d9d9",
+                          transition: "all 0.3s",
+                        }}
+                      />
+                      {tempAvatar === avatarInfo.url && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "-8px",
+                            right: "-8px",
+                            width: "16px",
+                            height: "16px",
+                            borderRadius: "50%",
+                            backgroundColor: "#1890ff",
+                          }}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* 用户名输入 */}
+          {/* 用户名显示（不可编辑） */}
+          <Form.Item name="username" label="用户名">
+            <Input placeholder="请输入用户名" disabled />
+          </Form.Item>
+
+          {/* 昵称输入 */}
           <Form.Item
-            name="username"
-            label="用户名"
-            rules={[{ required: true, validator: usernameValidator }]}
+            name="nickname"
+            label="昵称"
+            rules={[{ max: 50, message: "昵称不能超过50个字符" }]}
           >
-            <Input placeholder="请输入用户名" />
+            <Input placeholder="请输入昵称（选填）" />
           </Form.Item>
 
           {/* 邮箱输入 */}

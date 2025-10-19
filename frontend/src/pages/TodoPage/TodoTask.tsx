@@ -160,10 +160,19 @@ export default function TodoTask({
                 justify={"end"}
                 align={"middle"}
               >
-                {/*判断是否有Tag数组并且是否长度大于0*/}
+                {/*判断是否有Tag数组并且是否长度大于0，且只在showTaskDetails为false时显示*/}
                 {/*// @ts-ignore*/}
-                {todo.tags?.length > 0 && !showTaskDetails && (
-                  <Tag color="magenta">+{todo.tags?.length}</Tag>
+                { !showTaskDetails && todo.tags?.length > 0 && (
+                  todo.tags?.length > 3 ? (
+                    <Tag color="magenta">+{todo.tags?.length}</Tag>
+                  ) : todo.tags?.map((tagId) => {
+                    const tagItem = todoTags?.find(t => t.id === tagId);
+                    return (
+                      <Tag key={tagItem?.id} color={tagItem?.color || token.colorPrimary}>
+                        {tagItem?.name}
+                      </Tag>
+                    );
+                  })
                 )}
                 {/*是否有子任务*/}
                 {(todo?.children?.length > 0 ||
