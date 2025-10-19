@@ -56,6 +56,7 @@ const RegisterPage: React.FC = () => {
     email: string;
     password: string;
     code: string;
+    nickname?: string;
   }) => {
     try {
       setLoading(true); // 恢复加载状态设置
@@ -97,6 +98,13 @@ const RegisterPage: React.FC = () => {
           </Form.Item>
 
           <Form.Item
+            name="nickname"
+            rules={[{ required: false, message: "请输入昵称" }]}
+          >
+            <Input prefix={<UserOutlined />} placeholder="昵称（选填）" />
+          </Form.Item>
+
+          <Form.Item
             name="email"
             rules={[
               { required: true, message: "请输入邮箱" },
@@ -110,17 +118,22 @@ const RegisterPage: React.FC = () => {
             name="code"
             rules={[{ required: true, message: "请输入验证码" }]}
           >
-            <Search
-              prefix={<MailOutlined />}
-              placeholder="验证码"
-              enterButton={
-                countdown > 0 ? `${countdown}秒后重试` : "获取验证码"
-              }
-              onSearch={handleSendCode}
-              disabled={countdown > 0 || sendingCode}
-              loading={sendingCode}
-              style={{ width: "100%" }}
-            />
+            <Space style={{ width: "100%" }}>
+              <Input
+                prefix={<MailOutlined />}
+                placeholder="验证码"
+                style={{ flex: 1 }}
+              />
+              <Button
+                type="primary"
+                onClick={handleSendCode}
+                disabled={countdown > 0 || sendingCode}
+                loading={sendingCode}
+                style={{ minWidth: 120 }}
+              >
+                {countdown > 0 ? `${countdown}秒后重试` : "获取验证码"}
+              </Button>
+            </Space>
           </Form.Item>
 
           <Form.Item

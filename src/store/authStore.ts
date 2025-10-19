@@ -7,6 +7,7 @@ import {
   getUserInfo,
 } from "../services/authService";
 import sseService from "../services/sseService";
+import { devtools } from "zustand/middleware";
 import { useTodoStore } from "./index";
 
 interface User {
@@ -14,24 +15,41 @@ interface User {
   username: string;
   email: string;
   avatar: string;
+  nickname?: string;
+}
+interface AvatarInfo {
+  fileName: string;
+  objectKey: string;
+  url: string;
+  createdAt: string;
+  fileSize: number;
 }
 
 interface AuthState {
   user: User | null;
   userId: string;
   isAuthenticated: boolean;
+  isLoading: boolean; // 添加加载状态
+  avatarHistory: AvatarInfo[]; // 历史头像列表
   login: (username: string, password: string) => Promise<void>;
   register: ({
     username,
     email,
     password,
     code,
+    nickname,
   }: {
     username: string;
     email: string;
     password: string;
     code: string;
-  }) => Promise<{ id: string; username: string; email: string }>;
+    nickname?: string;
+  }) => Promise<{
+    id: string;
+    username: string;
+    email: string;
+    nickname?: string;
+  }>;
   logout: () => void;
   loadUserInfo: () => Promise<void>;
 }
@@ -40,11 +58,14 @@ interface AuthState {
 const initialState = {
   user: null,
   userId: "",
-  isAuthenticated: false, // 初始为false，但PrivateRoute已注释重定向
+  isAuthenticated: false,
+  isLoading: true, // 初始为加载中
+  avatarHistory: [], // 初始历史头像为空数组
 };
 
 export const useAuthStore = create<AuthState>()(
-  persist(
+  devtools(
+    // persist(
     (set, get) => ({
       ...initialState,
 
@@ -71,11 +92,13 @@ export const useAuthStore = create<AuthState>()(
         email,
         password,
         code,
+        nickname,
       }: {
         username: string;
         email: string;
         password: string;
         code: string;
+        nickname?: string;
       }) => {
         try {
           const response = await apiRegister({
@@ -83,6 +106,7 @@ export const useAuthStore = create<AuthState>()(
             email,
             password,
             code,
+            nickname,
           });
 
           // 恢复状态更新逻辑
@@ -108,13 +132,13 @@ export const useAuthStore = create<AuthState>()(
         try {
           await apiLogout();
         } finally {
-          const newState = { 
-            user: null, 
-            isAuthenticated: false, 
-            userId: ""
+          const newState = {
+            user: null,
+            isAuthenticated: false,
+            userId: "",
           };
           set(newState);
-          
+
           // 登出时断开SSE连接（disconnect方法会清除所有订阅）
           console.log("登出，断开SSE连接");
           sseService.disconnect();
@@ -123,11 +147,14 @@ export const useAuthStore = create<AuthState>()(
 
       loadUserInfo: async () => {
         try {
+          set({ isLoading: true }); // 开始加载
           const userInfo = await getUserInfo();
           const newState = {
-            user: userInfo,
-            userId: userInfo.id,
+            user: userInfo.user,
+            userId: userInfo.user.id,
+            avatarHistory: userInfo.avatarHistory,
             isAuthenticated: true,
+            isLoading: false, // 加载完成
           };
 
           set(newState);
@@ -139,18 +166,18 @@ export const useAuthStore = create<AuthState>()(
           }
         } catch (error) {
           console.error("加载用户信息失败:", error);
-          set({ user: null, isAuthenticated: false, userId: "" });
+          set({
+            user: null,
+            isAuthenticated: false,
+            userId: "",
+            isLoading: false,
+          }); // 加载失败
         }
       },
     }),
+
     {
-      name: "auth-storage",
-      partialize: (state) => ({
-        // 不保存敏感信息到本地存储
-        user: null,
-        userId: state.userId,
-        isAuthenticated: state.isAuthenticated,
-      }),
+      name: "AuthStore",
     },
   ),
 );

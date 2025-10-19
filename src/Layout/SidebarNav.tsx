@@ -156,7 +156,7 @@ const SidebarNav: React.FC<{
   // 移动端侧边栏内容
   const renderMobileSidebar = () => (
     <Drawer
-      title={user ? user.username : "任务管理"}
+      title={user ? (user.nickname || user.username) : "任务管理"}
       placement="left"
       onClose={onMobileClose}
       open={mobileVisible}
@@ -167,7 +167,7 @@ const SidebarNav: React.FC<{
         <div style={{ textAlign: "center", marginBottom: "24px", marginTop: "16px" }}>
           <img
             src={user.avatar}
-            alt={user.username}
+            alt={user.nickname || user.username}
             style={{
               width: 60,
               height: 60,
@@ -175,7 +175,7 @@ const SidebarNav: React.FC<{
               cursor: "pointer",
             }}
           />
-          <p style={{ marginTop: "8px" }}>{user.username}</p>
+          <p style={{ marginTop: "8px" }}>{user.nickname || user.username}</p>
         </div>
       )}
       
@@ -256,7 +256,7 @@ const SidebarNav: React.FC<{
           >
             <img
               src={user.avatar}
-              alt={user.username}
+              alt={user.nickname || user.username}
               style={{
                 width: 40,
                 height: 40,

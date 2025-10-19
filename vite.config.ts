@@ -21,7 +21,7 @@ export default defineConfig({
         // 保持连接活性
         secure: false,
         // 增加超时时间
-        timeout: 60000,
+        timeout: 300000,
       },
       // 添加其他可能需要的API代理
       '/api': {

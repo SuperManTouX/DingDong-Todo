@@ -15,6 +15,7 @@ export const IS_DEV_MODE = import.meta.env.DEV;
 export const updateUserProfile = async (userData: {
   username: string;
   email: string;
+  nickname?: string;
   bio?: string;
   avatar?: string;
 }): Promise<{ success: boolean; data?: any }> => {

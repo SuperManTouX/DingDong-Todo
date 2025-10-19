@@ -31,7 +31,7 @@ export default function AppLayout() {
             <SidebarNav />
           </Sider>
         )}
-        <Layout className={"overflow-y-scroll custom-scrollbar  d-flex flex-row border-0 "}>
+        <Layout >
           {/* 使用Outlet组件显示子路由内容 */}
           <Outlet />
         </Layout>
