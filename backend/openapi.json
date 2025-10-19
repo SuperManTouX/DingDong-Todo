@@ -1,6 +1,53 @@
 {
   "openapi": "3.0.0",
   "paths": {
+    "/users/avatar/history": {
+      "delete": {
+        "description": "删除当前登录用户的指定历史头像（从OSS和数据库中移除）",
+        "operationId": "UserController_deleteUserAvatar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "objectKey": {
+                    "type": "string",
+                    "description": "OSS对象键"
+                  },
+                  "fileName": {
+                    "type": "string",
+                    "description": "文件名"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "头像不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除用户历史头像",
+        "tags": [
+          "用户管理"
+        ]
+      }
+    },
     "/users/profile": {
       "get": {
         "description": "获取当前登录用户的详细个人信息",
@@ -42,6 +89,10 @@
                   "bio": {
                     "type": "string",
                     "description": "个人简介"
+                  },
+                  "nickname": {
+                    "type": "string",
+                    "description": "用户昵称"
                   }
                 }
               }
@@ -123,6 +174,30 @@
         ]
       }
     },
+    "/users/oss-images": {
+      "get": {
+        "description": "获取当前登录用户在阿里云OSS中的所有图片链接",
+        "operationId": "UserController_getUserOssImages",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取用户OSS图片列表",
+        "tags": [
+          "用户管理"
+        ]
+      }
+    },
     "/auth/login": {
       "post": {
         "description": "用户登录获取访问令牌",
@@ -166,6 +241,44 @@
         ]
       }
     },
+    "/auth/send-code": {
+      "post": {
+        "description": "向指定邮箱发送验证码",
+        "operationId": "AuthController_sendVerificationCode",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "description": "邮箱地址"
+                  }
+                },
+                "required": [
+                  "email"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "验证码发送成功"
+          },
+          "409": {
+            "description": "邮箱已被注册"
+          }
+        },
+        "summary": "发送验证码",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
     "/auth/register": {
       "post": {
         "description": "用户注册并自动登录",
@@ -190,15 +303,24 @@
                     "type": "string",
                     "description": "密码"
                   },
+                  "code": {
+                    "type": "string",
+                    "description": "验证码"
+                  },
                   "bio": {
                     "type": "string",
                     "description": "个人简介（可选）"
+                  },
+                  "nickname": {
+                    "type": "string",
+                    "description": "用户昵称（可选）"
                   }
                 },
                 "required": [
                   "username",
                   "email",
-                  "password"
+                  "password",
+                  "code"
                 ]
               }
             }
@@ -207,6 +329,9 @@
         "responses": {
           "201": {
             "description": "注册成功"
+          },
+          "400": {
+            "description": "验证码错误或已过期"
           },
           "409": {
             "description": "用户名或邮箱已存在"

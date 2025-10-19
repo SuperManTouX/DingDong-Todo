@@ -18,6 +18,9 @@ export class User {
   password: string;
 
   @Column({ nullable: true })
+  nickname: string;
+
+  @Column({ nullable: true })
   avatar: string;
 
   @Column({ type: 'text', nullable: true })

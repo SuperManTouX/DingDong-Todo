@@ -4,9 +4,10 @@ import { User } from './user.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { OssConfig } from '../config/oss.config';
 import { UserController } from './user.controller';
+import { FileModule } from '../file/file.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User])],
+  imports: [TypeOrmModule.forFeature([User]), FileModule],
   controllers: [UserController],
   providers: [UserService, OssConfig],
   exports: [UserService]

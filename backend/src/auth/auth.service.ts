@@ -26,8 +26,8 @@ export class AuthService {
 
     // 生成JWT令牌
     const payload = {
-      username: user.username,
-      sub: user.id,
+      username: user?.username,
+      sub: user?.id,
     };
 
     // 移除密码字段，只返回需要的用户信息
@@ -45,7 +45,8 @@ export class AuthService {
   async validateToken(token: string): Promise<User | null> {
     try {
       const payload = this.jwtService.verify(token);
-      return this.userService.findById(payload.sub);
+      const result = await this.userService.findById(payload.sub);
+      return result?.user || null;
     } catch (error) {
       return null;
     }
@@ -57,15 +58,15 @@ export class AuthService {
   async refreshToken(token: string): Promise<{ access_token: string }> {
     try {
       const payload = this.jwtService.verify(token, { ignoreExpiration: true });
-      const user = await this.userService.findById(payload.sub);
+      const userResult = await this.userService.findById(payload.sub);
       
-      if (!user) {
+      if (!userResult || !userResult.user) {
         throw new UnauthorizedException('用户不存在');
       }
 
       const newPayload = {
-        username: user.username,
-        sub: user.id,
+        username: userResult.user.username,
+        sub: userResult.user.id,
       };
 
       return {
