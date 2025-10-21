@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { OssFile } from './oss-file.entity';
@@ -137,6 +137,68 @@ export class FileService {
       return true;
     } catch (error) {
       console.error('删除用户头像失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 删除任务附件
+   * @param userId 用户ID
+   * @param objectKey OSS对象键
+   * @returns 删除结果
+   */
+  async deleteTaskAttachment(userId: string, objectKey: string): Promise<boolean> {
+    try {
+      console.log(`开始删除任务附件，用户ID: ${userId}, objectKey: ${objectKey}`);
+      
+      // 查找对应的文件记录
+      const ossFile = await this.ossFileRepository.findOne({ where: { objectKey } });
+      if (ossFile) {
+        console.log(`找到文件记录: id=${ossFile.id}`);
+      } else {
+        console.log(`文件记录不存在: ${objectKey}`);
+      }
+
+      // 验证文件路径是否属于该用户的task-attachments目录
+      // 预期格式: task-attachments/user-xxx/...
+      const expectedPrefix = `task-attachments/${userId}/`;
+      console.log(`验证路径前缀: ${expectedPrefix}`);
+      
+      if (!objectKey.includes(expectedPrefix)) {
+        console.error(`权限验证失败: ${objectKey} 不属于用户 ${userId}`);
+        throw new ForbiddenException('您无权删除此文件');
+      }
+
+      try {
+        // 获取OSS临时凭证
+        console.log('获取OSS临时凭证...');
+        const credentials = await this.ossConfig.getStsCredentials(userId, 'delete-attachment', 3600);
+        const ossClient = this.ossConfig.createOssClient(credentials);
+
+        if (!ossClient) {
+          console.error('创建OSS客户端失败');
+          throw new Error('OSS客户端创建失败');
+        }
+
+        // 从OSS删除文件
+        console.log(`执行OSS删除操作: ${objectKey}`);
+        await ossClient.delete(objectKey);
+        console.log(`成功从OSS删除文件: ${objectKey}`);
+      } catch (ossError) {
+        console.error('OSS删除操作失败:', ossError);
+        // 即使OSS删除失败，也尝试删除数据库记录（如果存在）
+      }
+
+      // 如果存在数据库记录，从数据库删除
+      if (ossFile) {
+        await this.ossFileRepository.remove(ossFile);
+        console.log(`成功删除文件记录: id=${ossFile.id}, objectKey=${objectKey}`);
+      }
+
+      console.log('删除任务附件完成');
+      return true;
+    } catch (error) {
+      console.error('删除任务附件失败:', error);
       throw error;
     }
   }
