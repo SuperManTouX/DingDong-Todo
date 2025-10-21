@@ -13,6 +13,8 @@ export interface ThemeConfig {
   gradientColor?: string; //特殊主题才有渐变色
   listGradientColor?: string; //特殊主题才有渐变色
   bgContainerColor?: string; //黑暗主题才有黑色
+  accentColor?: string; // 强调色，非深色主题为白色，深色主题为黑色
+  inverseAccentColor?: string; // 反强调色，非深色主题为黑色，深色主题为白色
 }
 
 // 自定义主题配置接口

@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Card, Statistic, Row, Col, Typography } from "antd";
+import { Card, Statistic, Row, Col, Typography, Layout } from "antd";
 import {
   PieChart,
   Pie,
@@ -154,8 +154,10 @@ const StatsPage: React.FC = () => {
   );
 
   return (
-    <div className={"w-100"} style={{ padding: "24px" }}>
-      <Title level={2}>统计信息</Title>
+    <Layout className={"border-0 p-4 "}>
+      <Title className={"text-start"} level={2}>
+        统计信息
+      </Title>
 
       {/* 统计卡片 */}
       <Row gutter={16}>
@@ -315,7 +317,7 @@ const StatsPage: React.FC = () => {
           </Card>
         </Col>
       </Row>
-    </div>
+    </Layout>
   );
 };
 

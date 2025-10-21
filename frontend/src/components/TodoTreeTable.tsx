@@ -180,6 +180,7 @@ const TodoTreeTable: React.FC<TodoTreeTableProps> = ({
       bordered={false}
       rowKey="id"
       style={{ minHeight: "50px" }}
+      showHeader={false}
     />
   );
 

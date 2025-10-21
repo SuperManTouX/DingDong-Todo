@@ -16,6 +16,7 @@ import {
   Dropdown,
   Menu,
   Row,
+  Layout,
 } from "antd";
 import {
   UploadOutlined,
@@ -177,8 +178,10 @@ const SettingsPage: React.FC = () => {
   // 用户名现在设为不可编辑，不再需要校验规则
 
   return (
-    <div className={"w-100"} style={{ padding: "24px" }}>
-      <Title level={2}>设置</Title>
+    <Layout className={"border-0 p-4 "}>
+      <Title className={"text-start"} level={2}>
+        设置
+      </Title>
 
       {/* 账户信息卡片 */}
       <Card
@@ -465,7 +468,7 @@ const SettingsPage: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </Layout>
   );
 };
 

@@ -194,10 +194,7 @@ export default function FilterGroup({
             </div>
           ),
           children: (
-            <div
-              className={"bgColor-transparent"}
-              style={{ minHeight: "2rem" }}
-            >
+            <div className={"bgColor-transparent"}>
               {children ? (
                 children
               ) : (

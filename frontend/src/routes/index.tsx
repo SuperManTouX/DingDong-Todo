@@ -8,6 +8,7 @@ import SettingsPage from "../pages/SettingsPage";
 import Index from "../pages/TodoPage";
 import { Index as FocusPage } from "@/pages/FocusPage/index.tsx";
 import SearchResultPage from "../pages/SearchResultPage";
+import { HabitPage } from "@/pages/HabitPage";
 
 // 添加路由配置日志
 
@@ -51,6 +52,10 @@ const router = createBrowserRouter([
       {
         path: "search",
         element: <SearchResultPage />,
+      },
+      {
+        path: "habit",
+        element: <HabitPage />,
       },
       {
         path: "search/:keyword",

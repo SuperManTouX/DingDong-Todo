@@ -190,7 +190,7 @@ export const Index: React.FC = () => {
   ];
 
   return (
-    <>
+    <Layout className={"d-flex flex-row  border-0 "}>
       {/*计时时钟*/}
       <FocusTimer
         onStartFocus={handleStartFocus}
@@ -201,7 +201,7 @@ export const Index: React.FC = () => {
       {/*概况*/}
       <Layout className={"border-start overflow-y-auto"}>
         <Header className="theme-color">
-          <Row className={"h100"} align={"middle"}>
+          <Row className={"h-100"} align={"middle"}>
             <Col>
               <Typography.Title className={"m-0"} level={5}>
                 概览
@@ -281,6 +281,6 @@ export const Index: React.FC = () => {
           }}
         />
       </Layout>
-    </>
+    </Layout>
   );
 };

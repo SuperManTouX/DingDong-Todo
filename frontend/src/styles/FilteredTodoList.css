@@ -32,8 +32,25 @@
     top: 30%;
 }
 
-/* 全新现代滚动条样式 */
+/* 全新现代滚动条样式 - 仅在滚动时显示 */
+/* 默认隐藏滚动条 */
 .custom-scrollbar::-webkit-scrollbar {
+  width: 0;
+  transition: width 0.2s ease;
+}
+
+/* 滚动时显示滚动条 */
+.custom-scrollbar:hover::-webkit-scrollbar,
+.custom-scrollbar:has(> .custom-scrollbar-content):active::-webkit-scrollbar,
+.custom-scrollbar:has(> .custom-scrollbar-content):focus-within::-webkit-scrollbar {
+  width: 8px;
+}
+
+/* 确保所有子内容区域也能触发滚动条显示 */
+.custom-scrollbar:hover::-webkit-scrollbar,
+.custom-scrollbar:active::-webkit-scrollbar,
+.custom-scrollbar:focus-within::-webkit-scrollbar,
+.custom-scrollbar:scrollbar-thumb {
   width: 8px;
 }
 
@@ -68,10 +85,12 @@
 /* Firefox 滚动条样式 */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
-  transition: scrollbar-color 0.3s ease;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.2s ease;
 }
 
-.custom-scrollbar:hover {
-  scrollbar-color: rgba(107, 114, 128, 0.7) transparent;
+.custom-scrollbar:hover,
+.custom-scrollbar:active,
+.custom-scrollbar:focus-within {
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
 }

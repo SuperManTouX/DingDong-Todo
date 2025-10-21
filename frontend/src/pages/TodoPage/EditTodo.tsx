@@ -424,13 +424,12 @@ export default function EditTodo({
   const renderFooter = () =>
     EselectTodo ? (
       <Row justify="start" align="middle">
-        <span style={{ marginRight: "12px" }}>所属清单：</span>
         <Select
           value={EselectTodo?.listId}
           style={{
-            width: 200,
             color: currentTheme.textColor,
           }}
+          variant="borderless"
           showSearch
           placeholder="选择清单"
           optionFilterProp="label"
