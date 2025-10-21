@@ -587,6 +587,13 @@ button + button {
 }
 
 .ant-drawer-body::-webkit-scrollbar {
+    width: 0;
+    transition: width 0.2s ease;
+}
+
+.ant-drawer-body:hover::-webkit-scrollbar,
+.ant-drawer-body:active::-webkit-scrollbar,
+.ant-drawer-body:focus-within::-webkit-scrollbar {
     width: 6px;
 }
 
@@ -601,6 +608,22 @@ button + button {
 
 .ant-drawer-body::-webkit-scrollbar-thumb:hover {
     background: var(--theme--colorTextSecondary);
+}
+
+/* Firefox 滚动条样式 */
+.ant-drawer-body {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.2s ease;
+}
+
+.ant-drawer-body:hover,
+.ant-drawer-body:active,
+.ant-drawer-body:focus-within {
+    scrollbar-color: var(--theme--colorTextTertiary) var(--theme--colorBgSecondary);
+}
+.background-accent{
+    background: var(--theme-accentColor);
 }
 
 

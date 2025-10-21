@@ -26,17 +26,20 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
   // 根据activeListId确定分组模式和过滤逻辑
   let groupMode: "normal" | "time" | "list" = "normal";
   let uncompletedTasks = tasks.filter(
-    // !task.completed && !task.isPinned && !task.deletedAt
-    (task) => !task.isPinned && !task.deletedAt,
+    (task) =>
+      !task.isPinned &&
+      !task.deletedAt &&
+      (activeListId.includes("todolist-")
+        ? activeListId === task.listId
+        : true),
   );
 
-  let filteredTasks;
+  let filteredTasks: Todo[];
   if (activeListId === "bin") {
     filteredTasks = [...tasks.filter((task) => task.deletedAt)];
   } else {
     filteredTasks = [...uncompletedTasks];
   }
-  let isCompletedMode = false;
 
   // 特殊activeListId处理
   if (activeListId.indexOf("tag") !== -1) {
@@ -71,16 +74,13 @@ export default function useTodoGrouping(tasks: Todo[]): UseTodoGroupingReturn {
     // 只显示已完成的任务
     groupMode = "time"; // 已完成任务也使用时间分组模式
     filteredTasks = [];
-    isCompletedMode = true;
   } else if (activeListId === "bin") {
     // 其他特殊列表保持原有的时间分组模式
     groupMode = "list";
   }
 
   // 在已完成模式下，显示所有已完成任务；否则只显示未完成任务
-  // const displayTasks = isCompletedMode
-  //   ? filteredTasks
-  //   : filteredTasks.filter((task) => !task.completed);
+
   const displayTasks = filteredTasks;
   const displayGroups: DisplayGroup[] = [];
 

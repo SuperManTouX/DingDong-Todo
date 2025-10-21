@@ -12,6 +12,8 @@ export const lightTheme: ThemeConfig = {
   menuHoverColor: "#dbeafe", // 菜单悬停颜色，与主色调呼应
   bgLayoutColor: "#f3f4f6",
   dateColor: "#3b82f6", // 使用主色调
+  accentColor: "#ffffff", // 非深色主题设置为白色
+  inverseAccentColor: "#000000", // 非深色主题设置为黑色
 };
 
 // 深色主题配置 - 改善对比度和层次感 不要删除，会变全黑（我也不知道为什么）
@@ -27,6 +29,8 @@ export const darkTheme: ThemeConfig = {
   hoverColor: "#60a5fa20", // 主色调的更浅色透明版本
   menuHoverColor: "#1e40af", // 菜单悬停颜色，加深版本
   dateColor: "#60a5fa", // 使用主色调
+  accentColor: "#000000", // 深色主题设置为黑色
+  inverseAccentColor: "#ffffff", // 深色主题设置为白色
 };
 
 // 绿色主题配置 - 采用自然和谐的绿色系
@@ -41,6 +45,8 @@ export const greenTheme: ThemeConfig = {
   menuBgColor: "rgb(228,233,223)", // 主色调的更浅色透明版本
   menuHoverColor: "rgb(217,224,211)", // 主色调的更浅色透明版本
   dateColor: "#a3b899", // 使用主题色
+  accentColor: "#ffffff", // 非深色主题设置为白色
+  inverseAccentColor: "#000000", // 非深色主题设置为黑色
 }; // 绿色主题配置 - 采用自然和谐的绿色系
 export const yellowTheme: ThemeConfig = {
   key: "yellow",
@@ -57,6 +63,8 @@ export const yellowTheme: ThemeConfig = {
     "linear-gradient(to bottom, rgb(243,194,104), rgb(244,170,139))",
   listGradientColor:
     "linear-gradient(to bottom, rgb(252,240,218), rgb(252,234,227))",
+  accentColor: "#ffffff", // 非深色主题设置为白色
+  inverseAccentColor: "#000000", // 非深色主题设置为黑色
 };
 
 // 红色主题配置 - 改进为更温暖、不刺眼的红色系
@@ -75,6 +83,8 @@ export const redTheme: ThemeConfig = {
     "linear-gradient(to bottom, rgb(255,121,164), rgb(255,175,166))", // 粉色渐变
   listGradientColor:
     "linear-gradient(to bottom, rgb(255,222,233), rgb(255,236,233))", // 浅色粉色渐变
+  accentColor: "#ffffff", // 非深色主题设置为白色
+  inverseAccentColor: "#000000", // 非深色主题设置为黑色
 };
 
 // 所有可用主题
@@ -100,6 +110,7 @@ export const generateAntdThemeConfig = (currentTheme: ThemeConfig) => {
       colorTextBase: currentTheme.textColor,
       colorBgLayout: currentTheme.bgLayoutColor,
       colorBgContainer: currentTheme.bgContainerColor || "#ffffff",
+      colorAccent: currentTheme.accentColor,
     },
     components: {
       Select: {
@@ -140,6 +151,9 @@ export const generateAntdThemeConfig = (currentTheme: ThemeConfig) => {
       },
       Drawer: {
         colorBgElevated: currentTheme.bgLayoutColor,
+      },
+      Statistic: {
+        colorTextDescription: currentTheme.inverseAccentColor,
       },
     },
   };

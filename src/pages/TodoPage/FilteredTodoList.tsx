@@ -7,8 +7,6 @@ import {
   Row,
   Dropdown,
   Layout,
-  Table,
-  Pagination,
   Spin,
 } from "antd";
 import React, { useCallback, useState } from "react";
@@ -117,7 +115,8 @@ export default function FilteredTodoList({
   };
 
   // 使用hooks获取各种功能
-  const { groupMode, displayGroups, displayUncompletedCount } = useTodoGrouping(tasks);
+  const { groupMode, displayGroups, displayUncompletedCount } =
+    useTodoGrouping(tasks);
   const {
     handleAdded,
     handleCompleteAll,
@@ -179,8 +178,8 @@ export default function FilteredTodoList({
           <Col>
             {isMobile ? (
               // 移动端显示汉堡菜单按钮
-              <Button 
-                type="text" 
+              <Button
+                type="text"
                 onClick={() => setMobileSidebarVisible(true)}
                 style={{ marginRight: 16 }}
               >
@@ -214,7 +213,7 @@ export default function FilteredTodoList({
 
       {/*移动端侧边栏Drawer*/}
       {isMobile && (
-        <SidebarNav 
+        <SidebarNav
           mobileVisible={mobileSidebarVisible}
           onMobileClose={() => setMobileSidebarVisible(false)}
         />
@@ -305,6 +304,7 @@ export default function FilteredTodoList({
                   <div style={{ opacity: ".4" }}>
                     <ProTable
                       columns={columns}
+                      showHeader={false}
                       request={async (params) => {
                         try {
                           // 使用todoService的getCompletedTasks方法获取数据
@@ -395,13 +395,6 @@ export default function FilteredTodoList({
               清空所有回收站todo
             </button>
           ) : (
-            // <button
-            //   type="button"
-            //   onClick={() => handleDeleteAllCompleted()}
-            //   className="btn btn-primary btn-sm"
-            // >
-            //   删除所有已完成
-            // </button>
             <span></span>
           )}
           {activeListId !== "bin" && (

@@ -17,6 +17,8 @@ import {
 } from "@ant-design/icons";
 import type { Todo } from "@/types";
 import SearchModal from "@/components/SearchModal";
+import CustomHabitIcon from "@/icons/CustomHabitIcon";
+import CustomTomatoIcon from "@/icons/CustomTomatoIcon";
 
 /**
  * 侧边栏导航组件
@@ -34,7 +36,7 @@ const SidebarNav: React.FC<{
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   // 通知面板显示状态
   const [notificationVisible, setNotificationVisible] = useState(false);
-  
+
   const menuItems: MenuProps["items"] = [
     {
       key: "todos",
@@ -43,13 +45,18 @@ const SidebarNav: React.FC<{
     },
     {
       key: "zhuanZhu",
-      icon: <ClockCircleFilled className={"sideNav-icon"} />,
+      icon: <CustomTomatoIcon className={"sideNav-icon"} />,
       label: "专注",
     },
     {
       key: "status",
       icon: <PieChartOutlined className={"sideNav-icon"} />,
       label: "数据",
+    },
+    {
+      key: "habit",
+      icon: <CustomHabitIcon className={"sideNav-icon"} />,
+      label: "习惯",
     },
     {
       key: "settings",
@@ -75,12 +82,12 @@ const SidebarNav: React.FC<{
     // 处理菜单点击事件
     console.log("Menu item clicked:", key);
     setSelectedKey(key); // 更新选中的菜单项
-    
+
     // 处理移动端点击菜单后关闭抽屉
     if (mobileVisible && onMobileClose) {
       onMobileClose();
     }
-    
+
     // 当点击搜索菜单项时，显示搜索Modal
     if (key === "search") {
       setSearchModalVisible(true);
@@ -129,23 +136,48 @@ const SidebarNav: React.FC<{
   // 通知面板内容
   const NotificationPanel = () => {
     return (
-      <div style={{
-        width: '100%',
-        height: '100%',
-        padding: '20px',
-        backgroundColor: '#fff',
-        display: 'flex',
-        flexDirection: 'column'
-      }}>
-        <h2 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: 'bold' }}>邮件提醒设置</h2>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ padding: '16px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          padding: "20px",
+          backgroundColor: "#fff",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <h2
+          style={{ margin: "0 0 20px 0", fontSize: "18px", fontWeight: "bold" }}
+        >
+          邮件提醒设置
+        </h2>
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            gap: "16px",
+          }}
+        >
+          <div
+            style={{
+              padding: "16px",
+              backgroundColor: "#f5f5f5",
+              borderRadius: "8px",
+            }}
+          >
             <p>这里可以配置邮件提醒相关的设置</p>
             <p>1. 设置任务提醒时间</p>
             <p>2. 查看历史提醒记录</p>
             <p>3. 管理提醒偏好</p>
           </div>
-          <div style={{ padding: '16px', backgroundColor: '#e6f7ff', borderRadius: '8px' }}>
+          <div
+            style={{
+              padding: "16px",
+              backgroundColor: "#e6f7ff",
+              borderRadius: "8px",
+            }}
+          >
             <p>邮件提醒可以帮助您及时了解任务进度</p>
           </div>
         </div>
@@ -156,7 +188,7 @@ const SidebarNav: React.FC<{
   // 移动端侧边栏内容
   const renderMobileSidebar = () => (
     <Drawer
-      title={user ? (user.nickname || user.username) : "任务管理"}
+      title={user ? user.nickname || user.username : "任务管理"}
       placement="left"
       onClose={onMobileClose}
       open={mobileVisible}
@@ -164,7 +196,13 @@ const SidebarNav: React.FC<{
       maxWidth={300}
     >
       {user && (
-        <div style={{ textAlign: "center", marginBottom: "24px", marginTop: "16px" }}>
+        <div
+          style={{
+            textAlign: "center",
+            marginBottom: "24px",
+            marginTop: "16px",
+          }}
+        >
           <img
             src={user.avatar}
             alt={user.nickname || user.username}
@@ -178,7 +216,7 @@ const SidebarNav: React.FC<{
           <p style={{ marginTop: "8px" }}>{user.nickname || user.username}</p>
         </div>
       )}
-      
+
       <Menu
         mode="vertical"
         className={
@@ -188,12 +226,14 @@ const SidebarNav: React.FC<{
         onClick={handleMenuClick}
         selectedKeys={[selectedKey]}
       />
-      
+
       {user && (
-        <div style={{ marginTop: "auto", padding: "16px", textAlign: "center" }}>
-          <Button 
-            type="primary" 
-            danger 
+        <div
+          style={{ marginTop: "auto", padding: "16px", textAlign: "center" }}
+        >
+          <Button
+            type="primary"
+            danger
             onClick={handleLogout}
             style={{ width: "100%" }}
           >
@@ -285,7 +325,7 @@ const SidebarNav: React.FC<{
         onCancel={() => setSearchModalVisible(false)}
         onSelectTask={handleTaskSelect}
       />
-      
+
       {/* 通知面板Drawer */}
       <Drawer
         title="邮件提醒"

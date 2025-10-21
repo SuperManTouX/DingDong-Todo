@@ -51,13 +51,15 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   // 从todoStore中获取数据
   const { todoListData, getActiveListData } = useTodoStore();
-  
+
   // 设置默认的listId为第一个可用的清单，避免初始为undefined
-  const [focusActiveListId, setFocusActiveListId] = useState(todoListData[0]?.id || null);
+  const [focusActiveListId, setFocusActiveListId] = useState(
+    todoListData[0]?.id || null,
+  );
   // 获取当前激活列表的数据，添加空值检查
   const currentListData = getActiveListData(focusActiveListId) || {};
   // 使用自定义hook获取任务列表
-  const { tasks: currentListTasks } = useTasksByList(currentListData.id || '');
+  const { tasks: currentListTasks } = useTasksByList(currentListData.id || "");
   console.log("currentListTasks", currentListTasks);
 
   // 准备Select组件的选项数据
@@ -94,7 +96,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
       // 添加当前清单的任务列表
       {
         type: "group",
-        label: `${currentListData.title || '选择的'} 清单的任务`,
+        label: `${currentListData.title || "选择的"} 清单的任务`,
         children: currentListTasks.map((todo) => ({
           key: `todo-${todo.id}`,
           label: (
@@ -130,7 +132,13 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     }
 
     return items;
-  }, [currentListTasks, currentListData, focusActiveListId, selectOptions, setSelectedTodo]);
+  }, [
+    currentListTasks,
+    currentListData,
+    focusActiveListId,
+    selectOptions,
+    setSelectedTodo,
+  ]);
 
   // 处理计时逻辑
   useEffect(() => {
@@ -248,30 +256,30 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
         const startTimeISO = dayjs(startTimestamp).toISOString();
         const endTimeISO = dayjs(endTime).toISOString();
         // 调用API创建专注记录
-              const createFocusRecord = async () => {
-                try {
-                  if (selectedTodo?.id) {
-                    const mode = activeFocusKey === "1" ? "pomodoro" : "normal";
-                    const response = await focusService.createFocusRecord({
-                      task_id: selectedTodo.id,
-                      start_time: startTimeISO,
-                      end_time: endTimeISO,
-                      mode: mode,
-                      completed: false,
-                    });
-                    message.success("创建专注记录成功:");
-                    // 更新focusRecordId，用于WebSocket事件匹配
-                    setFocusRecordId(response.id);
-                  } else {
-                    message.warning("请先选择一个任务");
-                    fetchAllFocusRecords();
-                    onStopFocus(); // 自动结束专注
-                  }
-                } catch (error) {
-                  console.error("创建专注记录失败:", error);
-                  message.error("创建专注记录失败，请重试");
-                }
-              };
+        const createFocusRecord = async () => {
+          try {
+            if (selectedTodo?.id) {
+              const mode = activeFocusKey === "1" ? "pomodoro" : "normal";
+              const response = await focusService.createFocusRecord({
+                task_id: selectedTodo.id,
+                start_time: startTimeISO,
+                end_time: endTimeISO,
+                mode: mode,
+                completed: false,
+              });
+              message.success("创建专注记录成功:");
+              // 更新focusRecordId，用于WebSocket事件匹配
+              setFocusRecordId(response.id);
+            } else {
+              message.warning("请先选择一个任务");
+              fetchAllFocusRecords();
+              onStopFocus(); // 自动结束专注
+            }
+          } catch (error) {
+            console.error("创建专注记录失败:", error);
+            message.error("创建专注记录失败，请重试");
+          }
+        };
         createFocusRecord();
       }
       // 重置暂停状态
@@ -370,7 +378,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     activeFocusKey === "1" ? formatTime(timeLeft) : formatTime(elapsedTime);
 
   return (
-    <Layout className="w-50">
+    <Layout>
       <Header className="theme-color">
         <Row justify="space-between" align="middle">
           <Col>
