@@ -198,6 +198,54 @@
         ]
       }
     },
+    "/file/attachments": {
+      "delete": {
+        "description": "删除用户的任务附件（从OSS和数据库中移除）",
+        "operationId": "FileController_deleteTaskAttachment",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "objectKey": {
+                    "type": "string",
+                    "description": "OSS对象键",
+                    "example": "task-attachments/user-001/1758975264618.jpg"
+                  },
+                  "imageUrl": {
+                    "type": "string",
+                    "description": "图片完整URL（用于调试）"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "文件不存在或无权删除"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除任务附件",
+        "tags": [
+          "文件管理"
+        ]
+      }
+    },
     "/auth/login": {
       "post": {
         "description": "用户登录获取访问令牌",
