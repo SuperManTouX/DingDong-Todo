@@ -18,7 +18,7 @@ const LoginPage: React.FC = () => {
     try {
       setLoading(true);
       await login(values.username, values.password);
-      navigate('/', { replace: true });
+      navigate('/todos', { replace: true });
     } catch (error) {
       // 移除重复的错误消息显示，因为authService中已经处理了
       // 但保留错误捕获以避免未捕获的Promise错误

@@ -86,6 +86,66 @@ export interface SSEUpdateData {
   };
 }
 
+// 习惯相关类型定义
+export interface Habit {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string;
+  frequency: string;
+  custom_frequency_days: number | null;
+  start_date: string;
+  target_days: number;
+  reminder_time: string;
+  is_reminder_enabled: number;
+  color: string;
+  emoji: string;
+  is_deleted: number;
+  created_at: string;
+  updated_at: string;
+  currentStreak: number;
+  totalDays: number;
+  isCompletedToday: boolean;
+}
+
+export interface DateStatus {
+  date: string; // YYYY-MM-DD格式
+  status: "completed" | "abandoned" | null;
+}
+
+export interface HabitCheckIn {
+  id: string;
+  habitId: string;
+  userId: string;
+  checkInDate: string;
+  status: "COMPLETED" | "SKIPPED" | "ABANDONED";
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HabitStreak {
+  currentStreak: number; // 当前连续打卡天数
+  longestStreak: number; // 最高连续打卡天数
+  totalDays: number; // 总打卡天数
+}
+
+// 习惯统计数据
+export interface HabitStats {
+  monthCompletedDays: number; // 当月完成天数
+  monthCompletionRate: number; // 当月完成率
+  totalDays: number; // 总打卡天数
+  currentStreak: number; // 当前连续打卡天数
+  longestStreak: number; // 最高连续打卡天数
+}
+
+// 习惯详情响应
+export interface HabitDetailResponse {
+  habit: Habit;
+  dateStatuses?: DateStatus[];
+  stats?: HabitStats;
+}
+
 interface TodoAddAction {
   type: "added";
   newTask: Todo;
@@ -251,6 +311,6 @@ export interface SideMenuProps {
 export interface TreeTableData extends Todo {
   key: string;
   children?: TreeTableData[];
-  totalChildren?: number;     // 子节点总数
+  totalChildren?: number; // 子节点总数
   completedChildren?: number; // 已完成的子节点数
 }

@@ -76,6 +76,7 @@ export const useAuthStore = create<AuthState>()(
             user: response.user,
             userId: response.user.id,
             isAuthenticated: true,
+            isLoading: false,
           };
           set(newState);
           // 登录成功后建立SSE连接，连接成功后会自动订阅所有事件
@@ -83,6 +84,7 @@ export const useAuthStore = create<AuthState>()(
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : "登录失败";
+          set({ isLoading: false });
           throw new Error(errorMessage);
         }
       },
@@ -114,6 +116,7 @@ export const useAuthStore = create<AuthState>()(
             user: response.user,
             userId: response.user.id,
             isAuthenticated: true,
+            isLoading: false,
           };
           set(newState);
 
@@ -124,6 +127,7 @@ export const useAuthStore = create<AuthState>()(
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : "注册失败";
+          set({ isLoading: false });
           throw new Error(errorMessage);
         }
       },
