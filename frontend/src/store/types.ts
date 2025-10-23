@@ -1,6 +1,33 @@
-import type { TodoListData, Todo, Tag, TodoActionExtended } from "@/types";
+import type { TodoListData, Todo, Tag, TodoActionExtended, Habit, DateStatus, HabitStats } from "@/types";
 import type { TagReducerAction, ListGroupAction } from "@/types";
 import type { Group } from "@/types/group";
+
+// 习惯状态类型
+export interface HabitState {
+  // 核心数据
+  habits: Habit[];
+  currentHabitId: string | null;
+  dateStatuses: DateStatus[];
+  habitStats: HabitStats | null;
+  isLoading: boolean;
+  error: string | null;
+
+  // 方法
+  setHabits: (habits: Habit[]) => void;
+  setCurrentHabitId: (id: string | null) => void;
+  setDateStatuses: (statuses: DateStatus[]) => void;
+  setHabitStats: (stats: HabitStats | null) => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  
+  // API相关方法
+  loadHabits: () => Promise<void>;
+  loadHabitDetail: (habitId: string, date?: string) => Promise<void>;
+  updateHabitCheckIn: (habitId: string, date: string, status: "completed" | "abandoned" | null) => Promise<void>;
+  createHabit: (habit: Omit<Habit, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateHabit: (habit: Habit) => Promise<void>;
+  deleteHabit: (habitId: string) => Promise<void>;
+}
 
 // 完整的状态类型定义
 export interface TodoState {

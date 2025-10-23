@@ -14,6 +14,9 @@ import sseService from "@/services/sseService";
 import type { TodoUpdateEvent } from "@/services/sseService";
 import { type SSEUpdateData, Todo, TreeTableData } from "@/types";
 
+// 导出习惯相关的store和hooks
+export * from "./habitStore";
+
 export const useTodoStore = create<TodoState>()(
   // 添加devtools中间件
   devtools(

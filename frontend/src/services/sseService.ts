@@ -36,10 +36,20 @@ interface SseErrorEvent {
   timestamp: Date;
 }
 
+// 定义习惯更新事件接口
+interface HabitUpdateEvent {
+  entity: "habit";
+  action: "created" | "updated" | "deleted";
+  habitId: string;
+  data: any;
+  timestamp: Date;
+}
+
 // 通用事件接口，包含实体类型标识
 interface EntityUpdateEvent {
-  entity: "tag" | "list" | "todo";
-  type: "create" | "update" | "delete" | "update_with_children";
+  entity: "tag" | "list" | "todo" | "habit" | "system";
+  type?: "create" | "update" | "delete" | "update_with_children" | "heartbeat" | "connected";
+  action?: string;
   [key: string]: any;
 }
 
@@ -172,6 +182,15 @@ class SseService {
             if (todoStore.subscribeToListUpdates) {
               todoStore.subscribeToListUpdates();
             }
+            
+            // 动态导入habitStore并订阅习惯更新事件
+            import("@/store/habitStore").then(({ useHabitStore }) => {
+              const habitStore = useHabitStore.getState();
+              if (habitStore.subscribeToHabitUpdates) {
+                habitStore.subscribeToHabitUpdates();
+                console.log("已订阅习惯更新事件");
+              }
+            });
             
             console.log("已订阅所有SSE事件");
           });
@@ -376,6 +395,8 @@ class SseService {
    * 处理接收到的事件数据
    */
   private handleEvent(data: EntityUpdateEvent): void {
+    console.log("处理SSE事件:", data);
+    
     // 处理心跳事件
     if (data.entity === 'system' && data.type === 'heartbeat') {
       this.handleHeartbeatEvent(data);
@@ -394,6 +415,9 @@ class SseService {
         break;
       case "todo":
         this.handleTodoUpdate(data as SSEUpdateData);
+        break;
+      case "habit":
+        this.handleHabitUpdate(data as HabitUpdateEvent);
         break;
       default:
         console.warn("未知的实体类型事件:", data);
@@ -436,6 +460,17 @@ class SseService {
    */
   private handleListUpdate(event: ListUpdateEvent): void {
     const listeners = this.listeners.get("listUpdate");
+    if (listeners) {
+      listeners.forEach((listener) => listener(event));
+    }
+  }
+
+  /**
+   * 处理习惯更新事件
+   */
+  private handleHabitUpdate(event: HabitUpdateEvent): void {
+    console.log("收到习惯更新事件:", event);
+    const listeners = this.listeners.get("habitUpdate");
     if (listeners) {
       listeners.forEach((listener) => listener(event));
     }
