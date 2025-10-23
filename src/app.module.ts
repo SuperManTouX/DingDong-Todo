@@ -13,6 +13,7 @@ import { S3Config } from './config/s3.config';
 import { OssConfig } from './config/oss.config';
 import { MailModule } from './mail/mail.module';
 import { FileModule } from './file/file.module';
+import { HabitModule } from './habit/habit.module';
 
 // 自定义请求日志中间件
 function RequestLoggingMiddleware(req: any, res: any, next: () => void) {
@@ -67,6 +68,7 @@ function RequestLoggingMiddleware(req: any, res: any, next: () => void) {
     SseModule,
     MailModule,
     FileModule,
+    HabitModule,
   ],
   providers: [S3Config, OssConfig],
   exports: [S3Config, OssConfig]

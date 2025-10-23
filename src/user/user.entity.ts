@@ -2,6 +2,7 @@ import { Entity, Column, PrimaryColumn, CreateDateColumn, UpdateDateColumn, OneT
 import { TodoList } from '../todo-list/todo-list.entity';
 import { TodoTag } from '../todo-tag/todo-tag.entity';
 import { Task } from '../todo/todo.entity';
+import { Habit } from '../habit/habit.entity';
 
 @Entity()
 export class User {
@@ -25,6 +26,9 @@ export class User {
 
   @Column({ type: 'text', nullable: true })
   bio: string;
+
+  @OneToMany(() => Habit, (habit) => habit.user)
+  habits: Habit[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
