@@ -7,11 +7,13 @@ import { UserService } from '../user/user.service';
 
 // 定义SSE事件接口
 export interface SseEvent {
-  entity: 'tag' | 'list' | 'todo' | 'system';
+  entity: 'tag' | 'list' | 'todo' | 'system' | 'habit';
   type?: "create" | "update" | "delete" | "update_with_children" | "connected" | "heartbeat";
   action?: "update_tree_node_with_children";
   parent?: any;
   childrenChanges?: { add?: any[], update?: any[], delete?: any[] };
+  habitId?: string;
+  data?: any;
   [key: string]: any;
 }
 
@@ -147,12 +149,41 @@ export class SseService {
       }
     };
 
+    // 监听habit.updated事件
+    const habitListener = (event: any) => {
+      // 只发送给习惯所属的用户
+      if (event.userId === userId) {
+        const eventData: SseEvent = {
+          entity: 'habit' as const,
+          action: event.action,
+          habitId: event.habitId,
+          data: event.data,
+          timestamp: event.timestamp
+        };
+        
+        // 获取用户的所有活跃连接
+        const userConnectionList = this.userConnections.get(userId);
+        if (userConnectionList) {
+          console.log(`向用户 ${userId} 的 ${userConnectionList.length} 个连接广播习惯更新事件`);
+          
+          // 广播事件到用户的所有连接
+          userConnectionList.forEach(conn => {
+            if (!conn.subject.closed) {
+              conn.subject.next(eventData);
+              this.updateUserActivity(userId, conn.connectionId);
+            }
+          });
+        }
+      }
+    };
+
     // 清理函数，在连接关闭时移除监听器
     const cleanup = () => {
       console.log(`清理用户 ${userId} 的连接 ${connectionId}`);
       this.eventEmitter.off('tag.updated', tagListener);
       this.eventEmitter.off('list.updated', listListener);
       this.eventEmitter.off('todo.updated', todoListener);
+      this.eventEmitter.off('habit.updated', habitListener);
       this.closeConnection(userId, connectionId);
     };
 
@@ -160,6 +191,7 @@ export class SseService {
     this.eventEmitter.on('tag.updated', tagListener);
     this.eventEmitter.on('list.updated', listListener);
     this.eventEmitter.on('todo.updated', todoListener);
+    this.eventEmitter.on('habit.updated', habitListener);
     console.log(`已为用户 ${userId} 注册SSE事件监听器`);
 
     // 存储用户连接信息
@@ -386,13 +418,10 @@ export class SseService {
   async validateToken(token: string): Promise<string> {
     try {
       console.log('尝试验证token，token长度:', token.length);
-      // 为了调试，先不实际验证token，直接返回一个测试用户ID
-      // 后续可以恢复正常验证
-      // const decoded = this.jwtService.verify(token);
-      // console.log('Token验证成功，decoded:', decoded);
-      // return decoded.sub;
-      console.log('跳过实际token验证，返回测试用户ID: user-001');
-      return 'user-001';
+      // 实际验证token
+      const decoded = this.jwtService.verify(token);
+      console.log('Token验证成功，decoded:', decoded);
+      return decoded.sub;
     } catch (error) {
       console.error('Token验证失败:', error.message || error);
       throw new Error('无效的认证token');
