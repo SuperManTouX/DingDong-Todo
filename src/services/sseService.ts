@@ -30,7 +30,12 @@ interface TodoUpdateEvent {
 
 // 定义SSE错误事件接口
 interface SseErrorEvent {
-  type: "connection_error" | "auth_error" | "network_error" | "server_error" | "heartbeat_timeout";
+  type:
+    | "connection_error"
+    | "auth_error"
+    | "network_error"
+    | "server_error"
+    | "heartbeat_timeout";
   message: string;
   code?: string;
   timestamp: Date;
@@ -42,13 +47,30 @@ interface HabitUpdateEvent {
   action: "created" | "updated" | "deleted";
   habitId: string;
   data: any;
+  stats?: {
+    currentStreak: number;
+    longestStreak: number;
+    totalDays: number;
+    lastCheckInDate?: string;
+    updatedAt?: string;
+    isCompletedToday?: boolean;
+    // 计算字段
+    completionRate?: number;
+    daysSinceStart?: number;
+  };
   timestamp: Date;
 }
 
 // 通用事件接口，包含实体类型标识
 interface EntityUpdateEvent {
   entity: "tag" | "list" | "todo" | "habit" | "system";
-  type?: "create" | "update" | "delete" | "update_with_children" | "heartbeat" | "connected";
+  type?:
+    | "create"
+    | "update"
+    | "delete"
+    | "update_with_children"
+    | "heartbeat"
+    | "connected";
   action?: string;
   [key: string]: any;
 }
@@ -169,20 +191,20 @@ class SseService {
           // 动态导入避免循环依赖
           import("@/store/index").then(({ useTodoStore }) => {
             const todoStore = useTodoStore.getState();
-            
+
             // 订阅任务更新事件
             todoStore.subscribeToTodoUpdates();
-            
+
             // 订阅标签更新事件（如果存在）
             if (todoStore.subscribeToTagUpdates) {
               todoStore.subscribeToTagUpdates();
             }
-            
+
             // 订阅清单更新事件（如果存在）
             if (todoStore.subscribeToListUpdates) {
               todoStore.subscribeToListUpdates();
             }
-            
+
             // 动态导入habitStore并订阅习惯更新事件
             import("@/store/habitStore").then(({ useHabitStore }) => {
               const habitStore = useHabitStore.getState();
@@ -191,7 +213,7 @@ class SseService {
                 console.log("已订阅习惯更新事件");
               }
             });
-            
+
             console.log("已订阅所有SSE事件");
           });
         } catch (error) {
@@ -304,22 +326,29 @@ class SseService {
    * 检查心跳是否超时
    */
   private checkHeartbeatTimeout(): void {
-    if (this.lastHeartbeatTime && this.eventSource?.readyState === EventSource.OPEN) {
+    if (
+      this.lastHeartbeatTime &&
+      this.eventSource?.readyState === EventSource.OPEN
+    ) {
       const now = Date.now();
       const timeSinceLastHeartbeat = now - this.lastHeartbeatTime;
-      
+
       if (timeSinceLastHeartbeat > this.HEARTBEAT_TIMEOUT) {
-        console.warn(`SSE心跳超时: ${timeSinceLastHeartbeat}ms，超过了${this.HEARTBEAT_TIMEOUT}ms的阈值`);
+        console.warn(
+          `SSE心跳超时: ${timeSinceLastHeartbeat}ms，超过了${this.HEARTBEAT_TIMEOUT}ms的阈值`,
+        );
         this.triggerErrorEvent(
           "heartbeat_timeout",
-          "SSE连接心跳超时，请检查网络连接"
+          "SSE连接心跳超时，请检查网络连接",
         );
         // 触发重连
         this.handleReconnect();
       } else {
         // 正常状态，记录距离下次超时的时间
         const timeToTimeout = this.HEARTBEAT_TIMEOUT - timeSinceLastHeartbeat;
-        console.log(`SSE心跳正常，距离下次检查还剩约${Math.round(timeToTimeout / 1000)}秒`);
+        console.log(
+          `SSE心跳正常，距离下次检查还剩约${Math.round(timeToTimeout / 1000)}秒`,
+        );
       }
     }
   }
@@ -396,9 +425,9 @@ class SseService {
    */
   private handleEvent(data: EntityUpdateEvent): void {
     console.log("处理SSE事件:", data);
-    
+
     // 处理心跳事件
-    if (data.entity === 'system' && data.type === 'heartbeat') {
+    if (data.entity === "system" && data.type === "heartbeat") {
       this.handleHeartbeatEvent(data);
       return;
     }
@@ -470,9 +499,18 @@ class SseService {
    */
   private handleHabitUpdate(event: HabitUpdateEvent): void {
     console.log("收到习惯更新事件:", event);
+    
+    // 创建事件的副本，确保stats中不携带id字段
+    const sanitizedEvent = { ...event };
+    if (sanitizedEvent.stats && 'id' in sanitizedEvent.stats) {
+      // 移除stats中的id字段
+      const { id, ...sanitizedStats } = sanitizedEvent.stats;
+      sanitizedEvent.stats = sanitizedStats;
+    }
+    
     const listeners = this.listeners.get("habitUpdate");
     if (listeners) {
-      listeners.forEach((listener) => listener(event));
+      listeners.forEach((listener) => listener(sanitizedEvent));
     }
   }
 
@@ -536,6 +574,35 @@ class SseService {
     };
   }
 
+  /**
+   * 监听清单更新事件
+   */
+  onHabitUpdate(callback: (event: HabitUpdateEvent) => void): () => void {
+    const subscriptionType = "habitUpdate";
+    const subscriptionId = ++this.subscriptionIdCounter;
+
+    if (!this.listeners.has(subscriptionType)) {
+      this.listeners.set(subscriptionType, []);
+    }
+
+    const listeners = this.listeners.get(subscriptionType)!;
+    listeners.push(callback);
+
+    // 保存订阅信息
+    this.subscriptionMap.set(subscriptionId, {
+      type: subscriptionType,
+      callback,
+    });
+
+    // 返回取消订阅函数
+    return () => {
+      const index = listeners.indexOf(callback);
+      if (index !== -1) {
+        listeners.splice(index, 1);
+        this.subscriptionMap.delete(subscriptionId);
+      }
+    };
+  }
   /**
    * 监听清单更新事件
    */

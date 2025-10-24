@@ -5,18 +5,29 @@ import {
   Calendar,
   Card,
   Col,
+  Dropdown,
+  Form,
+  Input,
+  Modal,
   Layout,
   List,
+  Menu,
   Row,
   Space,
   Statistic,
   Typography,
+  Radio,
+  DatePicker,
+  InputNumber,
+  TimePicker,
+  Switch,
+  Select,
 } from "antd";
 import {
-  ArrowUpOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
   FireFilled,
+  PlusOutlined,
   ThunderboltFilled,
 } from "@ant-design/icons";
 import { Button } from "antd";
@@ -29,8 +40,11 @@ import {
   useCurrentHabit,
   useDateStatuses,
 } from "@/store/habitStore";
+// 导入习惯服务
+import { habitService } from "@/services/habitService";
 // 解构Layout组件
-const { Header, Content, Footer } = Layout;
+const { Header, Content } = Layout;
+const { TextArea } = Input;
 
 export const HabitPage = () => {
   // 从store获取习惯列表和加载方法
@@ -47,6 +61,13 @@ export const HabitPage = () => {
   const dateStatuses = useDateStatuses();
   // 状态管理：控制是否显示最高连续打卡天数
   const [showLongestStreak, setShowLongestStreak] = React.useState(false);
+  // 状态管理：当前日历面板显示的月份
+  const [currentPanelMonth, setCurrentPanelMonth] = React.useState<string>(
+    dayjs().format("YYYY-MM"),
+  );
+  // 状态管理：控制添加习惯模态框的显示
+  const [isAddModalVisible, setIsAddModalVisible] = React.useState(false);
+  const [habitForm] = Form.useForm();
 
   // 组件挂载时加载习惯列表
   useEffect(() => {
@@ -59,47 +80,124 @@ export const HabitPage = () => {
     setCurrentHabitId(habit.id);
     // 加载习惯详情
     await loadHabitDetail(habit.id);
-    console.log(currentHabit?.date);
+  };
+
+  // 处理添加新习惯
+  const handleAddHabit = () => {
+    // 重置表单
+    habitForm.resetFields();
+    // 打开添加习惯模态框
+    setIsAddModalVisible(true);
+  };
+
+  const handleAddModalOk = () => {
+    habitForm
+      .validateFields()
+      .then((values) => {
+        // 准备提交数据，将前端字段转换为后端需要的格式
+        const habitData = {
+          name: values.name,
+          description: values.description || '',
+          frequency: values.frequency,
+          // 对于永远的习惯，target_days设置为null
+          target_days: values.targetDays,
+          // start_date使用用户选择的开始日期，无论是否为永久习惯
+          start_date: values.startDate.format('YYYY-MM-DD'),
+          color: values.color,
+          is_reminder_enabled: 0, // 默认关闭提醒
+          reminder_time: null,    // 默认无提醒时间
+          emoji: '',              // 默认无表情
+          is_deleted: 0           // 默认未删除
+        };
+        
+        console.log("表单验证成功，习惯数据:", habitData);
+        
+        // 发送添加习惯的请求
+        habitService.createHabit(habitData)
+          .then(() => {
+            message.success("习惯添加成功");
+            setIsAddModalVisible(false);
+            // 重新加载习惯列表
+            loadHabits();
+          })
+          .catch((error) => {
+            console.error("添加习惯失败:", error);
+            message.error("添加习惯失败，请重试");
+          });
+      })
+      .catch((info) => {
+        console.log("表单验证失败:", info);
+        message.error("请填写完整的习惯信息");
+      });
+  };
+
+  const handleAddModalCancel = () => {
+    setIsAddModalVisible(false);
+    habitForm.resetFields();
+  };
+
+  // 监听永久选项变化，控制目标天数输入框状态
+  const handlePermanentChange = (checked) => {
+    habitForm.setFieldsValue({ isPermanent: checked });
   };
   // 使用store中的习惯数据，如果没有则使用空数组
   const data = habits.length > 0 ? habits : [];
 
   // 处理面板变化
   const onPanelChange = (value: Dayjs, mode: CalendarProps<Dayjs>["mode"]) => {
+    // 更新当前显示的面板月份
+    const monthParam = value.format("YYYY-MM");
+    setCurrentPanelMonth(monthParam);
     // 只有在模式为'month'时才重新请求数据，避免日视图切换也触发请求
     if (mode === "month" && currentHabitId) {
-      // 格式化为YYYY-MM格式的月份参数
-      const monthParam = value.format("YYYY-MM");
       console.log(`切换到月份: ${monthParam}`);
       // 重新加载习惯详情，带上月份参数
       loadHabitDetail(currentHabitId, monthParam);
     }
   };
 
-  // 处理日期点击事件 - 切换完成/未完成状态
-  const handleDateClick = async (date: Dayjs, isRightClick = false) => {
-    if (!currentHabit) return;
+  // 处理日期点击事件 - 切换完成/未完成/放弃状态
+  const handleDateClick = async (
+    date: Dayjs,
+    status?: "completed" | "abandoned" | null,
+    isCurrentMonth = true,
+  ) => {
+    if (!currentHabit || !isCurrentMonth) return;
 
     const dateStr = date.format("YYYY-MM-DD");
-    console.log(`${isRightClick ? "右键" : "左键"}点击了日期: ${dateStr}`);
+    console.log(`点击了日期: ${dateStr}`);
+
+    // 检查日期是否大于当前系统时间
+    const today = dayjs().startOf("day"); // 使用dayjs的startOf方法获取今天00:00:00时间点
+    if (dayjs(date).isAfter(today, "day")) {
+      message.warning("打卡时间不能超过当前时间");
+      return;
+    }
+
+    // 检查日期是否早于习惯的开始日期
+    const startDate = dayjs(currentHabit.startDate).startOf("day");
+    if (dayjs(date).isBefore(startDate, "day")) {
+      message.warning("打卡时间不能早于习惯开始日期");
+      return;
+    }
 
     // 查找当前日期的状态
     const existingStatus =
       dateStatuses?.find((item) => item.date === dateStr)?.status || null;
     console.log(dateStr, existingStatus);
-    let newStatus: "completed" | "abandoned" | null;
 
-    // 右键点击：标记为放弃
-    if (isRightClick) {
-      newStatus = "abandoned";
-    }
-    // 左键点击：切换completed/null状态
-    else {
+    // 如果没有指定状态，则根据现有状态自动切换
+    let newStatus: "completed" | "abandoned" | null = status;
+    if (newStatus === undefined) {
+      // 自动切换逻辑
       switch (existingStatus) {
         case "completed":
           newStatus = null;
           break;
         case "abandoned":
+          // 单击放弃状态的记录，设置为未完成(null)
+          newStatus = null;
+          break;
         case null:
           newStatus = "completed";
           break;
@@ -110,7 +208,7 @@ export const HabitPage = () => {
 
     // 立即更新UI以提供即时反馈（使用从store解构的函数）
     updateSingleDateStatus(currentHabit.id, dateStr, newStatus);
-
+    console.log(currentHabit.id);
     try {
       // 调用API执行实际的状态切换
       await updateHabitCheckIn(currentHabit.id, dateStr, newStatus);
@@ -125,10 +223,15 @@ export const HabitPage = () => {
     }
   };
 
+  // 处理右键菜单的标记放弃操作
+  const handleMarkAsAbandoned = (date: Dayjs, isCurrentMonth: boolean) => {
+    if (!currentHabit || !isCurrentMonth) return;
+    handleDateClick(date, "abandoned", isCurrentMonth);
+  };
+
   // 自定义日期单元格渲染
-  const dateCellRender = (current: Dayjs, info: { type: string }) => {
-    const dayjsDate = dayjs(current);
-    const dateStr = dayjsDate.format("YYYY-MM-DD");
+  const dateCellRender = (current: Dayjs) => {
+    const dateStr = current.format("YYYY-MM-DD");
     // 使用store中的dateStatuses而不是currentHabit.dateStatuses
     const dateStatus = dateStatuses.find((item) => item.date === dateStr);
     const status = dateStatus?.status || null;
@@ -140,7 +243,7 @@ export const HabitPage = () => {
           return (
             <div className="flex justify-center mt-1">
               <CheckCircleOutlined
-                style={{ color: "#52c41a", fontSize: "16px" }}
+                style={{ color: "#52c41a", fontSize: "24px" }}
               />
             </div>
           );
@@ -149,7 +252,7 @@ export const HabitPage = () => {
           return (
             <div className="flex justify-center mt-1">
               <CloseCircleOutlined
-                style={{ color: "#ff4d4f", fontSize: "16px" }}
+                style={{ color: "#ff4d4f", fontSize: "24px" }}
               />
             </div>
           );
@@ -159,8 +262,8 @@ export const HabitPage = () => {
             <div className="flex justify-center mt-1">
               <div
                 style={{
-                  width: "16px",
-                  height: "16px",
+                  width: "24px",
+                  height: "24px",
                   borderRadius: "50%",
                   backgroundColor: "#d9d9d9",
                 }}
@@ -172,8 +275,8 @@ export const HabitPage = () => {
             <div className="flex justify-center mt-1">
               <div
                 style={{
-                  width: "16px",
-                  height: "16px",
+                  width: "24px",
+                  height: "24px",
                   borderRadius: "50%",
                   backgroundColor: "#d9d9d9",
                 }}
@@ -183,21 +286,56 @@ export const HabitPage = () => {
       }
     };
 
-    // 处理右键点击事件
-    const handleRightClick = (e: React.MouseEvent) => {
-      e.preventDefault(); // 阻止默认的右键菜单
-      handleDateClick(dayjsDate, true);
-    };
+    // 获取单元格日期的月份（YYYY-MM格式）
+    const cellMonth = current.format("YYYY-MM");
+    // 通过比较单元格日期的月份与当前显示面板的月份来判断是否为本月日期
+    const isCurrentMonth = cellMonth === currentPanelMonth;
+
+    // 右键菜单配置
+    const menu = (
+      <Menu>
+        <Menu.Item
+          key="1"
+          onClick={() => handleMarkAsAbandoned(current, isCurrentMonth)}
+          disabled={!isCurrentMonth}
+        >
+          标记为放弃
+        </Menu.Item>
+      </Menu>
+    );
+
+    // 检查日期是否大于当前系统时间
+    const today = dayjs().startOf("day"); // 使用dayjs的startOf方法获取今天00:00:00时间点
+    const isFutureDate = dayjs(current).isAfter(today, "day");
+
+    // 检查日期是否早于习惯的开始日期
+    const startDate = currentHabit?.startDate
+      ? dayjs(currentHabit.startDate).startOf("day")
+      : null;
+    const isBeforeStartDate =
+      startDate && dayjs(current).isBefore(startDate, "day");
+
+    // 如果是未来日期、非本月日期或早于开始日期，设置为半透明
+    const isDisabled = !isCurrentMonth || isFutureDate || isBeforeStartDate;
 
     return (
-      <div
-        className={`text-center p-1 cursor-pointer`}
-        onClick={() => handleDateClick(dayjsDate)}
-        onContextMenu={handleRightClick}
-        title="左键: 切换完成/未完成, 右键: 标记为放弃"
-      >
-        {renderStatusIndicator()}
-      </div>
+      <Dropdown overlay={menu} trigger={["contextMenu"]}>
+        <div
+          className={`text-center p-1 cursor-pointer ${isDisabled ? "opacity-30" : ""}`}
+          onClick={() => handleDateClick(current, undefined, isCurrentMonth)}
+          title={
+            isDisabled
+              ? isFutureDate
+                ? "未来日期，不可打卡"
+                : isBeforeStartDate
+                  ? "早于习惯开始日期，不可打卡"
+                  : "非本月日期，不可点击"
+              : "左键: 切换完成/未完成状态, 右键: 打开菜单"
+          }
+        >
+          {renderStatusIndicator()}
+        </div>
+      </Dropdown>
     );
   };
 
@@ -213,11 +351,19 @@ export const HabitPage = () => {
             style={{ backgroundColor: "var(--theme--colorBgLayout)" }}
             className="pe-1 ps-1 border-0 "
           >
-            {/*习惯页面标题*/}
-            <Row className={"h-100"} justify="start" align="middle">
+            {/*习惯页面标题和添加按钮*/}
+            <Row className={"h-100"} justify="space-between" align="middle">
               <Typography.Title className={"m-0"} level={4}>
                 习惯
               </Typography.Title>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => handleAddHabit()}
+                size="small"
+              >
+                添加
+              </Button>
             </Row>
           </Header>
           <Content>
@@ -394,6 +540,149 @@ export const HabitPage = () => {
           )}
         </Layout>
       </Layout>
+
+      {/* 添加习惯的模态框 */}
+      <Modal
+        title="添加新习惯"
+        open={isAddModalVisible}
+        onOk={handleAddModalOk}
+        onCancel={handleAddModalCancel}
+        okText="确定"
+        cancelText="取消"
+        width={600}
+      >
+        <Form
+          form={habitForm}
+          layout="vertical"
+          initialValues={{
+            name: '',
+            description: '',
+            color: '#1890ff',
+            frequency: 'daily',
+            reminderTime: null,
+            startDate: dayjs(),
+            targetDays: null,
+            targetType: '永远'
+          }}
+        >
+          <Form.Item
+            label="习惯名称"
+            name="name"
+            rules={[
+              { required: true, message: "请输入习惯名称" },
+              { max: 50, message: "习惯名称最多50个字符" },
+            ]}
+          >
+            <Input placeholder="请输入习惯名称" />
+          </Form.Item>
+
+          <Form.Item
+            label="习惯描述"
+            name="description"
+            rules={[{ max: 200, message: "习惯描述最多200个字符" }]}
+          >
+            <Input.TextArea rows={3} placeholder="请输入习惯描述（可选）" />
+          </Form.Item>
+
+          <Form.Item label="习惯颜色" name="color">
+            <Input type="color" />
+          </Form.Item>
+
+          <Form.Item
+            label="开始日期"
+            name="startDate"
+            rules={[{ required: true, message: "请选择开始日期" }]}
+          >
+            <DatePicker placeholder="请选择开始日期" />
+          </Form.Item>
+
+          <Form.Item
+            label="频率"
+            name="frequency"
+            rules={[{ required: true, message: "请选择习惯频率" }]}
+          >
+            <Radio.Group>
+              <Radio value="daily">每天</Radio>
+              <Radio value="weekly">每周</Radio>
+              <Radio value="monthly">每月</Radio>
+            </Radio.Group>
+          </Form.Item>
+
+          <Form.Item
+            label="目标天数"
+            name="targetDays"
+            rules={[
+              {
+                validator: (_, value, callback) => {
+                  const targetType = habitForm.getFieldValue("targetType");
+                  if (targetType === "自定义" && (!value || value < 1)) {
+                    callback("请输入有效的目标天数");
+                  } else {
+                    callback();
+                  }
+                },
+              },
+            ]}
+          >
+            <Space
+              style={{
+                width: "100%",
+                flexDirection: "column",
+                alignItems: "flex-start",
+              }}
+            >
+              <Form.Item noStyle name="targetType">
+                <Select
+                  placeholder="请选择目标类型"
+                  style={{ width: 120 }}
+                  onChange={() => {
+                    const targetType = habitForm.getFieldValue("targetType");
+                    if (targetType !== "自定义") {
+                      // 根据选择设置对应的天数
+                      const optionMap: Record<string, number | null> = {
+                        "7天": 7,
+                        "21天": 21,
+                        "30天": 30,
+                        "100天": 100,
+                        "365天": 365,
+                        "永远": null
+                      };
+                      habitForm.setFieldValue("targetDays", optionMap[targetType] || null);
+                    }
+                  }}
+                  options={[
+                    { label: '7天', value: '7天' },
+                    { label: '21天', value: '21天' },
+                    { label: '30天', value: '30天' },
+                    { label: '100天', value: '100天' },
+                    { label: '365天', value: '365天' },
+                    { label: '永远', value: '永远' },
+                    { label: '自定义', value: '自定义' }
+                  ]}
+                />
+              </Form.Item>
+
+              {/* 仅当选择自定义时显示输入框 */}
+              <Form.Item
+                noStyle
+                shouldUpdate={(prevValues, currentValues) => 
+                  prevValues.targetType !== currentValues.targetType
+                }
+              >
+                {({ getFieldValue }) => 
+                  getFieldValue("targetType") === "自定义" && (
+                    <InputNumber
+                      min={1}
+                      placeholder="请输入目标天数"
+                      style={{ width: 120, marginTop: 8 }}
+                    />
+                  )
+                }
+              </Form.Item>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
     </>
   );
 };

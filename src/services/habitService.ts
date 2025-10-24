@@ -64,8 +64,8 @@ class HabitService {
   async createHabit(
     habitData: Omit<Habit, "id" | "createdAt" | "updatedAt">,
   ): Promise<Habit> {
-    const response = await api.post<Habit>("/habits", habitData);
-    return response;
+    // 由于api.ts的响应拦截器已经返回response.data，这里直接返回即可
+    return await api.post<Habit>("/habits", habitData);
   }
 
   // 更新习惯

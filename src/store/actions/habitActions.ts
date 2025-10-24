@@ -32,13 +32,22 @@ export const habitActions = {
       const currentDate = date || new Date().toISOString().substring(0, 7);
       const response = await habitService.getHabitById(habitId, currentDate);
       console.log(response);
+      // 确保currentHabit的id与传入的habitId一致
+      const habitWithCorrectId = response
+        ? {
+            ...response,
+            id: habitId, // 明确设置为传入的habitId，防止被错误替换
+          }
+        : null;
+
       set({
         currentHabitId: habitId,
-        currentHabit: response || null, // 更新currentHabit状态
-        dateStatuses: response.dateStatuses || [],
-        habitStats: response.stats || null,
+        currentHabit: habitWithCorrectId, // 更新currentHabit状态，确保id正确
+        dateStatuses: response?.dateStatuses || [],
+        habitStats: response?.stats || null,
         isLoading: false,
       });
+      console.log("加载习惯详情，确保id正确:", habitId);
     } catch (error) {
       console.error("加载习惯详情失败:", error);
       set({ error: "加载习惯详情失败", isLoading: false });
@@ -89,24 +98,26 @@ export const habitActions = {
       }
 
       set({ dateStatuses: newDateStatuses });
-
+      console.log(habitId);
       // 直接传递status参数，包括null值
       await habitService.toggleCheckInStatus(habitId, date, status);
-      
-      console.log(`习惯 ${habitId} 在 ${date} 的打卡状态已切换为 ${status || 'abandoned'}，等待SSE更新`);
-      
+
+      console.log(
+        `习惯 ${habitId} 在 ${date} 的打卡状态已切换为 ${status || "abandoned"}，等待SSE更新`,
+      );
+
       // 不再立即重新加载数据，将由SSE事件处理更新
       set({ isLoading: false });
     } catch (error) {
       console.error("更新打卡状态失败:", error);
-      
+
       // 如果API调用失败，回滚本地状态
       try {
         await this.loadHabitDetail(habitId, date.substring(0, 7), set);
       } catch (reloadError) {
         console.error("回滚状态失败:", reloadError);
       }
-      
+
       set({ error: "更新打卡状态失败", isLoading: false });
     }
   },
