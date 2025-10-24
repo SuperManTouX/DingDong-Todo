@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsOptional, IsBoolean, ValidateIf } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsBoolean, ValidateIf, IsDateString, IsNumber } from 'class-validator';
 
 class CustomFrequency {
   @IsNotEmpty({ message: '自定义频率必须指定天数' })
@@ -19,7 +19,7 @@ export class CreateHabitDto {
 
   @IsNotEmpty({ message: '频率类型不能为空' })
   @IsString({ message: '频率类型必须是字符串' })
-  frequency: 'daily' | 'weekly' | 'custom';
+  frequency: 'daily' | 'weekly' | 'monthly' | 'custom';
 
   @ValidateIf((o) => o.frequency === 'custom')
   @IsNotEmpty({ message: '自定义频率不能为空' })
@@ -31,4 +31,12 @@ export class CreateHabitDto {
   @IsOptional()
   @IsBoolean({ message: '是否归档必须是布尔值' })
   isArchived?: boolean;
+
+  @IsNotEmpty({ message: '开始日期不能为空' })
+  @IsDateString()
+  start_date: string;
+
+  @IsOptional()
+  @IsNumber({}, { message: '目标天数必须是数字' })
+  target_days?: number | null;
 }

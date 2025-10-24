@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Between } from 'typeorm';
 import { Habit } from './habit.entity';
 import { HabitCheckIn, CheckInStatus } from './habit-check-in.entity';
 import { HabitStreak } from './habit-streak.entity';
@@ -31,10 +31,14 @@ export class HabitService {
     // 移除不需要的属性
     const { customFrequency, ...habitData } = createHabitDto;
 
+    // 创建习惯对象，包含startDate和targetDays
     const habit = this.habitRepository.create({
       ...habitData,
       customFrequencyDays,
       user,
+      // 确保字段映射正确
+      startDate: createHabitDto.start_date,
+      targetDays: createHabitDto.target_days,
     });
 
     const savedHabit = await this.habitRepository.save(habit);
@@ -49,6 +53,29 @@ export class HabitService {
     });
     
     await this.streakRepository.save(streak);
+    
+    // 通过SSE发送习惯创建事件
+    try {
+      // 发送习惯更新事件
+      await this.sseService.sendHabitUpdate(user.id, {
+        entity: 'habit',
+        action: 'created',
+        habitId: savedHabit.id,
+        data: savedHabit,
+        stats: {
+          currentStreak: 0,
+          longestStreak: 0,
+          totalDays: 0,
+          isCompletedToday: false,
+        },
+        timestamp: new Date(),
+      });
+      
+      console.log(`已通过SSE发送习惯创建事件: ${savedHabit.id}`);
+    } catch (error) {
+      console.error('发送SSE消息失败:', error);
+      // SSE发送失败不应影响习惯创建，只记录错误
+    }
     
     return savedHabit;
   }
@@ -288,7 +315,7 @@ export class HabitService {
     return savedCheckIn;
   }
 
-  async toggleCheckInStatus(habitId: string, userId: string, checkInDate: Date, status?: CheckInStatus) {
+  async toggleCheckInStatus(habitId: string, userId: string, checkInDate: Date, status?: CheckInStatus | null) {
     // 检查习惯是否存在
     const habit = await this.habitRepository.findOne({ where: { id: habitId, user: { id: userId } } });
     if (!habit) {
@@ -311,38 +338,28 @@ export class HabitService {
     let result;
     let action;
 
-    if (existingCheckIn && existingCheckIn.status === CheckInStatus.COMPLETED) {
-      // 如果存在已完成的打卡记录，则删除它（切换为未完成）
-      await this.checkInRepository.delete(existingCheckIn.id);
-      result = null;
-      action = 'deleted';
-    } else if (status === CheckInStatus.ABANDONED) {
-      // 如果指定了放弃状态，则创建或更新为放弃
-      if (existingCheckIn) {
-        existingCheckIn.status = CheckInStatus.ABANDONED;
+    // 处理已存在记录的情况
+    if (existingCheckIn) {
+      if (existingCheckIn.status === CheckInStatus.COMPLETED && !status) {
+        // 如果存在已完成的打卡记录且没有指定新状态，则删除它（切换为未完成）
+        await this.checkInRepository.delete(existingCheckIn.id);
+        result = null;
+        action = 'deleted';
+      } else {
+        // 更新现有记录的状态
+        existingCheckIn.status = status === undefined ? CheckInStatus.COMPLETED : status;
+        existingCheckIn.updatedAt = new Date();
         result = await this.checkInRepository.save(existingCheckIn);
         action = 'updated';
-      } else {
-        const now = new Date();
-        const newCheckIn = this.checkInRepository.create({
-          habit,
-          user: { id: userId } as User,
-          checkInDate: normalizedDate,
-          status: CheckInStatus.ABANDONED,
-          createdAt: now,
-          updatedAt: now
-        });
-        result = await this.checkInRepository.save(newCheckIn);
-        action = 'created';
       }
     } else {
-      // 否则创建一个新的已完成状态的打卡记录
+      // 创建新记录
       const now = new Date();
       const newCheckIn = this.checkInRepository.create({
         habit,
         user: { id: userId } as User,
         checkInDate: normalizedDate,
-        status: CheckInStatus.COMPLETED,
+        status: status === undefined ? CheckInStatus.COMPLETED : status,
         createdAt: now,
         updatedAt: now
       });
@@ -350,24 +367,23 @@ export class HabitService {
       action = 'created';
     }
 
-    // 更新连续打卡统计
-    await this.updateStreak(habitId, checkInDate, status || CheckInStatus.COMPLETED);
+    // 保存原始状态用于统计更新
+    const originalStatus = existingCheckIn?.status;
     
-    // 发送SSE事件
-    this.emitHabitUpdateEvent(userId, habitId, action, result);
+    // 更新连续打卡统计，只有当status不为null且不是undefined时才调用
+    if (status !== null && status !== undefined) {
+      await this.updateStreak(habitId, checkInDate, status);
+    }
+    
+    // 发送SSE事件，包含最新统计数据
+    await this.emitHabitUpdateEvent(userId, habitId, action, result);
     
     return { action, data: result };
   }
 
-  private emitHabitUpdateEvent(userId: string, habitId: string, action: string, data: any) {
-    // 发送SSE事件到用户
-    const eventData = {
-      entity: 'habit',
-      action,
-      habitId,
-      data,
-      timestamp: new Date(),
-    };
+  private async emitHabitUpdateEvent(userId: string, habitId: string, action: string, data: any) {
+    // 获取最新的习惯统计数据
+    const stats = await this.getHabitStreak(habitId, userId);
     
     // 使用event-emitter2广播事件
     this.eventEmitter.emit('habit.updated', {
@@ -375,6 +391,7 @@ export class HabitService {
       habitId,
       action,
       data,
+      stats, // 添加统计数据
       timestamp: new Date(),
     });
     
@@ -440,7 +457,7 @@ export class HabitService {
   }
 
   // 获取连续打卡统计
-  async getHabitStreak(habitId: string, userId: string): Promise<HabitStreak> {
+  async getHabitStreak(habitId: string, userId: string): Promise<any> {
     await this.getHabitById(habitId, userId); // 验证习惯归属
     
     const streak = await this.streakRepository.findOne({
@@ -450,7 +467,112 @@ export class HabitService {
     if (!streak) {
       throw new NotFoundException('打卡统计不存在');
     }
+    
+    // 计算当月打卡天数和完成率
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const monthStart = new Date(year, month - 1, 1);
+    const monthEnd = new Date(year, month, 0);
+    
+    // 查询当月完成的打卡记录
+    const monthCheckIns = await this.checkInRepository.count({
+      where: {
+        habit: { id: habitId },
+        user: { id: userId },
+        status: CheckInStatus.COMPLETED,
+        checkInDate: Between(monthStart, monthEnd),
+      },
+    });
+    
+    // 计算当月完成率
+    const daysInMonth = monthEnd.getDate();
+    const completionRate = daysInMonth > 0 
+      ? Math.round((monthCheckIns / daysInMonth) * 100) / 100 
+      : 0;
+    
+    // 检查今天是否已完成
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+    
+    const todayCheckIn = await this.checkInRepository.findOne({
+      where: {
+        habit: { id: habitId },
+        user: { id: userId },
+        status: CheckInStatus.COMPLETED,
+        checkInDate: Between(todayStart, todayEnd),
+      },
+    });
+    
+    // 查询所有已完成的打卡记录总数
+    const totalCompletedCheckIns = await this.checkInRepository.count({
+      where: {
+        habit: { id: habitId },
+        user: { id: userId },
+        status: CheckInStatus.COMPLETED,
+      },
+    });
 
-    return streak;
+    // 计算连续打卡天数：从当前系统时间一直朝前检查status是否为completed
+    let currentStreak = 0;
+    const checkDate = new Date();
+    checkDate.setHours(0, 0, 0, 0);
+    
+    // 循环向前检查，直到找到未完成的日期
+    while (true) {
+      const dayStart = new Date(checkDate);
+      const dayEnd = new Date(checkDate);
+      dayEnd.setHours(23, 59, 59, 999);
+      
+      const hasCheckIn = await this.checkInRepository.findOne({
+        where: {
+          habit: { id: habitId },
+          user: { id: userId },
+          status: CheckInStatus.COMPLETED,
+          checkInDate: Between(dayStart, dayEnd),
+        },
+      });
+      
+      if (!hasCheckIn) {
+        // 如果当天没有完成打卡记录，则终止连续天数计算
+        break;
+      }
+      
+      // 如果当天完成打卡，增加连续天数
+      currentStreak++;
+      
+      // 向前移动一天
+      checkDate.setDate(checkDate.getDate() - 1);
+    }
+    
+    // 如果当前连续天数超过最高连续天数，更新数据库中的最高连续天数
+    if (currentStreak > streak.longestStreak) {
+      streak.longestStreak = currentStreak;
+      await this.streakRepository.save(streak);
+    }
+    
+    // 获取最后一次打卡日期
+    const lastCheckIn = await this.checkInRepository.findOne({
+      where: {
+        habit: { id: habitId },
+        user: { id: userId },
+        status: CheckInStatus.COMPLETED,
+      },
+      order: { checkInDate: 'DESC' },
+    });
+
+    // 返回不包含id字段的对象
+    return {
+      currentStreak, // 从当前时间向前计算的连续天数
+      longestStreak: streak.longestStreak, // 保持使用数据库中的最长连续天数
+      totalCheckInDays: totalCompletedCheckIns, // 所有status为completed的天数
+      lastCheckInDate: lastCheckIn?.checkInDate || null,
+      updatedAt: streak.updatedAt,
+      isCompletedToday: !!todayCheckIn,
+      monthCheckInDays: monthCheckIns, // 添加当月打卡天数
+      completionRate, // 添加完成率
+    };
   }
 }

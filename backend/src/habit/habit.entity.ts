@@ -19,13 +19,19 @@ export class Habit {
   description: string;
 
   @Column()
-  frequency: string; // daily, weekly, custom
+  frequency: string; // daily, weekly, monthly, custom
 
   @Column({ name: 'custom_frequency_days', nullable: true })
   customFrequencyDays?: string;
 
   @Column({ name: 'is_deleted', default: false })
   isArchived: boolean;
+
+  @Column({ name: 'start_date' })
+  startDate: string;
+
+  @Column({ name: 'target_days', type: 'int', nullable: true })
+  targetDays?: number | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
