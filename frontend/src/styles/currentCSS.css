@@ -504,6 +504,10 @@ button + button {
     transition: opacity .2s;
 }
 
+.opacity-30 {
+    opacity: .3;
+}
+
 .opacityHover3-1:hover {
     opacity: 1;
 }
