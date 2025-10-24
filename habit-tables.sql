@@ -16,8 +16,8 @@ CREATE TABLE IF NOT EXISTS habit (
   color VARCHAR(255) NULL DEFAULT '#3b82f6' COMMENT '习惯颜色',
   emoji VARCHAR(10) NULL COMMENT '习惯表情符号',
   is_deleted BOOLEAN NOT NULL DEFAULT FALSE COMMENT '是否已删除',
-  created_at DATETIME NOT NULL,
-  updated_at DATETIME NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
   INDEX idx_habit_user_id (user_id),
   INDEX idx_habit_is_deleted (is_deleted)
@@ -29,10 +29,10 @@ CREATE TABLE IF NOT EXISTS habit_check_in (
   habit_id VARCHAR(36) NOT NULL,
   user_id VARCHAR(36) NOT NULL,
   check_in_date DATE NOT NULL COMMENT '打卡日期',
-  status VARCHAR(20) NOT NULL COMMENT '状态：completed（已完成）, skipped（跳过）, abandoned（放弃）',
+  status VARCHAR(20) NULL COMMENT '状态：completed（已完成）, skipped（跳过）, abandoned（放弃）, null（未完成）',
   notes TEXT NULL COMMENT '打卡备注',
-  created_at DATETIME NOT NULL,
-  updated_at DATETIME NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (habit_id) REFERENCES habit(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
   UNIQUE KEY idx_habit_date (habit_id, check_in_date),
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS habit_streak (
   longest_streak INT NOT NULL DEFAULT 0 COMMENT '最长连续天数',
   total_check_ins INT NOT NULL DEFAULT 0 COMMENT '总打卡次数',
   last_check_in_date DATE NULL COMMENT '最后一次打卡日期',
-  updated_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (habit_id) REFERENCES habit(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
   UNIQUE KEY idx_habit_streak (habit_id),
@@ -131,6 +131,13 @@ BEGIN
   ELSEIF p_status = 'abandoned' THEN
     -- 放弃打卡，重置连续天数
     SET v_current_streak = 0;
+  ELSEIF p_status IS NULL THEN
+    -- 未完成状态，重置连续天数
+    SET v_current_streak = 0;
+    -- 如果当前日期就是最后打卡日期，则清除最后打卡日期
+    IF v_last_check_in IS NOT NULL AND DATEDIFF(p_check_in_date, v_last_check_in) = 0 THEN
+      SET v_last_check_in = NULL;
+    END IF;
   END IF;
   
   -- 更新统计记录

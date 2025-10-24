@@ -158,6 +158,7 @@ export class SseService {
           action: event.action,
           habitId: event.habitId,
           data: event.data,
+          stats: event.stats, // 添加统计数据
           timestamp: event.timestamp
         };
         
@@ -458,5 +459,27 @@ export class SseService {
   getUserConnectionCount(userId: string): number {
     const userConnectionList = this.userConnections.get(userId);
     return userConnectionList ? userConnectionList.length : 0;
+  }
+
+  /**
+   * 发送习惯更新事件
+   * @param userId 用户ID
+   * @param eventData 事件数据
+   */
+  async sendHabitUpdate(userId: string, eventData: any): Promise<void> {
+    try {
+      console.log(`准备发送习惯更新事件给用户 ${userId}`);
+      
+      // 通过事件发射器广播事件
+      this.eventEmitter.emit('habit.updated', {
+        userId,
+        ...eventData,
+      });
+      
+      console.log(`习惯更新事件已发送给用户 ${userId}`);
+    } catch (error) {
+      console.error(`发送习惯更新事件失败:`, error);
+      throw error;
+    }
   }
 }

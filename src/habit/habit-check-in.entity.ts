@@ -24,8 +24,8 @@ export class HabitCheckIn {
   @Column({ name: 'check_in_date' })
   checkInDate: Date;
 
-  @Column({ default: CheckInStatus.COMPLETED })
-  status: CheckInStatus;
+  @Column({ type: 'enum', enum: CheckInStatus, default: CheckInStatus.COMPLETED, nullable: true })
+  status: CheckInStatus | null;
 
   @Column('text', { nullable: true })
   notes?: string;

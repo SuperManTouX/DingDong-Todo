@@ -115,7 +115,7 @@ export class HabitController {
   @ApiParam({ name: 'habitId', description: '习惯ID' })
   async toggleCheckInStatus(
     @Param('habitId') habitId: string,
-    @Body() body: { checkInDate: Date; status?: CheckInStatus },
+    @Body() body: { checkInDate: Date; status?: CheckInStatus | null },
     @Req() req,
   ): Promise<any> {
     return this.habitService.toggleCheckInStatus(habitId, req.user.id, body.checkInDate, body.status);
