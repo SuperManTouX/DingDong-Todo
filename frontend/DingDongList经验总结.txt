@@ -1,0 +1,57 @@
+DingDongList经验总结
+
+
+1. @dnd\kit分容器拖动效果（dragOver）
+
+2. 合并组件
+
+3. 递归创建节点树
+
+4. 用对象存储不同名字的数组，再用Object.keys(obj)遍历对象创建新数组
+
+5. 阿帕奇apache url访问图片
+
+6. 阿里云的OSS。ai一键生成的代码行不通，要把官网上的例子给他看一遍然后让他写才可以
+
+7.dify
+
+8. Rendered more hooks than during the previous render  这违反了React Hook的核心规则：Hook必须在组件的顶层调用，不能在条件语句、循环或嵌套函数中调用
+
+9. 响应式检测应该放在main？
+
+10. {
+              key: "sub3",
+              label: (
+                <Row justify="space-between" align="middle">
+                  <Col>
+                    <span>子菜单</span>
+                  </Col>
+                  <Col>
+                    <EllipsisOutlined
+                      className="opacityHover0-1"
+                      style={{ cursor: "pointer" }}
+                    />
+                  </Col>
+                </Row>
+              ),
+              icon: <FileTextOutlined />,}  antd中如果SubMenuItems中有icon，且label中有两层结构。只会显示icon，label会消失。
+              解决办法：children数组中的对象不返回icon属性；label返回字符串。
+
+
+11. 渐变色的主题色
+修改themeConfig.ts文件 ：
+
+- 为redTheme添加了gradientColor属性，设置为从#C46A9F到#E879B7的粉色渐变
+- 黄色主题的gradientColor属性已经存在（从rgb(243,194,104)到rgb(244,170,139)）
+- 2.
+修改CSS样式 ：
+
+- 在FilteredTodoList.css中添加了基于data-theme属性的条件样式
+- 当主题为"yellow"时，将.theme-bgcColor-primaryColor的背景设置为渐变
+- 当主题为"red"时，将.theme-bgcColor-primaryColor的背景设置为渐变
+- 从currentCSS.css中移除了重复的样式定义，避免冲突
+- 3.
+保留其他主题行为 ：
+
+- 浅色、深色和绿色主题的侧边栏导航仍然使用primaryColor作为背景色
+- 渐变效果仅应用于黄色和红色主题
