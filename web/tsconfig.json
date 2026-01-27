@@ -1,0 +1,26 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "./tsconfig.app.json"
+    },
+    {
+      "path": "./tsconfig.node.json"
+    }
+  ],
+  "compilerOptions": {
+    "jsx": "react",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    "allowSyntheticDefaultImports": true
+  },
+    "allowSyntheticDefaultImports": true,
+    "include": [
+      "src",
+      "src/types/index.d.ts"
+, "src/testTodoLists.ts"    ]
+  }

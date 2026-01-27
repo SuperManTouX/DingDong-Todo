@@ -1,0 +1,2868 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/users/avatar/history": {
+      "delete": {
+        "description": "删除当前登录用户的指定历史头像（从OSS和数据库中移除）",
+        "operationId": "UserController_deleteUserAvatar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "objectKey": {
+                    "type": "string",
+                    "description": "OSS对象键"
+                  },
+                  "fileName": {
+                    "type": "string",
+                    "description": "文件名"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "头像不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除用户历史头像",
+        "tags": [
+          "用户管理"
+        ]
+      }
+    },
+    "/users/profile": {
+      "get": {
+        "description": "获取当前登录用户的详细个人信息",
+        "operationId": "UserController_getProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取用户个人信息",
+        "tags": [
+          "用户管理"
+        ]
+      },
+      "put": {
+        "description": "更新当前登录用户的个人信息",
+        "operationId": "UserController_updateProfile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "description": "用户名"
+                  },
+                  "bio": {
+                    "type": "string",
+                    "description": "个人简介"
+                  },
+                  "nickname": {
+                    "type": "string",
+                    "description": "用户昵称"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "更新用户个人信息",
+        "tags": [
+          "用户管理"
+        ]
+      }
+    },
+    "/users/avatar/presigned-url": {
+      "post": {
+        "operationId": "UserController_getOssCredentialsForAvatar",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "用户管理"
+        ]
+      }
+    },
+    "/users/avatar": {
+      "put": {
+        "operationId": "UserController_updateAvatar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "用户管理"
+        ]
+      }
+    },
+    "/users/test-sts-credentials": {
+      "get": {
+        "operationId": "UserController_testStsCredentials",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "用户管理"
+        ]
+      }
+    },
+    "/users/debug-oss-config": {
+      "get": {
+        "operationId": "UserController_debugOssConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "用户管理"
+        ]
+      }
+    },
+    "/users/oss-images": {
+      "get": {
+        "description": "获取当前登录用户在阿里云OSS中的所有图片链接",
+        "operationId": "UserController_getUserOssImages",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取用户OSS图片列表",
+        "tags": [
+          "用户管理"
+        ]
+      }
+    },
+    "/file/attachments": {
+      "delete": {
+        "description": "删除用户的任务附件（从OSS和数据库中移除）",
+        "operationId": "FileController_deleteTaskAttachment",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "objectKey": {
+                    "type": "string",
+                    "description": "OSS对象键",
+                    "example": "task-attachments/user-001/1758975264618.jpg"
+                  },
+                  "imageUrl": {
+                    "type": "string",
+                    "description": "图片完整URL（用于调试）"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "文件不存在或无权删除"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除任务附件",
+        "tags": [
+          "文件管理"
+        ]
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "description": "用户登录获取访问令牌",
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "description": "用户名"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "密码"
+                  }
+                },
+                "required": [
+                  "username",
+                  "password"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "登录成功"
+          },
+          "401": {
+            "description": "用户名或密码错误"
+          }
+        },
+        "summary": "用户登录",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/auth/send-code": {
+      "post": {
+        "description": "向指定邮箱发送验证码",
+        "operationId": "AuthController_sendVerificationCode",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "description": "邮箱地址"
+                  }
+                },
+                "required": [
+                  "email"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "验证码发送成功"
+          },
+          "409": {
+            "description": "邮箱已被注册"
+          }
+        },
+        "summary": "发送验证码",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "description": "用户注册并自动登录",
+        "operationId": "AuthController_register",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "description": "用户名（唯一）"
+                  },
+                  "email": {
+                    "type": "string",
+                    "description": "邮箱（唯一）"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "密码"
+                  },
+                  "code": {
+                    "type": "string",
+                    "description": "验证码"
+                  },
+                  "bio": {
+                    "type": "string",
+                    "description": "个人简介（可选）"
+                  },
+                  "nickname": {
+                    "type": "string",
+                    "description": "用户昵称（可选）"
+                  }
+                },
+                "required": [
+                  "username",
+                  "email",
+                  "password",
+                  "code"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "注册成功"
+          },
+          "400": {
+            "description": "验证码错误或已过期"
+          },
+          "409": {
+            "description": "用户名或邮箱已存在"
+          }
+        },
+        "summary": "用户注册",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "description": "使用现有令牌刷新获取新令牌",
+        "operationId": "AuthController_refresh",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "description": "刷新令牌"
+                  }
+                },
+                "required": [
+                  "token"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "令牌刷新成功"
+          },
+          "401": {
+            "description": "令牌无效"
+          }
+        },
+        "summary": "刷新令牌",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/auth/profile": {
+      "get": {
+        "description": "获取当前登录用户的信息",
+        "operationId": "AuthController_getProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取用户信息",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "description": "用户注销登录",
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "注销成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "用户注销",
+        "tags": [
+          "认证"
+        ]
+      }
+    },
+    "/todos/completed": {
+      "get": {
+        "description": "分页获取当前用户的已完成任务，支持多种类型过滤",
+        "operationId": "TodoController_getCompletedTasks",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "页码",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "example": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "description": "任务类型过滤：today、nearlyWeek、bin、cp或todolist-{id}、tag-{id}",
+            "schema": {
+              "example": "today",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "分页获取已完成任务",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos": {
+      "get": {
+        "description": "获取当前用户的所有任务",
+        "operationId": "TodoController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取所有任务",
+        "tags": [
+          "任务管理"
+        ]
+      },
+      "post": {
+        "description": "创建一个新的任务",
+        "operationId": "TodoController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "任务ID（可选）"
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "任务标题",
+                    "example": "完成项目文档"
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "任务描述（可选）"
+                  },
+                  "completed": {
+                    "type": "boolean",
+                    "description": "完成状态（可选，默认false）"
+                  },
+                  "priority": {
+                    "type": "number",
+                    "description": "优先级 0-3（可选）"
+                  },
+                  "datetimeLocal": {
+                    "type": "string",
+                    "description": "日期时间（可选）"
+                  },
+                  "deadline": {
+                    "type": "string",
+                    "description": "截止日期（可选）"
+                  },
+                  "parentId": {
+                    "type": "string",
+                    "description": "父任务ID（可选）"
+                  },
+                  "depth": {
+                    "type": "number",
+                    "description": "任务深度（可选）"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "标签ID数组（可选）"
+                  },
+                  "listId": {
+                    "type": "string",
+                    "description": "所属清单ID"
+                  },
+                  "groupId": {
+                    "type": "string",
+                    "description": "所属分组ID（可选）"
+                  },
+                  "is_pinned": {
+                    "type": "boolean",
+                    "description": "是否置顶（可选，默认false）"
+                  },
+                  "pinned_at": {
+                    "type": "string",
+                    "description": "置顶时间（可选）"
+                  },
+                  "reminder_at": {
+                    "type": "string",
+                    "description": "提醒时间（可选）"
+                  },
+                  "is_reminded": {
+                    "type": "boolean",
+                    "description": "是否已提醒（可选，默认false）"
+                  }
+                },
+                "required": [
+                  "title",
+                  "listId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "创建成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建新任务",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/pinned": {
+      "get": {
+        "description": "获取当前用户的所有置顶任务",
+        "operationId": "TodoController_getPinnedTodos",
+        "parameters": [
+          {
+            "name": "listId",
+            "required": true,
+            "in": "query",
+            "description": "清单ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取置顶任务",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/type/{type}": {
+      "get": {
+        "description": "获取不同类型的任务列表",
+        "operationId": "TodoController_getTasksByType",
+        "parameters": [
+          {
+            "name": "type",
+            "required": true,
+            "in": "path",
+            "description": "任务类型",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "根据类型获取任务列表",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/search": {
+      "get": {
+        "description": "根据关键词搜索当前用户的任务",
+        "operationId": "TodoController_searchTasks",
+        "parameters": [
+          {
+            "name": "keyword",
+            "required": true,
+            "in": "query",
+            "description": "搜索关键词",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "搜索成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "按关键词搜索任务",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/demo": {
+      "post": {
+        "description": "创建带标签的演示任务",
+        "operationId": "TodoController_createDemo",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "创建成功"
+          }
+        },
+        "summary": "创建演示任务",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/bin": {
+      "get": {
+        "description": "获取用户回收站中的所有任务，支持分页",
+        "operationId": "TodoController_getBinTasks",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "页码",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "example": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取回收站任务列表",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/bin/empty": {
+      "delete": {
+        "description": "永久删除回收站中的所有任务",
+        "operationId": "TodoController_emptyBin",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "清空成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "清空回收站",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/{id}/restore": {
+      "post": {
+        "description": "从回收站恢复指定ID的任务",
+        "operationId": "TodoController_restoreTask",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "任务ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "恢复成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "任务不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "恢复已删除任务",
+        "tags": [
+          "任务管理"
+        ]
+      },
+      "patch": {
+        "description": "从回收站恢复指定的已删除任务",
+        "operationId": "TodoController_restore",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "任务ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "恢复成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "回收站中未找到该任务"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "恢复已删除的任务",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/{id}/permanent": {
+      "delete": {
+        "description": "从回收站永久删除指定ID的任务",
+        "operationId": "TodoController_permanentlyDeleteTask",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "任务ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "任务不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "永久删除任务",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/{id}": {
+      "get": {
+        "description": "根据ID获取单个任务详情",
+        "operationId": "TodoController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "任务ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "任务不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取单个任务",
+        "tags": [
+          "任务管理"
+        ]
+      },
+      "put": {
+        "description": "更新指定ID的任务信息",
+        "operationId": "TodoController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "任务ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "任务标题"
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "任务描述"
+                  },
+                  "completed": {
+                    "type": "boolean",
+                    "description": "完成状态"
+                  },
+                  "priority": {
+                    "type": "number",
+                    "description": "优先级 0-3"
+                  },
+                  "datetimeLocal": {
+                    "type": "string",
+                    "description": "日期时间"
+                  },
+                  "deadline": {
+                    "type": "string",
+                    "description": "截止日期"
+                  },
+                  "parentId": {
+                    "type": "string",
+                    "description": "父任务ID"
+                  },
+                  "depth": {
+                    "type": "number",
+                    "description": "任务深度"
+                  },
+                  "listId": {
+                    "type": "string",
+                    "description": "所属清单ID"
+                  },
+                  "groupId": {
+                    "type": "string",
+                    "description": "所属分组ID"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "标签ID数组"
+                  },
+                  "is_pinned": {
+                    "type": "boolean",
+                    "description": "是否置顶"
+                  },
+                  "pinned_at": {
+                    "type": "string",
+                    "description": "置顶时间"
+                  },
+                  "reminder_at": {
+                    "type": "string",
+                    "description": "提醒时间"
+                  },
+                  "is_reminded": {
+                    "type": "boolean",
+                    "description": "是否已提醒"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "任务不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "更新任务",
+        "tags": [
+          "任务管理"
+        ]
+      },
+      "delete": {
+        "description": "将任务移至回收站（软删除）",
+        "operationId": "TodoController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "任务ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "任务不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除任务",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/{id}/pin": {
+      "patch": {
+        "description": "切换任务的置顶状态",
+        "operationId": "TodoController_togglePin",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "任务ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "更新成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "任务不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "切换任务置顶状态",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/{id}/completed": {
+      "patch": {
+        "description": "切换任务的完成状态，并同步更新所有子任务的完成状态",
+        "operationId": "TodoController_toggleTaskCompleted",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "任务ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "更新成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "任务不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "切换任务完成状态",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/{id}/parent": {
+      "patch": {
+        "description": "更新任务的父任务ID，并自动计算和更新depth值，同时更新所有子任务的depth",
+        "operationId": "TodoController_updateParentId",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "任务ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "新的父任务ID信息",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateParentIdDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功"
+          },
+          "400": {
+            "description": "参数错误或循环引用"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "任务不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "更新任务的父任务ID",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/{id}/move-to-group": {
+      "patch": {
+        "description": "将指定任务及其所有子任务移动到新的分组",
+        "operationId": "TodoController_moveTaskToGroup",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "任务ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "groupId": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "新的分组ID，null表示无分组"
+                  },
+                  "listId": {
+                    "type": "string",
+                    "description": "新的清单ID"
+                  }
+                },
+                "required": [
+                  "groupId",
+                  "listId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "移动成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "任务或分组不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "移动任务及其子任务到指定分组",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/{id}/move-to-list": {
+      "patch": {
+        "description": "将指定任务及其所有子任务移动到新的清单，并清空它们的groupId，同时清除父任务的parentId",
+        "operationId": "TodoController_moveTaskToList",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "任务ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "listId": {
+                    "type": "string",
+                    "description": "新的清单ID"
+                  }
+                },
+                "required": [
+                  "listId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "移动成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "任务或清单不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "移动任务及其子任务到指定清单",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/batch-update-order": {
+      "post": {
+        "description": "批量更新任务的排序索引",
+        "operationId": "TodoController_batchUpdateOrder",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchUpdateOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "更新成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "批量更新任务排序",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/{id}/hard": {
+      "delete": {
+        "description": "不经过回收站，直接从数据库删除指定任务及其所有子任务",
+        "operationId": "TodoController_hardDelete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "任务ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "任务不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "硬删除单个任务",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todos/hard/all": {
+      "delete": {
+        "description": "不经过回收站，直接从数据库删除当前用户的所有任务",
+        "operationId": "TodoController_hardDeleteAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "硬删除所有任务",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todo": {
+      "get": {
+        "description": "与/todos相同的功能，用于兼容性支持",
+        "operationId": "TodoAliasController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取所有任务（别名）",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/search": {
+      "get": {
+        "description": "搜索当前用户的任务中包含关键词的任务",
+        "operationId": "SearchController_searchTasks",
+        "parameters": [
+          {
+            "name": "keyword",
+            "required": true,
+            "in": "query",
+            "description": "搜索关键词",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "搜索成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "按关键词搜索任务",
+        "tags": [
+          "任务管理"
+        ]
+      }
+    },
+    "/todo-lists": {
+      "get": {
+        "description": "获取当前用户创建的所有清单列表",
+        "operationId": "TodoListController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取所有清单",
+        "tags": [
+          "清单管理"
+        ]
+      },
+      "post": {
+        "description": "创建一个新的清单",
+        "operationId": "TodoListController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "清单名称",
+                    "example": "工作计划"
+                  },
+                  "emoji": {
+                    "type": "string",
+                    "description": "清单表情（可选）"
+                  },
+                  "color": {
+                    "type": "string",
+                    "description": "清单颜色（可选）"
+                  }
+                },
+                "required": [
+                  "title"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "创建成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建清单",
+        "tags": [
+          "清单管理"
+        ]
+      }
+    },
+    "/todo-lists/{id}": {
+      "get": {
+        "description": "根据ID获取特定清单的详细信息",
+        "operationId": "TodoListController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "清单ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "清单不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取单个清单",
+        "tags": [
+          "清单管理"
+        ]
+      },
+      "put": {
+        "description": "更新指定ID的清单信息",
+        "operationId": "TodoListController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "清单ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "清单名称"
+                  },
+                  "emoji": {
+                    "type": "string",
+                    "description": "清单表情"
+                  },
+                  "color": {
+                    "type": "string",
+                    "description": "清单颜色"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "清单不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "更新清单",
+        "tags": [
+          "清单管理"
+        ]
+      },
+      "delete": {
+        "description": "删除指定ID的清单，支持将关联任务移动到其他清单或标记为已删除",
+        "operationId": "TodoListController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "清单ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "targetListId": {
+                    "type": "string",
+                    "description": "目标清单ID，用于移动任务",
+                    "nullable": true
+                  },
+                  "mode": {
+                    "type": "string",
+                    "description": "操作模式: move(移动任务) 或 delete(软删除任务)",
+                    "enum": [
+                      "move",
+                      "delete"
+                    ]
+                  }
+                },
+                "required": [
+                  "mode"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "清单不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除清单",
+        "tags": [
+          "清单管理"
+        ]
+      }
+    },
+    "/todo-tags": {
+      "get": {
+        "description": "获取当前用户创建的所有标签列表",
+        "operationId": "TodoTagController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取所有标签",
+        "tags": [
+          "标签管理"
+        ]
+      },
+      "post": {
+        "description": "创建一个新的任务标签",
+        "operationId": "TodoTagController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "标签名称",
+                    "example": "重要"
+                  },
+                  "parentId": {
+                    "type": "string",
+                    "description": "父标签ID",
+                    "nullable": true
+                  },
+                  "color": {
+                    "type": "string",
+                    "description": "标签颜色",
+                    "example": "#ff0000"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "创建成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建标签",
+        "tags": [
+          "标签管理"
+        ]
+      }
+    },
+    "/todo-tags/{id}": {
+      "get": {
+        "description": "根据ID获取特定标签的详细信息",
+        "operationId": "TodoTagController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "标签ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "标签不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取单个标签",
+        "tags": [
+          "标签管理"
+        ]
+      },
+      "put": {
+        "description": "更新指定ID的标签信息",
+        "operationId": "TodoTagController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "标签ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "标签名称"
+                  },
+                  "color": {
+                    "type": "string",
+                    "description": "标签颜色"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "标签不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "更新标签",
+        "tags": [
+          "标签管理"
+        ]
+      },
+      "delete": {
+        "description": "删除指定ID的标签",
+        "operationId": "TodoTagController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "标签ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "标签不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除标签",
+        "tags": [
+          "标签管理"
+        ]
+      }
+    },
+    "/todo-tags/task-tag-mappings": {
+      "get": {
+        "description": "获取当前用户任务与标签的映射关系",
+        "operationId": "TodoTagController_getTaskTagMappings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取标签映射关系",
+        "tags": [
+          "标签管理"
+        ]
+      }
+    },
+    "/task-groups": {
+      "get": {
+        "description": "获取当前用户创建的所有分组列表",
+        "operationId": "TaskGroupController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取所有分组",
+        "tags": [
+          "分组管理"
+        ]
+      },
+      "post": {
+        "description": "创建一个新的任务分组",
+        "operationId": "TaskGroupController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "listId": {
+                    "type": "string",
+                    "description": "所属清单ID"
+                  },
+                  "groupName": {
+                    "type": "string",
+                    "description": "分组名称",
+                    "example": "今日任务"
+                  }
+                },
+                "required": [
+                  "listId",
+                  "groupName"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "创建成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建分组",
+        "tags": [
+          "分组管理"
+        ]
+      }
+    },
+    "/task-groups/{id}": {
+      "get": {
+        "description": "根据ID获取特定分组的详细信息",
+        "operationId": "TaskGroupController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "分组ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "分组不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取单个分组",
+        "tags": [
+          "分组管理"
+        ]
+      },
+      "put": {
+        "description": "更新指定ID的分组信息",
+        "operationId": "TaskGroupController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "分组ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "groupName": {
+                    "type": "string",
+                    "description": "分组名称"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "分组不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "更新分组",
+        "tags": [
+          "分组管理"
+        ]
+      },
+      "delete": {
+        "description": "删除指定ID的分组",
+        "operationId": "TaskGroupController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "分组ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "分组不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除分组",
+        "tags": [
+          "分组管理"
+        ]
+      }
+    },
+    "/focus-records": {
+      "post": {
+        "description": "创建一条新的专注记录",
+        "operationId": "FocusRecordController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "专注记录创建数据",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "创建成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建专注记录",
+        "tags": [
+          "专注记录"
+        ]
+      },
+      "get": {
+        "description": "获取当前用户的所有专注记录列表",
+        "operationId": "FocusRecordController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取所有专注记录",
+        "tags": [
+          "专注记录"
+        ]
+      }
+    },
+    "/focus-records/{id}": {
+      "get": {
+        "description": "根据ID获取特定的专注记录详情",
+        "operationId": "FocusRecordController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "专注记录ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "记录不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取单个专注记录",
+        "tags": [
+          "专注记录"
+        ]
+      },
+      "put": {
+        "description": "更新指定ID的专注记录信息",
+        "operationId": "FocusRecordController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "专注记录ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "专注记录更新数据",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "记录不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "更新专注记录",
+        "tags": [
+          "专注记录"
+        ]
+      },
+      "delete": {
+        "description": "删除指定ID的专注记录",
+        "operationId": "FocusRecordController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "专注记录ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "记录不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除专注记录",
+        "tags": [
+          "专注记录"
+        ]
+      }
+    },
+    "/focus-records/task/{taskId}": {
+      "get": {
+        "description": "获取指定任务的所有专注记录",
+        "operationId": "FocusRecordController_findByTaskId",
+        "parameters": [
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "description": "任务ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取任务专注记录",
+        "tags": [
+          "专注记录"
+        ]
+      }
+    },
+    "/focus-records/stats/summary": {
+      "get": {
+        "description": "获取当前用户的专注统计信息",
+        "operationId": "FocusRecordController_getStatistics",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取专注统计",
+        "tags": [
+          "专注记录"
+        ]
+      }
+    },
+    "/events": {
+      "get": {
+        "description": "建立Server-Sent Events连接，用于接收实时更新事件",
+        "operationId": "SseController_sse",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "SSE连接成功建立"
+          },
+          "401": {
+            "description": "未授权访问"
+          }
+        },
+        "summary": "建立SSE连接",
+        "tags": [
+          "SSE"
+        ]
+      }
+    },
+    "/habits": {
+      "post": {
+        "operationId": "HabitController_createHabit",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateHabitDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "习惯创建成功"
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建新习惯",
+        "tags": [
+          "习惯打卡"
+        ]
+      },
+      "get": {
+        "operationId": "HabitController_getUserHabits",
+        "parameters": [
+          {
+            "name": "includeArchived",
+            "required": false,
+            "in": "query",
+            "description": "是否包含已归档的习惯",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取用户的所有习惯",
+        "tags": [
+          "习惯打卡"
+        ]
+      }
+    },
+    "/habits/{habitId}": {
+      "get": {
+        "operationId": "HabitController_getHabitById",
+        "parameters": [
+          {
+            "name": "habitId",
+            "required": true,
+            "in": "path",
+            "description": "习惯ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date",
+            "required": false,
+            "in": "query",
+            "description": "年月，格式为YYYY-MM",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "习惯不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取单个习惯详情",
+        "tags": [
+          "习惯打卡"
+        ]
+      },
+      "put": {
+        "operationId": "HabitController_updateHabit",
+        "parameters": [
+          {
+            "name": "habitId",
+            "required": true,
+            "in": "path",
+            "description": "习惯ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateHabitDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功"
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "习惯不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "更新习惯",
+        "tags": [
+          "习惯打卡"
+        ]
+      },
+      "delete": {
+        "operationId": "HabitController_deleteHabit",
+        "parameters": [
+          {
+            "name": "habitId",
+            "required": true,
+            "in": "path",
+            "description": "习惯ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "习惯不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除习惯（软删除）",
+        "tags": [
+          "习惯打卡"
+        ]
+      }
+    },
+    "/habits/{habitId}/check-ins": {
+      "post": {
+        "operationId": "HabitController_createCheckIn",
+        "parameters": [
+          {
+            "name": "habitId",
+            "required": true,
+            "in": "path",
+            "description": "习惯ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateHabitCheckInDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "打卡成功"
+          },
+          "400": {
+            "description": "已打卡或参数错误"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "习惯不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建打卡记录",
+        "tags": [
+          "习惯打卡"
+        ]
+      },
+      "get": {
+        "operationId": "HabitController_getCheckIns",
+        "parameters": [
+          {
+            "name": "habitId",
+            "required": true,
+            "in": "path",
+            "description": "习惯ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "startDate",
+            "required": false,
+            "in": "query",
+            "description": "开始日期",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "required": false,
+            "in": "query",
+            "description": "结束日期",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "习惯不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取习惯的打卡记录",
+        "tags": [
+          "习惯打卡"
+        ]
+      }
+    },
+    "/habits/{habitId}/toggle-check-in": {
+      "post": {
+        "operationId": "HabitController_toggleCheckInStatus",
+        "parameters": [
+          {
+            "name": "habitId",
+            "required": true,
+            "in": "path",
+            "description": "习惯ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "状态切换成功"
+          },
+          "400": {
+            "description": "参数错误"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "习惯不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "切换打卡状态",
+        "tags": [
+          "习惯打卡"
+        ]
+      }
+    },
+    "/habits/{habitId}/streak": {
+      "get": {
+        "operationId": "HabitController_getHabitStreak",
+        "parameters": [
+          {
+            "name": "habitId",
+            "required": true,
+            "in": "path",
+            "description": "习惯ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "习惯不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取习惯的连续打卡统计",
+        "tags": [
+          "习惯打卡"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "叮咚待办 (DingDongTodo) API",
+    "description": "DingDongTodo后端API文档",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "name": "Authorization",
+        "description": "JWT认证Bearer Token",
+        "in": "header"
+      }
+    },
+    "schemas": {
+      "UpdateParentIdDto": {
+        "type": "object",
+        "properties": {
+          "parentId": {
+            "type": "string",
+            "description": "新的父任务ID，如果为null则表示移到根级",
+            "nullable": true
+          }
+        },
+        "required": [
+          "parentId"
+        ]
+      },
+      "BatchUpdateOrderDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateHabitDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "UpdateHabitDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateHabitCheckInDto": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  }
+}
