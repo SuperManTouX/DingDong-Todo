@@ -15,12 +15,14 @@ export class OssConfig {
   private readonly bucketName: string;
 
   private readonly endpoint: string;
+  private readonly useSts: boolean;
 
   constructor() {
     // 尝试从环境变量获取配置，提供默认值作为后备
     this.region = process.env.OSS_REGION || 'oss-cn-beijing';
     this.bucketName = process.env.OSS_BUCKET || process.env.OSS_BUCKET_NAME || 'todo-avatar';
     this.endpoint = process.env.OSS_ENDPOINT || `https://${this.region}.aliyuncs.com`;
+    this.useSts = process.env.OSS_USE_STS !== 'false';
     
     console.log(`OSS配置初始化 - 区域: ${this.region}, Bucket名称: ${this.bucketName}, Endpoint: ${this.endpoint}`);
     
@@ -35,8 +37,10 @@ export class OssConfig {
     const requiredEnvVars = [
       { key: 'OSS_ACCESS_KEY_ID', name: '阿里云访问密钥ID' },
       { key: 'OSS_ACCESS_KEY_SECRET', name: '阿里云访问密钥密钥' },
-      { key: 'OSS_STS_ROLE_ARN', name: '阿里云STS角色ARN' },
     ];
+    if (this.useSts) {
+      requiredEnvVars.push({ key: 'OSS_STS_ROLE_ARN', name: '阿里云STS角色ARN' });
+    }
     
     requiredEnvVars.forEach(({ key, name }) => {
       if (!process.env[key]) {
@@ -77,65 +81,73 @@ export class OssConfig {
         console.error('无法获取OSS凭证: OSS_ACCESS_KEY_SECRET 环境变量未设置');
         throw new Error('OSS_ACCESS_KEY_SECRET environment variable is required');
       }
-      if (!process.env.OSS_STS_ROLE_ARN) {
-        console.error('无法获取OSS凭证: OSS_STS_ROLE_ARN 环境变量未设置');
-        throw new Error('OSS_STS_ROLE_ARN environment variable is required');
-      }
+      const roleArn = process.env.OSS_STS_ROLE_ARN;
       
       // 记录环境变量状态（但不记录敏感信息）
       console.log(`环境变量 OSS_ACCESS_KEY_ID: ${process.env.OSS_ACCESS_KEY_ID ? '已设置' : '未设置'}`);
       console.log(`环境变量 OSS_ACCESS_KEY_SECRET: ${process.env.OSS_ACCESS_KEY_SECRET ? '已设置' : '未设置'}`);
-      console.log(`环境变量 OSS_STS_ROLE_ARN: ${process.env.OSS_STS_ROLE_ARN ? '已设置' : '未设置'}`);
-      
+      console.log(`环境变量 OSS_STS_ROLE_ARN: ${roleArn ? '已设置' : '未设置'}`);
+
+      // 回退模式：未启用STS或未配置Role ARN时，直接返回AK/SK（仅建议开发环境）
+      if (!this.useSts || !roleArn) {
+        console.warn('OSS STS未启用或未配置Role ARN，使用AK/SK直连模式');
+        return {
+          AccessKeyId: process.env.OSS_ACCESS_KEY_ID!,
+          AccessKeySecret: process.env.OSS_ACCESS_KEY_SECRET!,
+          SecurityToken: '',
+          Expiration: new Date(Date.now() + expiration * 1000).toISOString(),
+        };
+      }
+
       // 改用ali-oss包中的STS客户端
       console.log('使用ali-oss包中的STS客户端');
       const { STS } = require('ali-oss');
-      
+
       // 初始化STS客户端
       const sts = new STS({
         accessKeyId: process.env.OSS_ACCESS_KEY_ID,
         accessKeySecret: process.env.OSS_ACCESS_KEY_SECRET
       });
-      
-      console.log(`准备调用assumeRole - roleArn: ${process.env.OSS_STS_ROLE_ARN}, sessionName: ${roleSessionName}-${userId}`);
-      
+
+      console.log(`准备调用assumeRole - roleArn: ${roleArn}, sessionName: ${roleSessionName}-${userId}`);
+
       // 调用assumeRole接口获取STS临时访问凭证
       // 参数: roleArn, policy(空字符串), expirationSeconds, roleSessionName
       const result = await sts.assumeRole(
-        process.env.OSS_STS_ROLE_ARN, 
-        '', 
-        expiration, 
+        roleArn,
+        '',
+        expiration,
         `${roleSessionName}-${userId}`
       );
-      
+
       console.log('STS assumeRole响应结构:', Object.keys(result || {}));
-      
+
       // 检查result.credentials是否存在且是对象类型
       if (!result || typeof result !== 'object' || !result.credentials || typeof result.credentials !== 'object') {
         console.error('STS响应中缺少credentials字段或credentials不是对象:', JSON.stringify(result));
         throw new Error('Invalid STS response: missing or invalid credentials');
       }
-      
+
       console.log('credentials字段存在且是对象，结构:', Object.keys(result.credentials));
       console.log('credentials完整内容:', JSON.stringify(result.credentials));
-      
+
       // 提取临时访问凭证（添加空值检查）
       const accessKeyId = result.credentials.AccessKeyId || result.credentials.accessKeyId;
       const accessKeySecret = result.credentials.AccessKeySecret || result.credentials.accessKeySecret;
       const securityToken = result.credentials.SecurityToken || result.credentials.securityToken;
       const expTime = result.credentials.Expiration || result.credentials.expiration;
-      
+
       // 验证必要的凭证字段
       if (!accessKeyId || !accessKeySecret || !securityToken) {
         console.error('凭证信息不完整:', {
-          accessKeyId: !!accessKeyId, 
-          accessKeySecret: !!accessKeySecret, 
+          accessKeyId: !!accessKeyId,
+          accessKeySecret: !!accessKeySecret,
           securityToken: !!securityToken,
           originalCredentials: JSON.stringify(result.credentials)
         });
         throw new Error('Invalid STS response: incomplete credentials');
       }
-      
+
       // 返回格式化的凭证
       const formattedCredentials = {
         AccessKeyId: accessKeyId,
@@ -143,7 +155,7 @@ export class OssConfig {
         SecurityToken: securityToken,
         Expiration: expTime || new Date(Date.now() + expiration * 1000).toISOString()
       };
-      
+
       console.log('成功获取OSS临时访问凭证');
       return formattedCredentials;
     } catch (error) {

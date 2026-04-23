@@ -30,6 +30,9 @@ const AppWithTheme: React.FC = () => {
       loadUserInfo();
       // 移除自动建立SSE连接，改为在authStore中登录成功后建立
       // sseService.connect();
+    } else {
+      // 无 token 时结束鉴权加载态，避免 PrivateRoute 一直返回 null 导致白屏
+      useAuthStore.setState({ isLoading: false, isAuthenticated: false });
     }
 
     // 组件卸载时断开SSE连接

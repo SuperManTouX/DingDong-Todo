@@ -14,7 +14,7 @@ export default defineConfig({
     // 配置代理，将请求转发到后端服务
     proxy: {
       '/events': {
-        target: 'http://localhost:3000',
+        target: 'http://127.0.0.1:3000/',
         changeOrigin: true,
         // 为SSE连接添加特殊处理
         ws: true,
@@ -25,7 +25,7 @@ export default defineConfig({
       },
       // 添加其他可能需要的API代理
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'http://127.0.0.1:3000/',
         changeOrigin: true,
       },
     }

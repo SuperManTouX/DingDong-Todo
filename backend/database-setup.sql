@@ -5,6 +5,12 @@ USE todo_db;
 
 -- 删除表（按照依赖关系顺序删除）
 DROP TABLE IF EXISTS focus_record CASCADE;
+DROP TABLE IF EXISTS user_avatars CASCADE;
+DROP TABLE IF EXISTS task_attachments CASCADE;
+DROP TABLE IF EXISTS oss_files CASCADE;
+DROP TABLE IF EXISTS habit_check_in CASCADE;
+DROP TABLE IF EXISTS habit_streak CASCADE;
+DROP TABLE IF EXISTS habit CASCADE;
 DROP TABLE IF EXISTS task_tag CASCADE;
 DROP TABLE IF EXISTS bin CASCADE;
 DROP TABLE IF EXISTS task CASCADE;
@@ -19,6 +25,7 @@ CREATE TABLE IF NOT EXISTS user (
   username VARCHAR(255) NOT NULL UNIQUE,
   email VARCHAR(255) NOT NULL UNIQUE,
   password VARCHAR(255) NOT NULL,
+  nickname VARCHAR(255) NULL,
   avatar VARCHAR(255) NULL,
   bio TEXT NULL COMMENT '个人简介',
   created_at DATETIME NOT NULL,
@@ -45,7 +52,8 @@ CREATE TABLE IF NOT EXISTS task_group (
   user_id VARCHAR(36) NOT NULL,
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
-  FOREIGN KEY (list_id) REFERENCES todo_list(id) ON DELETE CASCADE
+  FOREIGN KEY (list_id) REFERENCES todo_list(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 5. 创建标签表
@@ -70,7 +78,7 @@ CREATE TABLE IF NOT EXISTS task (
   priority INT NOT NULL DEFAULT 0,
   datetime_local VARCHAR(50) NULL COMMENT 'ISO 8601格式的日期时间',
   deadline VARCHAR(50) NULL COMMENT 'ISO 8601格式的截止日期',
-  reminder_at VARCHAR(50) NULL COMMENT 'ISO 8601格式的提醒时间',
+  reminder_at DATETIME NULL COMMENT '提醒时间',
   is_reminded BOOLEAN NOT NULL DEFAULT FALSE COMMENT '是否已发送提醒',
   parent_id VARCHAR(36) NULL,
   depth INT NOT NULL DEFAULT 0,
@@ -79,12 +87,14 @@ CREATE TABLE IF NOT EXISTS task (
   user_id VARCHAR(36) NOT NULL,
   is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
   pinned_at DATETIME NULL,
+  deleted_at DATETIME NULL COMMENT '软删除时间',
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   time_order_index INT DEFAULT 0,   -- 时间分组内排序索引
   group_order_index INT DEFAULT 0,  -- 分组内排序索引
   FOREIGN KEY (list_id) REFERENCES todo_list(id) ON DELETE CASCADE,
   FOREIGN KEY (group_id) REFERENCES task_group(id) ON DELETE SET NULL,
+  FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
   FOREIGN KEY (parent_id) REFERENCES task(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -132,6 +142,55 @@ CREATE TABLE IF NOT EXISTS bin (
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   deleted_at DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 9. 创建习惯相关表（与后端实体保持一致）
+CREATE TABLE IF NOT EXISTS habit (
+  id VARCHAR(36) NOT NULL PRIMARY KEY,
+  user_id VARCHAR(36) NOT NULL,
+  title VARCHAR(255) NOT NULL COMMENT '习惯名称',
+  description TEXT NULL COMMENT '习惯描述',
+  frequency VARCHAR(50) NOT NULL COMMENT '打卡频率：daily/weekly/monthly/custom',
+  custom_frequency_days VARCHAR(100) NULL COMMENT '自定义频率日期',
+  is_deleted BOOLEAN NOT NULL DEFAULT FALSE COMMENT '是否归档',
+  start_date DATE NOT NULL COMMENT '开始日期',
+  target_days INT NULL COMMENT '目标天数',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+  INDEX idx_habit_user_id (user_id),
+  INDEX idx_habit_is_deleted (is_deleted)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS habit_check_in (
+  id VARCHAR(36) NOT NULL PRIMARY KEY,
+  habit_id VARCHAR(36) NOT NULL,
+  user_id VARCHAR(36) NOT NULL,
+  check_in_date DATE NOT NULL COMMENT '打卡日期',
+  status ENUM('completed', 'skipped', 'abandoned') NULL DEFAULT 'completed' COMMENT '打卡状态',
+  notes TEXT NULL COMMENT '打卡备注',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (habit_id) REFERENCES habit(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+  UNIQUE KEY idx_habit_date (habit_id, check_in_date),
+  INDEX idx_habit_check_in_user_id (user_id),
+  INDEX idx_habit_check_in_date (check_in_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS habit_streak (
+  id VARCHAR(36) NOT NULL PRIMARY KEY,
+  habit_id VARCHAR(36) NOT NULL,
+  user_id VARCHAR(36) NOT NULL,
+  current_streak INT NOT NULL DEFAULT 0 COMMENT '当前连续天数',
+  longest_streak INT NOT NULL DEFAULT 0 COMMENT '最长连续天数',
+  total_check_ins INT NOT NULL DEFAULT 0 COMMENT '总打卡次数',
+  last_check_in_date DATE NULL COMMENT '最后打卡日期',
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (habit_id) REFERENCES habit(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+  UNIQUE KEY idx_habit_streak (habit_id),
+  INDEX idx_habit_streak_user_id (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 8. 插入用户数据 (标准化ID格式: user-xxx)

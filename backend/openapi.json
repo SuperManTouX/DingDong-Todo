@@ -198,6 +198,54 @@
         ]
       }
     },
+    "/file/attachments/presigned-url": {
+      "post": {
+        "description": "获取上传任务附件到OSS所需的临时凭证和对象路径",
+        "operationId": "FileController_getAttachmentUploadCredentials",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fileName": {
+                    "type": "string",
+                    "description": "原始文件名"
+                  },
+                  "fileType": {
+                    "type": "string",
+                    "description": "MIME类型",
+                    "example": "image/jpeg"
+                  }
+                },
+                "required": [
+                  "fileName"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取任务附件上传凭证",
+        "tags": [
+          "文件管理"
+        ]
+      }
+    },
     "/file/attachments": {
       "delete": {
         "description": "删除用户的任务附件（从OSS和数据库中移除）",

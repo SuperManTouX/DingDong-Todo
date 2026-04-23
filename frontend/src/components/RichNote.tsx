@@ -223,8 +223,7 @@ const RichNote: React.FC<RichNoteProps> = ({
   // 获取阿里云OSS临时访问凭证
   const getTaskAttachmentPresignedUrl = async (
     fileName: string,
-    fileType: string,
-    username: string
+    fileType: string
   ): Promise<{
     credentials: {
       AccessKeyId: string;
@@ -239,26 +238,9 @@ const RichNote: React.FC<RichNoteProps> = ({
   }> => {
     try {
       console.log("获取阿里云OSS临时访问凭证 - 开始");
-      
-      // 生成正确格式的文件名，包含task-attachments路径，并确保用户名格式为user-001格式
-      const timestamp = Date.now();
-      const extension = fileName.split('.').pop() || 'jpg';
-      // 确保用户名格式为user-001格式（添加前缀和补零）
-      let formattedUsername = username;
-      if (!username.startsWith('user-')) {
-        // 如果用户名不是user-开头，尝试转换为user-001格式
-        const match = username.match(/\d+/);
-        if (match) {
-          const userId = parseInt(match[0]);
-          formattedUsername = `user-${userId.toString().padStart(3, '0')}`;
-        }
-      }
-      const formattedFileName = `task-attachments/${formattedUsername}/${timestamp}.${extension}`;
-      console.log(`使用格式化后的用户名: ${formattedUsername}`);
-      
-      // 调用API获取凭证
-      const response = await api.post("/users/avatar/presigned-url", {
-        fileName: formattedFileName,
+      // 调用任务附件专用凭证接口，路径由后端统一生成
+      const response = await api.post("/file/attachments/presigned-url", {
+        fileName,
         fileType
       });
 
@@ -268,12 +250,11 @@ const RichNote: React.FC<RichNoteProps> = ({
       }
 
       console.log("成功获取阿里云OSS临时访问凭证");
-      
-      // 强制使用正确的路径格式，而不依赖API返回的路径
+
       const bucketName = response.bucketName || "todo-avatar";
       const region = response.region || "oss-cn-beijing";
-      const objectKey = formattedFileName;
-      const fileUrl = `https://${bucketName}.${region}.aliyuncs.com/${objectKey}`;
+      const objectKey = response.objectKey;
+      const fileUrl = response.fileUrl;
       console.log(`最终上传路径: ${fileUrl}`);
       
       console.log(`设置上传路径: ${fileUrl}`);
@@ -355,7 +336,9 @@ const RichNote: React.FC<RichNoteProps> = ({
       formData.append("OSSAccessKeyId", credentials.AccessKeyId);
       formData.append("policy", policyBase64);
       formData.append("signature", signature);
-      formData.append("x-oss-security-token", credentials.SecurityToken); // 必须添加安全令牌
+      if (credentials.SecurityToken) {
+        formData.append("x-oss-security-token", credentials.SecurityToken);
+      }
       formData.append("Content-Type", fileType);
       formData.append("success_action_status", "200"); // 确保返回200状态码
       formData.append("file", file);
@@ -393,9 +376,8 @@ const RichNote: React.FC<RichNoteProps> = ({
           return await onImageUpload(file);
         }
 
-        // 获取当前用户信息
         const { user } = useAuthStore.getState();
-        if (!user || !user.username) {
+        if (!user) {
           throw new Error("用户未登录，无法上传图片");
         }
 
@@ -405,8 +387,7 @@ const RichNote: React.FC<RichNoteProps> = ({
         // 直接使用原始文件名，在getTaskAttachmentPresignedUrl内部会生成唯一文件名
         const ossCredentialsData = await getTaskAttachmentPresignedUrl(
           file.name,
-          file.type,
-          user.username
+          file.type
         );
 
         message.loading("上传中...");

@@ -11,7 +11,7 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
   
   // 如果正在加载认证状态，显示空白或加载指示器
   if (isLoading) {
-    return null; // 或者返回一个加载指示器组件
+    return <div style={{ padding: 16 }}>加载中...</div>;
   }
 
   // 认证状态加载完成后，再检查是否已认证

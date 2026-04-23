@@ -238,7 +238,7 @@ class SseService {
       clearTimeout(this.reconnectTimeoutId);
       this.reconnectTimeoutId = null;
     }
-    console.log("断开了SSE连接");
+    const hadConnection = !!this.eventSource;
     // 清除状态检查定时器
     this.stopStatusCheck();
     // 重置心跳时间
@@ -251,6 +251,10 @@ class SseService {
     if (this.eventSource) {
       this.eventSource.close();
       this.eventSource = null;
+    }
+
+    if (hadConnection) {
+      console.log("断开了SSE连接");
     }
   }
 
